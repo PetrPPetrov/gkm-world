@@ -2,7 +2,9 @@
 # License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 add_subdirectory(balancer_server)
-# add_subdirectory(bot_client)
-# add_subdirectory(node_server)
-# add_subdirectory(win_gl_client)
+add_subdirectory(bot_client)
+# add_subdirectory(gl_client)
+add_subdirectory(node_server)
+add_subdirectory(proxy_server)
+add_subdirectory(vector_pool_proof)
 

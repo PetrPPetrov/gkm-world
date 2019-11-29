@@ -1,26 +1,24 @@
 // Copyright 2018-2019 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
-#include <iostream>
 #include <boost/asio/impl/src.hpp>
-#include "protocol.h"
 #include "log.h"
-#include "balancer_server.h"
+#include "proxy_server.h"
 
 extern std::ofstream* g_log_file = nullptr;
 
 int main(int argc, char** argv)
 {
-    std::cout << "Gkm-World Balancer Server Copyright (c) 2018 Petr Petrovich Petrov" << std::endl;
+    std::cout << "Gkm-World Proxy Server Copyright (c) 2018 Petr Petrovich Petrov" << std::endl;
 
     LogFileHolder log_file_holder;
-    g_log_file = new std::ofstream("balancer_server.log", std::ios::app);
-    LOG_INFO << "Balancer Server is starting..." << std::endl;
+    g_log_file = new std::ofstream("proxy_server.log", std::ios::app);
+    LOG_INFO << "Proxy Server is starting..." << std::endl;
 
     try
     {
-        BalancerServer balancer_server;
-        balancer_server.start();
+        ProxyServer proxy_server;
+        proxy_server.start();
     }
     catch (boost::system::system_error& error)
     {

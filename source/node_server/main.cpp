@@ -1,26 +1,37 @@
 // Copyright 2018-2019 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
-#include <iostream>
 #include <boost/asio/impl/src.hpp>
-#include "protocol.h"
 #include "log.h"
-#include "balancer_server.h"
+#include "node_server.h"
+#include "logic_thread.h"
 
 extern std::ofstream* g_log_file = nullptr;
 
 int main(int argc, char** argv)
 {
-    std::cout << "Gkm-World Balancer Server Copyright (c) 2018 Petr Petrovich Petrov" << std::endl;
+    std::cout << "Gkm-World Node Server Copyright (c) 2018 by GkmSoft" << std::endl;
+
+    unsigned short port_number = 17014;
+    if (argc >= 2)
+    {
+        port_number = static_cast<unsigned short>(std::stoi(argv[1]));
+    }
+    else
+    {
+        std::cout << "using default port number 17014, usage is node_server port_number" << std::endl;
+    }
 
     LogFileHolder log_file_holder;
-    g_log_file = new std::ofstream("balancer_server.log", std::ios::app);
-    LOG_INFO << "Balancer Server is starting..." << std::endl;
+    g_log_file = new std::ofstream("node_server" + std::to_string(port_number) + ".log", std::ios::app);
+    LOG_INFO << "Node Server is starting..." << std::endl;
 
     try
     {
-        BalancerServer balancer_server;
-        balancer_server.start();
+        LogicThread logic_thread;
+        logic_thread.start();
+        NodeServer node_server(port_number, logic_thread);
+        node_server.start();
     }
     catch (boost::system::system_error& error)
     {
