@@ -148,7 +148,7 @@ namespace Packet
 
     struct InitializePositionAnswer : public Base
     {
-        bool success;
+        bool success = false;
         PlayerLocation corrected_location;
 
         InitializePositionAnswer()
@@ -174,7 +174,7 @@ namespace Packet
 
     struct InitializePositionInternalAnswer : public Base
     {
-        bool success;
+        bool success = false;
         boost::asio::ip::address_v4::bytes_type node_server_address = { 0 };
         unsigned short node_server_port_number = 0;
         std::uint32_t user_token = 0;
@@ -358,12 +358,12 @@ namespace Packet
     struct WakeOnLan
     {
         std::array<std::uint8_t, 6> synchronization_chain = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-        union 
+        union
         {
             std::array<Network::MacAddress, 16> mac_addresses;
-            std::uint32_t packet_number;
+            std::uint32_t packet_number = 0;
         };
-        
+
         WakeOnLan()
         {
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
@@ -429,7 +429,7 @@ namespace Packet
     template<>
     inline size_t getSize<UserActionAnswer>(const UserActionAnswer* packet)
     {
-        std::int32_t other_user_count = std::max<std::int32_t>(packet->other_player_count, 1);
+        size_t other_user_count = std::max<size_t>(packet->other_player_count, 1);
         size_t result = sizeof(UserActionAnswer) + sizeof(PlayerUuidLocation) * (other_user_count - 1);
         assert(result <= MAX_SIZE);
         return result;
@@ -438,7 +438,7 @@ namespace Packet
     template<>
     inline size_t getSize<UserActionInternalAnswer>(const UserActionInternalAnswer* packet)
     {
-        std::int32_t other_user_count = std::max<std::int32_t>(packet->other_player_count, 1);
+        size_t other_user_count = std::max<size_t>(packet->other_player_count, 1);
         size_t result = sizeof(UserActionInternalAnswer) + sizeof(PlayerUuidLocation) * (other_user_count - 1);
         assert(result <= MAX_SIZE);
         return result;

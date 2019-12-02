@@ -6,7 +6,7 @@
 #include "bounding_box.h"
 #include "global_parameters.h"
 
-enum NeighborIndex : std::uint8_t
+enum ENeighborIndex : std::uint8_t
 {
     NeighborUpperLeftCorner,
     NeighborUpperLeft,
@@ -29,7 +29,7 @@ enum NeighborIndex : std::uint8_t
 // |--------|--------|
 // | fourth | third  |
 // |--------|--------|
-inline NeighborIndex getNeihgborByPosition(double x_pos, double y_pos, const box2i_t& bounding_box)
+inline ENeighborIndex getNeihgborByPosition(double x_pos, double y_pos, const box2i_t& bounding_box)
 {
     const std::int32_t bb_min_x_pos = bounding_box.min_corner().get<0>();
     const std::int32_t bb_min_y_pos = bounding_box.min_corner().get<1>();

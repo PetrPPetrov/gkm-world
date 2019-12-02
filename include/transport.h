@@ -33,16 +33,16 @@ private:
 
     struct GuaranteedDeliveryInfo : public std::enable_shared_from_this<GuaranteedDeliveryInfo>
     {
-        typedef GuaranteedDeliveryInfo self_type;
-        typedef std::shared_ptr<self_type> ptr;
+        typedef GuaranteedDeliveryInfo SelfType;
+        typedef std::shared_ptr<SelfType> Ptr;
 
-        std::uint32_t packet_number;
-        std::uint8_t attempt_count;
+        std::uint32_t packet_number = 0;
+        std::uint8_t attempt_count = 8;
         boost::asio::deadline_timer timer;
         const boost::posix_time::milliseconds delay;
         boost::asio::ip::udp::endpoint end_point;
-        void* packet_buffer;
-        std::size_t packet_buffer_size;
+        void* packet_buffer = nullptr;
+        std::size_t packet_buffer_size = 0;
         std::function<void()> error_handler;
         bool delivered_ok = false;
 
@@ -51,7 +51,7 @@ private:
         {
         }
     };
-    typedef std::unordered_map<std::uint32_t, GuaranteedDeliveryInfo::ptr> guaranteed_delivery_map_t;
+    typedef std::unordered_map<std::uint32_t, GuaranteedDeliveryInfo::Ptr> guaranteed_delivery_map_t;
     guaranteed_delivery_map_t guaranteed_delivery_map;
     bool guaranteed_delivery_enabled = false;
 
@@ -263,7 +263,7 @@ private:
 #endif
     }
 
-    void onTimeout(GuaranteedDeliveryInfo::ptr info, const boost::system::error_code& error)
+    void onTimeout(GuaranteedDeliveryInfo::Ptr info, const boost::system::error_code& error)
     {
         if (info->delivered_ok)
         {

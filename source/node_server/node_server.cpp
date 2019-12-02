@@ -172,7 +172,7 @@ bool NodeServer::onUserActionInternal(size_t received_bytes)
         // If user is in the notify zone, then need to send message neighbors node servers
         if (!inside(user_location->user_location.x_pos, user_location->user_location.y_pos, without_notify_bounding_box))
         {
-            NeighborIndex neighbor_index = getNeihgborByPosition(user_location->user_location.x_pos, user_location->user_location.y_pos, global_bounding_box);
+            ENeighborIndex neighbor_index = getNeihgborByPosition(user_location->user_location.x_pos, user_location->user_location.y_pos, global_bounding_box);
             boost::asio::ip::udp::endpoint neighbor_end_point = neighbor_end_points[neighbor_index];
             auto user_action_internal_packet = createPacket<Packet::UserActionInternal>(packet->packet_number);
             user_action_internal_packet->keyboard_state = packet->keyboard_state;
