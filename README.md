@@ -6,3 +6,4 @@ Open Source Massive Multiplayer Online Battle Game
 * rename BalanceTree:split() to BalanceTree:staticSplit()
 * introduce parameters for proxy server IP address in balancer server
 * introduce parameters for proxy server IP address in node server
+* use successful double action policy for packet delivery
