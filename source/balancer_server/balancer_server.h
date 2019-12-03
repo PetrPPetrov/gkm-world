@@ -19,8 +19,8 @@
 
 struct NodeServerInfo
 {
-    typedef NodeServerInfo self_type;
-    typedef std::shared_ptr<self_type> ptr;
+    typedef NodeServerInfo SelfType;
+    typedef std::shared_ptr<SelfType> Ptr;
 
     Network::MacAddress mac_address;
     boost::asio::ip::address_v4 ip_address;
@@ -34,14 +34,12 @@ struct NodeInfo
 {
     Network::MacAddress mac_address;
     boost::asio::ip::address_v4 ip_address;
-    unsigned short port_number = 17014;
+    unsigned short port_number = NODE_SERVER_PORT_NUMBER_BASE;
 };
 
 class BalancerServer : public Transport
 {
     unsigned short port_number = 17013;
-    unsigned short node_server_port_number_min = 17014;
-    unsigned short node_server_port_number_max = 50000;
     boost::asio::signal_set signals;
     bool proxy_server_end_point_initialized = false;
     boost::asio::ip::udp::endpoint proxy_server_end_point;
@@ -56,7 +54,7 @@ class BalancerServer : public Transport
     typedef std::map<boost::asio::ip::udp::endpoint, BalanceTree*> end_point_to_tree_t;
     end_point_to_tree_t end_point_to_tree;
 
-    typedef std::map<boost::asio::ip::address_v4::bytes_type, NodeServerInfo::ptr> available_node_servers_t;
+    typedef std::map<boost::asio::ip::address_v4::bytes_type, NodeServerInfo::Ptr> available_node_servers_t;
     available_node_servers_t available_node_servers;
     std::list<NodeInfo> available_nodes;
 
@@ -67,8 +65,8 @@ public:
     BalanceTree* createNewBalanceNode(const box2i_t& bounding_box, BalanceTree* parent);
     NodeInfo getAvailableNode();
     void startNode(NodeInfo& node_info, BalanceTree* balance_tree);
-    void wakeUp(NodeServerInfo::ptr node_server_info);
-    void onWakeupTimeout(NodeServerInfo::ptr node_server_info, const boost::system::error_code& error);
+    void wakeUp(NodeServerInfo::Ptr node_server_info);
+    void onWakeupTimeout(NodeServerInfo::Ptr node_server_info, const boost::system::error_code& error);
 
 private:
     bool onInitializePositionInternal(size_t received_bytes);

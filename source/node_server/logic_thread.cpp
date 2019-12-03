@@ -75,6 +75,7 @@ void LogicThread::fillOtherUserList(Packet::UserActionInternalAnswer& packet, st
 {
     packet.other_player_count = 0;
     UserLocation* cur_user_location = user_location_chain;
+    // TODO: Optimize this; use cell spacing for the visible users selection
     while (cur_user_location)
     {
         if (cur_user_location->user_location.user_token != user_token)

@@ -23,4 +23,3 @@ public:
     void removeUser(UserLocation* user);
     void fillOtherUserList(Packet::UserActionInternalAnswer& packet, std::uint32_t user_token);
 };
-

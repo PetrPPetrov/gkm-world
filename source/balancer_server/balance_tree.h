@@ -19,7 +19,7 @@ class BalanceTree : private boost::noncopyable
     const std::size_t MAX_USER = 1000;
     const std::size_t MIN_USER = 100;
 
-    enum ChildIndex : std::uint8_t
+    enum EChildIndex : std::uint8_t
     {
         ChildUpperLeft,
         ChildUpperRight,
@@ -42,13 +42,11 @@ class BalanceTree : private boost::noncopyable
     boost::asio::ip::udp::endpoint node_server_end_point;
 
 public:
-    BalanceTree(BalancerServer& balancer_server, std::uint32_t index, const box2i_t& bounding_box);
-    BalanceTree(BalancerServer& balancer_server, std::uint32_t index, const box2i_t& bounding_box, BalanceTree* parent);
+    BalanceTree(BalancerServer& balancer_server, std::uint32_t token, const box2i_t& bounding_box);
+    BalanceTree(BalancerServer& balancer_server, std::uint32_t token, const box2i_t& bounding_box, BalanceTree* parent);
 
     std::uint32_t getToken() const;
     bool registerNewUser(const Packet::InitializePositionInternal& packet);
-    void addUser();
-    void deleteUser();
     void increaseUserCount();
     void decreaseUserCount();
     void balance();
@@ -59,7 +57,4 @@ public:
     void split();
     void splitChildren();
     void startChildrenNodeServer();
-
-private:
-    void merge();
 };

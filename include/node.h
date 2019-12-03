@@ -29,6 +29,7 @@ enum ENeighborIndex : std::uint8_t
 // |--------|--------|
 // | fourth | third  |
 // |--------|--------|
+// TODO: Revise this
 inline ENeighborIndex getNeihgborByPosition(double x_pos, double y_pos, const box2i_t& bounding_box)
 {
     const std::int32_t bb_min_x_pos = bounding_box.min_corner().get<0>();

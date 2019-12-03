@@ -21,3 +21,6 @@ const std::int32_t MAXIMAL_CELL_SIZE = 2048;
 const size_t PACKET_POOL_SIZE = 4096;
 
 const boost::posix_time::milliseconds TIMER_INTERVAL(50);
+
+const unsigned short NODE_SERVER_PORT_NUMBER_BASE = 17014;
+const unsigned short NODE_SERVER_PORT_NUMBER_MAX = 50000;

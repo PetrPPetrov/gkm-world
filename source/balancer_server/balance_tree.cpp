@@ -8,13 +8,13 @@
 #include "balancer_server.h"
 #include "log.h"
 
-BalanceTree::BalanceTree(BalancerServer& balancer_server_, std::uint32_t index_, const box2i_t& bounding_box_) :
-    BalanceTree(balancer_server_, index_, bounding_box_, nullptr)
+BalanceTree::BalanceTree(BalancerServer& balancer_server_, std::uint32_t token_, const box2i_t& bounding_box_) :
+    BalanceTree(balancer_server_, token_, bounding_box_, nullptr)
 {
 }
 
-BalanceTree::BalanceTree(BalancerServer& balancer_server_, std::uint32_t index_, const box2i_t& bounding_box_, BalanceTree* parent_) :
-    balancer_server(balancer_server_), token(index_)
+BalanceTree::BalanceTree(BalancerServer& balancer_server_, std::uint32_t token_, const box2i_t& bounding_box_, BalanceTree* parent_) :
+    balancer_server(balancer_server_), token(token_)
 {
     bounding_box = bounding_box_;
     parent = parent_;
@@ -60,16 +60,6 @@ bool BalanceTree::registerNewUser(const Packet::InitializePositionInternal& pack
     return false;
 }
 
-void BalanceTree::addUser()
-{
-    // TODO:
-}
-
-void BalanceTree::deleteUser()
-{
-    // TODO:
-}
-
 void BalanceTree::increaseUserCount()
 {
     user_count++;
@@ -102,7 +92,7 @@ void BalanceTree::balance()
     {
         if (user_count < MIN_USER)
         {
-            merge();
+            //merge();
         }
     }
     for (auto child : children)
@@ -428,9 +418,4 @@ void BalanceTree::startChildrenNodeServer()
             child->startChildrenNodeServer();
         }
     }
-}
-
-void BalanceTree::merge()
-{
-    // TODO:
 }

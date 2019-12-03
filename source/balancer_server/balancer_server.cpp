@@ -32,8 +32,6 @@ BalancerServer::BalancerServer() :
     config_reader.addParameter("global_bounding_box_min_unit_y", global_bounding_box_min_y);
     config_reader.addParameter("global_bounding_box_max_unit_x", global_bounding_box_max_x);
     config_reader.addParameter("global_bounding_box_max_unit_y", global_bounding_box_max_y);
-    config_reader.addParameter("node_server_port_number_min", node_server_port_number_min);
-    config_reader.addParameter("node_server_port_number_max", node_server_port_number_max);
     config_reader.addParameter("node_server_mac_address", node_server_mac_address);
     config_reader.addParameter("node_server_ip_address", node_server_ip_address);
     config_reader.addParameter("node_server_max_process_count", node_server_max_process_count);
@@ -44,15 +42,13 @@ BalancerServer::BalancerServer() :
     LOG_INFO << "global_bounding_box_min_unit_y " << global_bounding_box_min_y << std::endl;
     LOG_INFO << "global_bounding_box_max_unit_x " << global_bounding_box_max_x << std::endl;
     LOG_INFO << "global_bounding_box_max_unit_y " << global_bounding_box_max_y << std::endl;
-    LOG_INFO << "node_server_port_number_min " << node_server_port_number_min << std::endl;
-    LOG_INFO << "node_server_port_number_max " << node_server_port_number_max << std::endl;
 
     auto ip_address_it = node_server_ip_address.begin();
     auto max_process_count_it = node_server_max_process_count.begin();
 
     for (auto mac_address_it = node_server_mac_address.begin(); mac_address_it != node_server_mac_address.end(); ++mac_address_it)
     {
-        NodeServerInfo::ptr new_node_server_info = std::make_shared<NodeServerInfo>();
+        NodeServerInfo::Ptr new_node_server_info = std::make_shared<NodeServerInfo>();
         new_node_server_info->mac_address = *mac_address_it;
         new_node_server_info->ip_address = boost::asio::ip::address_v4::from_string(*ip_address_it++);
         if (new_node_server_info->ip_address.is_loopback())
@@ -78,7 +74,7 @@ BalancerServer::BalancerServer() :
 
     initAvailableNodes();
 
-    uuid_to_tree.allocate(uuid_to_tree.allocateIndex()); // Allocate BalanceTree with 0 index
+    uuid_to_tree.allocate(uuid_to_tree.allocateIndex()); // Allocate BalanceTree with 0 token
     balance_tree = createNewBalanceNode(global_bounding_box, nullptr);
     balance_tree->split();
     balance_tree->splitChildren();
@@ -97,9 +93,9 @@ void BalancerServer::start()
 
 BalanceTree* BalancerServer::createNewBalanceNode(const box2i_t& bounding_box, BalanceTree* parent)
 {
-    std::uint32_t new_node_index = uuid_to_tree.allocateIndex();
-    BalanceTree* new_node = uuid_to_tree.allocate(new_node_index);
-    return new(new_node) BalanceTree(*this, new_node_index, bounding_box, parent);
+    std::uint32_t new_node_token = uuid_to_tree.allocateIndex();
+    BalanceTree* new_node = uuid_to_tree.allocate(new_node_token);
+    return new(new_node) BalanceTree(*this, new_node_token, bounding_box, parent);
 }
 
 NodeInfo BalancerServer::getAvailableNode()
@@ -148,7 +144,9 @@ void BalancerServer::startNode(NodeInfo& node_info, BalanceTree* balance_tree)
         {
             auto request = createPacket<Packet::SpawnNodeServer>();
             request->node_server_port = node_info.port_number;
-            standardSendTo(request, boost::asio::ip::udp::endpoint(node_info.ip_address, 17014));
+            // TODO: Select randomly port number from the running node servers pool of the specified node server host
+            // In the current case we overload the first node server (which is running on port number NODE_SERVER_PORT_NUMBER_BASE)
+            standardSendTo(request, boost::asio::ip::udp::endpoint(node_info.ip_address, NODE_SERVER_PORT_NUMBER_BASE));
         }
     }
     else
@@ -159,7 +157,7 @@ void BalancerServer::startNode(NodeInfo& node_info, BalanceTree* balance_tree)
     }
 }
 
-void BalancerServer::wakeUp(NodeServerInfo::ptr node_server_info)
+void BalancerServer::wakeUp(NodeServerInfo::Ptr node_server_info)
 {
     if (!node_server_info->power_on)
     {
@@ -182,8 +180,10 @@ void BalancerServer::wakeUp(NodeServerInfo::ptr node_server_info)
     }
 }
 
-void BalancerServer::onWakeupTimeout(NodeServerInfo::ptr node_server_info, const boost::system::error_code& error)
+void BalancerServer::onWakeupTimeout(NodeServerInfo::Ptr node_server_info, const boost::system::error_code& error)
 {
+    // TODO: Introduce some time-out
+    // TODO: If server does not respond when exclude this server from available servers list
     if (!node_server_info->power_on)
     {
         wakeUp(node_server_info);
@@ -274,15 +274,18 @@ bool BalancerServer::onGetNodeInfo(size_t received_bytes)
         auto found_node_info_it = available_node_servers.find(remote_end_point.address().to_v4().to_bytes());
         if (found_node_info_it != available_node_servers.end())
         {
-            found_node_info_it->second->power_on = true;
-            // Add other node info for this node server
-            for (unsigned short port_number = 17015; port_number < 17014 + found_node_info_it->second->max_process_count; ++port_number)
+            if (!found_node_info_it->second->power_on)
             {
-                NodeInfo new_node_info;
-                new_node_info.ip_address = found_node_info_it->second->ip_address;
-                new_node_info.port_number = port_number;
-                new_node_info.mac_address = found_node_info_it->second->mac_address;
-                available_nodes.push_front(new_node_info);
+                found_node_info_it->second->power_on = true;
+                // Add other node info for this node server
+                for (unsigned short port_number = NODE_SERVER_PORT_NUMBER_BASE + 1; port_number < NODE_SERVER_PORT_NUMBER_BASE + found_node_info_it->second->max_process_count; ++port_number)
+                {
+                    NodeInfo new_node_info;
+                    new_node_info.ip_address = found_node_info_it->second->ip_address;
+                    new_node_info.port_number = port_number;
+                    new_node_info.mac_address = found_node_info_it->second->mac_address;
+                    available_nodes.push_front(new_node_info);
+                }
             }
         }
 
@@ -304,7 +307,7 @@ void BalancerServer::initAvailableNodes()
     {
         if (node_server_info.second->ip_address.is_loopback())
         {
-            for (unsigned short port_number = 17014; port_number < 17014 + node_server_info.second->max_process_count; ++port_number)
+            for (unsigned short port_number = NODE_SERVER_PORT_NUMBER_BASE; port_number < NODE_SERVER_PORT_NUMBER_BASE + node_server_info.second->max_process_count; ++port_number)
             {
                 NodeInfo new_node_info;
                 new_node_info.ip_address = node_server_info.second->ip_address;
@@ -318,7 +321,7 @@ void BalancerServer::initAvailableNodes()
             // Standard case
             NodeInfo new_node_info;
             new_node_info.ip_address = node_server_info.second->ip_address;
-            new_node_info.port_number = 17014;
+            new_node_info.port_number = NODE_SERVER_PORT_NUMBER_BASE;
             new_node_info.mac_address = node_server_info.second->mac_address;
             available_nodes.push_back(new_node_info);
         }

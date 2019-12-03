@@ -26,18 +26,18 @@ namespace Packet
         UserActionInternal,
         UserActionInternalAnswer,
         // Node->Node protocol
-        UserMove,
+        UserMove, // Not used
         // Node->Proxy protocol
-        AddNodeServerToProxy,
-        RemoveNodeServerFromProxy,
+        AddNodeServerToProxy, // Not used
+        RemoveNodeServerFromProxy, // Not used
         // Node->Balancer protocol
         GetNodeInfo,
         GetNodeInfoAnswer,
         // Balancer->Node protocol
-        SpawnNodeServer,
-        SpawnNodeServerAnswer,
-        SplitNode,
-        SplitNodeAnswer,
+        SpawnNodeServer, // Not used
+        SpawnNodeServerAnswer, // Not used
+        SplitNode, // Not used
+        SplitNodeAnswer, // Not used
         // Markers
         Last,
         First = Login

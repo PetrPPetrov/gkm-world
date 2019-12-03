@@ -76,10 +76,14 @@ bool NodeServer::onLogoutInternal(size_t received_bytes)
     {
         logic_thread.removeUser(user_location);
         // TODO: remove user_location from uuid_to_user_location with some delay, to avoid race condition
+        // However, such race condition does not lead to crash or dead-lock
+        // because FastImdexMap does not really deallocate memory blocks
+        // Maybe it will be OK and does not need to be fixed
         user_count--;
         uuid_to_user_location.deallocate(packet->user_token);
     }
 
+    // Double logout will give a positive answer
     auto answer = createPacket<Packet::LogoutInternalAnswer>(packet->packet_number);
     answer->success = true;
     answer->user_token = packet->user_token;
@@ -128,6 +132,15 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
 #ifdef _DEBUG
             LOG_DEBUG << "can not initialize position of user " << packet->user_token << " because position is out of bounding box" << std::endl;
 #endif
+            auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->packet_number);
+            answer->user_token = packet->user_token;
+            answer->client_packet_number = packet->client_packet_number;
+            answer->node_server_address = node_server_end_point.address().to_v4().to_bytes();
+            answer->node_server_port_number = node_server_end_point.port();
+            answer->proxy_packet_number = packet->proxy_packet_number;
+            answer->success = false;
+            standardSend(answer);
+            return true;
         }
     }
     else
@@ -148,14 +161,6 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
         return true;
     }
 
-    auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->packet_number);
-    answer->user_token = packet->user_token;
-    answer->client_packet_number = packet->client_packet_number;
-    answer->node_server_address = node_server_end_point.address().to_v4().to_bytes();
-    answer->node_server_port_number = node_server_end_point.port();
-    answer->proxy_packet_number = packet->proxy_packet_number;
-    answer->success = false;
-    standardSend(answer);
     return true;
 }
 
