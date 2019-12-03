@@ -7,3 +7,4 @@ Open Source Massive Multiplayer Online Battle Game
 * introduce parameters for proxy server IP address in balancer server
 * introduce parameters for proxy server IP address in node server
 * use successful double action policy for packet delivery
+* prepare visible users list on node server for quick fetching
