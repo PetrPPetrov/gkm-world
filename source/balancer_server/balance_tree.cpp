@@ -3,19 +3,19 @@
 
 #include <cassert>
 #include <boost/asio.hpp>
-#include <boost/geometry.hpp>
 #include "balance_tree.h"
 #include "balancer_server.h"
 #include "log.h"
 
-BalanceTree::BalanceTree(BalancerServer& balancer_server_, std::uint32_t token_, const box2i_t& bounding_box_) :
+BalanceTree::BalanceTree(BalancerServer& balancer_server_, std::uint32_t token_, SquareCell bounding_box_) :
     BalanceTree(balancer_server_, token_, bounding_box_, nullptr)
 {
 }
 
-BalanceTree::BalanceTree(BalancerServer& balancer_server_, std::uint32_t token_, const box2i_t& bounding_box_, BalanceTree* parent_) :
-    balancer_server(balancer_server_), token(token_)
+BalanceTree::BalanceTree(BalancerServer& balancer_server_, std::uint32_t token_, SquareCell bounding_box_, BalanceTree* parent_) :
+    balancer_server(balancer_server_)
 {
+    token = token_;
     bounding_box = bounding_box_;
     parent = parent_;
     if (parent)
@@ -31,9 +31,19 @@ std::uint32_t BalanceTree::getToken() const
     return token;
 }
 
+void BalanceTree::dump() const
+{
+    const std::string indent(level, ' ');
+    std::cout << indent << "node_server_token: " << token << std::endl;
+    std::cout << indent << "node_server_end_point: " << node_server_end_point << std::endl;
+    std::cout << indent << "leaf_node: " << leaf_node << std::endl;
+    std::cout << indent << "level: " << level << std::endl;
+    std::cout << indent << "user_count: " << user_count << std::endl;
+}
+
 bool BalanceTree::registerNewUser(const Packet::InitializePositionInternal& packet)
 {
-    if (!inside(packet.user_location.x_pos, packet.user_location.y_pos, bounding_box))
+    if (!inside(bounding_box, packet.user_location.x_pos, packet.user_location.y_pos))
     {
         return false;
     }
@@ -48,8 +58,6 @@ bool BalanceTree::registerNewUser(const Packet::InitializePositionInternal& pack
         LOG_DEBUG << "sending request to " << node_server_end_point.address().to_string() << ":" << node_server_end_point.port() << std::endl;
 #endif
         balancer_server.standardSendTo(create_new_user_request, node_server_end_point);
-        increaseUserCount();
-        balance();
         return true;
     }
     for (auto child : children)
@@ -60,81 +68,10 @@ bool BalanceTree::registerNewUser(const Packet::InitializePositionInternal& pack
     return false;
 }
 
-void BalanceTree::increaseUserCount()
-{
-    user_count++;
-    if (parent)
-    {
-        parent->increaseUserCount();
-    }
-}
-
-void BalanceTree::decreaseUserCount()
-{
-    user_count--;
-    if (parent)
-    {
-        parent->decreaseUserCount();
-    }
-}
-
-void BalanceTree::balance()
-{
-    if (leaf_node)
-    {
-        if (user_count >= MAX_USER)
-        {
-            split();
-        }
-        return;
-    }
-    else
-    {
-        if (user_count < MIN_USER)
-        {
-            //merge();
-        }
-    }
-    for (auto child : children)
-    {
-        child->balance();
-    }
-}
-
 void BalanceTree::getInfo(Packet::GetNodeInfoAnswer* answer) const
 {
     assert(answer);
-
-    answer->bounding_box = bounding_box;
-
-    for (size_t i = NeighborFirst; i < NeighborLast; ++i)
-    {
-        answer->neighbor_addresses[i] = boost::asio::ip::address_v4::from_string("127.0.0.1").to_bytes();
-        auto neighbor = neighbors[i];
-        if (neighbor)
-        {
-            answer->neighbor_ports[i] = neighbor->node_server_port_number;
-            answer->neighbor_tokens[i] = neighbor->token;
-        }
-        else
-        {
-            answer->neighbor_ports[i] = 0;
-            answer->neighbor_tokens[i] = { 0 };
-        }
-    }
-
-    if (parent)
-    {
-        answer->parent_port = parent->node_server_port_number;
-        answer->parent_token = parent->token;
-    }
-    else
-    {
-        answer->parent_port = 0;
-        answer->parent_token = { 0 };
-    }
-    answer->parent_address = boost::asio::ip::address_v4::from_string("127.0.0.1").to_bytes();
-    answer->success = true;
+    // TODO:
 }
 
 void BalanceTree::startNodeServer()
@@ -144,28 +81,39 @@ void BalanceTree::startNodeServer()
         return;
     }
 
-    NodeInfo node_info = balancer_server.getAvailableNode();
-    node_server_end_point = boost::asio::ip::udp::endpoint(node_info.ip_address, node_info.port_number);
-    node_server_port_number = node_info.port_number;
+    if (node_server_port_number == 0)
+    {
+        NodeInfo node_info = balancer_server.getAvailableNode();
+        node_server_end_point = boost::asio::ip::udp::endpoint(node_info.ip_address, node_info.port_number);
+        node_server_port_number = node_info.port_number;
 
 #ifdef _DEBUG
-    LOG_DEBUG << "starting node_server " << node_info.ip_address << ":" << node_info.port_number << " " << token << std::endl;
+        LOG_DEBUG << "starting node_server " << node_info.ip_address << ":" << node_info.port_number << " " << token << std::endl;
 #endif
 
-    balancer_server.startNode(node_info, this);
+        balancer_server.startNode(node_info, this);
+    }
 }
 
-void BalanceTree::dump() const
+void BalanceTree::startNodeServers()
 {
-    const std::string indent(level, ' ');
-    std::cout << indent << "node_server_token: " << token << std::endl;
-    std::cout << indent << "node_server_end_point: " << node_server_end_point << std::endl;
-    std::cout << indent << "leaf_node: " << leaf_node << std::endl;
-    std::cout << indent << "level: " << level << std::endl;
-    std::cout << indent << "user_count: " << user_count << std::endl;
+    if (leaf_node)
+    {
+        startNodeServer();
+        return;
+    }
+
+    for (auto& child : children)
+    {
+        if (child)
+        {
+            child->startNodeServers();
+        }
+    }
 }
 
-void BalanceTree::split()
+
+void BalanceTree::staticSplit()
 {
     if (!leaf_node)
     {
@@ -399,23 +347,6 @@ void BalanceTree::splitChildren()
         if (child)
         {
             child->split();
-        }
-    }
-}
-
-void BalanceTree::startChildrenNodeServer()
-{
-    if (leaf_node)
-    {
-        startNodeServer();
-        return;
-    }
-
-    for (auto& child : children)
-    {
-        if (child)
-        {
-            child->startChildrenNodeServer();
         }
     }
 }

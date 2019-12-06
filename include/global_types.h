@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include <cstddef>
+#include <cstdint>
+#include "global_parameters.h"
 
 struct CellIndex
 {
@@ -30,3 +31,52 @@ struct CellBox
     {
     }
 };
+
+inline bool inside(const CellBox& cell, double x_pos, double y_pos)
+{
+    if (x_pos >= cell.min.x * CELL_SIZE && x_pos < cell.max.x * CELL_SIZE &&
+        y_pos >= cell.min.y * CELL_SIZE && y_pos < cell.max.y * CELL_SIZE)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+struct SquareCell
+{
+    CellIndex start;
+    std::int32_t size = MAXIMAL_NODE_SIZE;
+
+    SquareCell()
+    {
+    }
+    SquareCell(CellIndex start_, std::int32_t size_) : start(start_), size(size_)
+    {
+    }
+};
+
+inline bool inside(const SquareCell& cell, double x_pos, double y_pos)
+{
+    if (x_pos >= cell.start.x * CELL_SIZE && x_pos < (cell.start.x + cell.size) * CELL_SIZE &&
+        y_pos >= cell.start.y * CELL_SIZE && y_pos < (cell.start.y + cell.size) * CELL_SIZE)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+inline CellIndex cellGlobalToLocal(CellIndex global, const SquareCell& cell)
+{
+    return CellIndex(global.x - cell.start.x, global.y - cell.start.y);
+}
+
+inline CellIndex cellLocalToGlobal(const SquareCell& cell, CellIndex local)
+{
+    return CellIndex(cell.start.x + local.x, cell.start.y + local.y);
+}

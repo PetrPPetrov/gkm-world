@@ -18,6 +18,9 @@ const std::size_t PACKET_POOL_SIZE = 4096;
 const unsigned short NODE_SERVER_PORT_NUMBER_BASE = 17014;
 const unsigned short NODE_SERVER_PORT_NUMBER_MAX = 50000;
 
+const std::uint32_t NODE_MAX_USER = 1000;
+const std::uint32_t NODE_MIN_USER = 100;
+
 const boost::posix_time::milliseconds TIMER_INTERVAL(50);
 
 const double RAD_TO_GRAD = 57.295779513082320876798154814105;
