@@ -32,6 +32,19 @@ struct CellBox
     }
 };
 
+inline bool inside(const CellBox& cell, CellIndex other)
+{
+    if (other.x >= cell.min.x && other.x < cell.max.x &&
+        other.y >= cell.min.y && other.y < cell.max.y)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 inline bool inside(const CellBox& cell, double x_pos, double y_pos)
 {
     if (x_pos >= cell.min.x * CELL_SIZE && x_pos < cell.max.x * CELL_SIZE &&
@@ -57,6 +70,19 @@ struct SquareCell
     {
     }
 };
+
+inline bool inside(const SquareCell& cell, CellIndex other)
+{
+    if (other.x >= cell.start.x && other.x < cell.start.x + cell.size &&
+        other.y >= cell.start.y && other.y < cell.start.y + cell.size)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
 
 inline bool inside(const SquareCell& cell, double x_pos, double y_pos)
 {

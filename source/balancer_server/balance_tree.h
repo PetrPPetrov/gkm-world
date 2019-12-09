@@ -10,16 +10,18 @@
 
 class BalancerServer;
 
+const std::uint32_t NEIGHBOR_COUNT_AT_SIDE = MAXIMAL_NODE_SIZE / MINIMAL_NODE_SIZE;
+
 class BalanceTree
 {
     enum EChildIndex : std::uint8_t
     {
+        ChildLowerLeft,
         ChildUpperLeft,
         ChildUpperRight,
         ChildLowerRight,
-        ChildLowerLeft,
         ChildLast,
-        ChildFirst = ChildUpperLeft,
+        ChildFirst = ChildLowerLeft,
         CountOfChildren = ChildLast
     };
 
@@ -31,7 +33,8 @@ class BalanceTree
     BalanceTree* parent = nullptr;
     bool leaf_node = true;
     std::array<BalanceTree*, CountOfChildren> children;
-    std::array<BalanceTree*, 4 * (MAXIMAL_NODE_SIZE / MINIMAL_NODE_SIZE + 1)> neighbors;
+    typedef std::array<BalanceTree*, 4 * (NEIGHBOR_COUNT_AT_SIDE + 1)> Neighbors;
+    Neighbors neighbors;
     std::uint32_t user_count = 0;
     unsigned short node_server_port_number = 0;
     boost::asio::ip::udp::endpoint node_server_end_point;
@@ -55,5 +58,7 @@ public:
     void staticSplit(std::size_t required_level);
 
 private:
-    void setNeighbor
+    static std::uint32_t getNeighborIndex(const SquareCell& box, CellIndex neighbor);
+    void setNeighbor(CellIndex neighbor_cell, BalanceTree* neighbor);
+    BalanceTree* getNeighbor(CellIndex neighbor_cell) const;
 };
