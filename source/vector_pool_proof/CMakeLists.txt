@@ -6,8 +6,8 @@ project(vector_pool_proof)
 find_package(Boost 1.60 REQUIRED)
 
 include_directories(
-  ${PROJECT_SOURCE_DIR}
-  ${PROJECT_SOURCE_DIR}/../../include
+${PROJECT_SOURCE_DIR}
+${PROJECT_SOURCE_DIR}/../../include
 )
 
 include_directories(${Boost_INCLUDE_DIRS})

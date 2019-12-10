@@ -103,7 +103,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
     if (!user_location)
     {
         // Register new user
-        if (inside(packet->user_location.x_pos, packet->user_location.y_pos, global_bounding_box))
+        if (inside(global_bounding_box, packet->user_location.x_pos, packet->user_location.y_pos))
         {
             user_count++;
             UserLocation* new_user = new(uuid_to_user_location.allocate(packet->user_token)) UserLocation;
@@ -175,14 +175,14 @@ bool NodeServer::onUserActionInternal(size_t received_bytes)
     if (user_location)
     {
         // If user is in the notify zone, then need to send message neighbors node servers
-        if (!inside(user_location->user_location.x_pos, user_location->user_location.y_pos, without_notify_bounding_box))
+        if (!inside(without_notify_bounding_box, user_location->user_location.x_pos, user_location->user_location.y_pos))
         {
-            ENeighborIndex neighbor_index = getNeihgborByPosition(user_location->user_location.x_pos, user_location->user_location.y_pos, global_bounding_box);
-            boost::asio::ip::udp::endpoint neighbor_end_point = neighbor_end_points[neighbor_index];
-            auto user_action_internal_packet = createPacket<Packet::UserActionInternal>(packet->packet_number);
-            user_action_internal_packet->keyboard_state = packet->keyboard_state;
-            user_action_internal_packet->user_token = packet->user_token;
-            standardSendTo(user_action_internal_packet, neighbor_end_point);
+            //ENeighborIndex neighbor_index = getNeihgborByPosition(user_location->user_location.x_pos, user_location->user_location.y_pos, global_bounding_box);
+            //boost::asio::ip::udp::endpoint neighbor_end_point = neighbor_end_points[neighbor_index];
+            //auto user_action_internal_packet = createPacket<Packet::UserActionInternal>(packet->packet_number);
+            //user_action_internal_packet->keyboard_state = packet->keyboard_state;
+            //user_action_internal_packet->user_token = packet->user_token;
+            //standardSendTo(user_action_internal_packet, neighbor_end_point);
         }
 
         user_location->state = packet->keyboard_state;
@@ -213,10 +213,10 @@ bool NodeServer::onGetNodeInfoAnswer(size_t received_bytes)
     }
 
     global_bounding_box = packet->bounding_box;
-    without_notify_bounding_box.min_corner().set<0>(global_bounding_box.min_corner().get<0>() + NOTIFY_DISTANCE);
-    without_notify_bounding_box.min_corner().set<1>(global_bounding_box.min_corner().get<1>() + NOTIFY_DISTANCE);
-    without_notify_bounding_box.max_corner().set<0>(global_bounding_box.max_corner().get<0>() - NOTIFY_DISTANCE);
-    without_notify_bounding_box.max_corner().set<1>(global_bounding_box.max_corner().get<1>() - NOTIFY_DISTANCE);
+    //without_notify_bounding_box.min_corner().set<0>(global_bounding_box.min_corner().get<0>() + NOTIFY_DISTANCE);
+    //without_notify_bounding_box.min_corner().set<1>(global_bounding_box.min_corner().get<1>() + NOTIFY_DISTANCE);
+    //without_notify_bounding_box.max_corner().set<0>(global_bounding_box.max_corner().get<0>() - NOTIFY_DISTANCE);
+    //without_notify_bounding_box.max_corner().set<1>(global_bounding_box.max_corner().get<1>() - NOTIFY_DISTANCE);
 
     for (size_t i = NeighborFirst; i < NeighborLast; ++i)
     {

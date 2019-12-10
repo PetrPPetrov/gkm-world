@@ -6,9 +6,9 @@ project(node_server)
 find_package(Boost 1.60 REQUIRED)
 
 include_directories(
-  ${PROJECT_SOURCE_DIR}
-  ${PROJECT_SOURCE_DIR}/../../include
-  ${PROJECT_SOURCE_DIR}/../../3rdparty/eigen/include/eigen3
+${PROJECT_SOURCE_DIR}
+${PROJECT_SOURCE_DIR}/../../include
+${PROJECT_SOURCE_DIR}/../../3rdparty/eigen/include/eigen3
 )
 
 add_definitions(-DBOOST_ASIO_SEPARATE_COMPILATION)

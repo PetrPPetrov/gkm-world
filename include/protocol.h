@@ -5,7 +5,7 @@
 
 #include <cstdint>
 #include <boost/asio/ip/address_v4.hpp>
-#include "bounding_box.h"
+#include "global_types.h"
 #include "logic.h"
 #include "protocol_enum.h"
 #include "mac_address.h"
@@ -295,7 +295,7 @@ namespace Packet
     struct GetNodeInfoAnswer : public Base
     {
         bool success = false;
-        box2i_t bounding_box;
+        SquareCell bounding_box;
         std::array<boost::asio::ip::address_v4::bytes_type, 12> neighbor_addresses;
         std::array<unsigned short, 12> neighbor_ports;
         std::array<std::uint32_t, 12> neighbor_tokens;
@@ -332,7 +332,7 @@ namespace Packet
 
     struct SplitNode : public Base
     {
-        box2d_t bounding_box;
+        SquareCell bounding_box;
         std::array<boost::asio::ip::address_v4::bytes_type, 12> neighbor_addresses;
         std::array<unsigned short, 12> neighbor_ports;
         std::array<std::uint32_t, 12> neighbor_tokens;

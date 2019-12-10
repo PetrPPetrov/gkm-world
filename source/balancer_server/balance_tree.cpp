@@ -58,6 +58,7 @@ bool BalanceTree::registerNewUser(const Packet::InitializePositionInternal& pack
         LOG_DEBUG << "sending request to " << node_server_end_point.address().to_string() << ":" << node_server_end_point.port() << std::endl;
 #endif
         balancer_server.standardSendTo(create_new_user_request, node_server_end_point);
+        user_count++;
         return true;
     }
     for (auto child : children)
@@ -92,6 +93,10 @@ void BalanceTree::startNodeServer()
 #endif
 
         balancer_server.startNode(node_info, this);
+    }
+    else
+    {
+        // TODO: Report a warning that node server is already started
     }
 }
 
@@ -293,16 +298,91 @@ void BalanceTree::staticSplit()
         {
             top_neighbor->setNeighbor(top_cell, i < upper_left_box.size ? upper_left_sub_tree : upper_right_sub_tree);
         }
+
+        CellIndex right_cell_neighbor = bounding_box.start;
+        right_cell_neighbor.x += bounding_box.size;
+        right_cell_neighbor.y += i;
+        CellIndex right_cell = right_cell_neighbor;
+        right_cell.x--;
+        BalanceTree* right_neighbor = getNeighbor(right_cell_neighbor);
+        if (right_neighbor)
+        {
+            right_neighbor->setNeighbor(right_cell, i < lower_right_box.size ? lower_right_sub_tree : upper_right_sub_tree);
+        }
+
+        CellIndex bottom_cell = bounding_box.start;
+        bottom_cell.x += i;
+        CellIndex bottom_cell_neighbor = bottom_cell;
+        bottom_cell_neighbor.y--;
+        BalanceTree* bottom_neighbor = getNeighbor(bottom_cell_neighbor);
+        if (bottom_neighbor)
+        {
+            bottom_neighbor->setNeighbor(bottom_cell, i < lower_left_box.size ? lower_left_sub_tree : lower_right_sub_tree);
+        }
+    }
+
+    CellIndex bottom_left_cell_neighbor = bounding_box.start;
+    bottom_left_cell_neighbor.x--;
+    bottom_left_cell_neighbor.y--;
+    CellIndex bottom_left_cell = bounding_box.start;
+    BalanceTree* bottom_left_neighbor = getNeighbor(bottom_left_cell_neighbor);
+    if (bottom_left_neighbor)
+    {
+        bottom_left_neighbor->setNeighbor(bottom_left_cell, lower_left_sub_tree);
+    }
+
+    CellIndex top_left_cell_neighbor = bounding_box.start;
+    top_left_cell_neighbor.x--;
+    top_left_cell_neighbor.y += bounding_box.size;
+    CellIndex top_left_cell = bounding_box.start;
+    top_left_cell.y += (bounding_box.size - 1);
+    BalanceTree* top_left_neighbor = getNeighbor(top_left_cell_neighbor);
+    if (top_left_neighbor)
+    {
+        top_left_neighbor->setNeighbor(top_left_cell, upper_left_sub_tree);
+    }
+
+    CellIndex top_right_cell_neighbor = bounding_box.start;
+    top_right_cell_neighbor.x += bounding_box.size;
+    top_right_cell_neighbor.y += bounding_box.size;
+    CellIndex top_right_cell = top_right_cell_neighbor;
+    top_right_cell.x--;
+    top_right_cell.y--;
+    BalanceTree* top_right_neighbor = getNeighbor(top_right_cell_neighbor);
+    if (top_right_neighbor)
+    {
+        top_right_neighbor->setNeighbor(top_right_cell, upper_right_sub_tree);
+    }
+
+    CellIndex bottom_right_cell_neighbor = bounding_box.start;
+    bottom_right_cell_neighbor.x += bounding_box.size;
+    bottom_right_cell_neighbor.y--;
+    CellIndex bottom_right_cell = bounding_box.start;
+    bottom_right_cell.x += (bounding_box.size - 1);
+    BalanceTree* bottom_right_neighbor = getNeighbor(bottom_right_cell_neighbor);
+    if (bottom_right_neighbor)
+    {
+        bottom_right_neighbor->setNeighbor(bottom_right_cell, lower_right_sub_tree);
     }
 }
 
-void BalanceTree::splitChildren()
+void BalanceTree::staticSplit(std::size_t required_level)
 {
+    if (level >= required_level)
+    {
+        return;
+    }
+
+    if (leaf_node)
+    {
+        staticSplit();
+    }
+
     for (auto& child : children)
     {
         if (child)
         {
-            child->split();
+            child->staticSplit(required_level);
         }
     }
 }

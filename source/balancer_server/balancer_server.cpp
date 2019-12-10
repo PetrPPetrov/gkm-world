@@ -17,10 +17,9 @@
 BalancerServer::BalancerServer() :
     signals(io_service, SIGINT, SIGTERM)
 {
-    std::int32_t global_bounding_box_min_x = 0;
-    std::int32_t global_bounding_box_min_y = 0;
-    std::int32_t global_bounding_box_max_x = 2048;
-    std::int32_t global_bounding_box_max_y = 2048;
+    std::int32_t global_bounding_box_start_x = 0;
+    std::int32_t global_bounding_box_start_y = 0;
+    std::int32_t global_bounding_box_size = MAXIMAL_NODE_SIZE;
     std::list<Network::MacAddress> node_server_mac_address;
     std::list<std::string> node_server_ip_address;
     std::list<unsigned short> node_server_max_process_count;
@@ -28,20 +27,18 @@ BalancerServer::BalancerServer() :
     std::ifstream config_file("balancer_server.cfg");
     ConfigurationReader config_reader;
     config_reader.addParameter("balancer_server_port_number", port_number);
-    config_reader.addParameter("global_bounding_box_min_unit_x", global_bounding_box_min_x);
-    config_reader.addParameter("global_bounding_box_min_unit_y", global_bounding_box_min_y);
-    config_reader.addParameter("global_bounding_box_max_unit_x", global_bounding_box_max_x);
-    config_reader.addParameter("global_bounding_box_max_unit_y", global_bounding_box_max_y);
+    config_reader.addParameter("global_bounding_box_start_x", global_bounding_box_start_x);
+    config_reader.addParameter("global_bounding_box_start_y", global_bounding_box_start_y);
+    config_reader.addParameter("global_bounding_box_size", global_bounding_box_size);
     config_reader.addParameter("node_server_mac_address", node_server_mac_address);
     config_reader.addParameter("node_server_ip_address", node_server_ip_address);
     config_reader.addParameter("node_server_max_process_count", node_server_max_process_count);
     config_reader.read(config_file);
 
     LOG_INFO << "balancer_server_port_number " << port_number << std::endl;
-    LOG_INFO << "global_bounding_box_min_unit_x " << global_bounding_box_min_x << std::endl;
-    LOG_INFO << "global_bounding_box_min_unit_y " << global_bounding_box_min_y << std::endl;
-    LOG_INFO << "global_bounding_box_max_unit_x " << global_bounding_box_max_x << std::endl;
-    LOG_INFO << "global_bounding_box_max_unit_y " << global_bounding_box_max_y << std::endl;
+    LOG_INFO << "global_bounding_box_start_x " << global_bounding_box_start_x << std::endl;
+    LOG_INFO << "global_bounding_box_start_y " << global_bounding_box_start_y << std::endl;
+    LOG_INFO << "global_bounding_box_size " << global_bounding_box_size << std::endl;
 
     auto ip_address_it = node_server_ip_address.begin();
     auto max_process_count_it = node_server_max_process_count.begin();
@@ -64,10 +61,27 @@ BalancerServer::BalancerServer() :
     }
 
     socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port_number));
-    global_bounding_box.min_corner().set<0>(global_bounding_box_min_x);
-    global_bounding_box.min_corner().set<1>(global_bounding_box_min_y);
-    global_bounding_box.max_corner().set<0>(global_bounding_box_max_x);
-    global_bounding_box.max_corner().set<1>(global_bounding_box_max_y);
+
+    global_bounding_box.start.x = global_bounding_box_start_x;
+    global_bounding_box.start.y = global_bounding_box_start_y;
+    global_bounding_box.size = global_bounding_box_size;
+
+    if (MINIMAL_NODE_SIZE > MAXIMAL_NODE_SIZE)
+    {
+        // TODO: Report an error
+    }
+    if (global_bounding_box_size > MAXIMAL_NODE_SIZE)
+    {
+        // TODO: Report an error
+    }
+    while (global_bounding_box_size > MINIMAL_NODE_SIZE)
+    {
+        if (global_bounding_box_size % 2)
+        {
+            // TODO: Report an error; global_bounding_box_size must be even, not odd!
+        }
+        global_bounding_box_size /= 2;
+    }
 
     node_server_path = findNodeServerPath();
     LOG_INFO << "node_server_path " << node_server_path << std::endl;
@@ -76,9 +90,8 @@ BalancerServer::BalancerServer() :
 
     uuid_to_tree.allocate(uuid_to_tree.allocateIndex()); // Allocate BalanceTree with 0 token
     balance_tree = createNewBalanceNode(global_bounding_box, nullptr);
-    balance_tree->split();
-    balance_tree->splitChildren();
-    balance_tree->startChildrenNodeServer();
+    balance_tree->staticSplit(2);
+    balance_tree->startNodeServers();
 }
 
 void BalancerServer::start()
@@ -91,7 +104,7 @@ void BalancerServer::start()
     io_service.run();
 }
 
-BalanceTree* BalancerServer::createNewBalanceNode(const box2i_t& bounding_box, BalanceTree* parent)
+BalanceTree* BalancerServer::createNewBalanceNode(const SquareCell& bounding_box, BalanceTree* parent)
 {
     std::uint32_t new_node_token = uuid_to_tree.allocateIndex();
     BalanceTree* new_node = uuid_to_tree.allocate(new_node_token);

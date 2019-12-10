@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainMonitorWindow</class>
+ <widget class="QMainWindow" name="MainMonitorWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1024</width>
+    <height>768</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Gkm-World Balance Monitor</string>
+  </property>
+  <widget class="BalanceMonitorWidget" name="centralwidget"/>
+  <widget class="QMenuBar" name="menubar"/>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>BalanceMonitorWidget</class>
+   <extends>QWidget</extends>
+   <header>balance_monitor_widget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <connections/>
+</ui>

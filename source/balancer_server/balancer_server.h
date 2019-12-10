@@ -15,7 +15,7 @@
 #include "balance_tree.h"
 #include "fast_index_map.h"
 #include "mac_address.h"
-#include "bounding_box.h"
+#include "global_types.h"
 
 struct NodeServerInfo
 {
@@ -45,7 +45,7 @@ class BalancerServer : public Transport
     boost::asio::ip::udp::endpoint proxy_server_end_point;
     boost::filesystem::path node_server_path;
 
-    box2i_t global_bounding_box;
+    SquareCell global_bounding_box;
     BalanceTree* balance_tree = nullptr;
 
     typedef Memory::FastIndexMap<BalanceTree> uuid_to_tree_t;
@@ -62,7 +62,7 @@ public:
     BalancerServer();
     void start();
 
-    BalanceTree* createNewBalanceNode(const box2i_t& bounding_box, BalanceTree* parent);
+    BalanceTree* createNewBalanceNode(const SquareCell& bounding_box, BalanceTree* parent);
     NodeInfo getAvailableNode();
     void startNode(NodeInfo& node_info, BalanceTree* balance_tree);
     void wakeUp(NodeServerInfo::Ptr node_server_info);

@@ -29,8 +29,8 @@ class NodeServer : public Transport
 
     boost::asio::ip::udp::endpoint node_server_end_point;
     std::uint32_t node_server_token;
-    box2i_t global_bounding_box;
-    box2i_t without_notify_bounding_box;
+    SquareCell global_bounding_box;
+    SquareCell without_notify_bounding_box;
     std::array<boost::asio::ip::udp::endpoint, 12> neighbor_end_points;
     std::array<std::uint32_t, 12> neighbor_tokens;
     boost::asio::ip::udp::endpoint parent_end_point;
