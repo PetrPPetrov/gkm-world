@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Gkm-World Balance Monitor</string>
+   <string>Gkm-World Balancer Monitor</string>
   </property>
   <widget class="BalancerMonitorWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar"/>

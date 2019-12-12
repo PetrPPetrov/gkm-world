@@ -107,7 +107,7 @@ void BalancerMonitorWidget::mouseMoveEvent(QMouseEvent* event)
 
     QString mouse_position_in_status = tr("Gkm-World Position: ");
     std::stringstream mouse_position;
-    mouse_position << std::fixed << std::setprecision(2) << gkm_world_position_x << ";" << gkm_world_position_y;
+    mouse_position << std::fixed << std::setprecision(2) << gkm_world_position_x << "; " << gkm_world_position_y;
     mouse_position_in_status += mouse_position.str().c_str();
     //QString scenter_position_in_status = tr("Gkm-World Screen Center Position: ");
     //std::stringstream scenter_position;

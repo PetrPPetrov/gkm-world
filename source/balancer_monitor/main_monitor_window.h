@@ -9,6 +9,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDockWidget>
+#include <QPlainTextEdit>
 #include <QTreeView>
 #include "ui_main_monitor_window.h"
 
@@ -18,6 +19,7 @@ class MainMonitorWindow : public QMainWindow
 
 public:
     MainMonitorWindow();
+    QPlainTextEdit* getLog() const;
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -25,6 +27,7 @@ protected:
 private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
+    QPlainTextEdit* log = nullptr;
 };
 
 extern MainMonitorWindow* g_main_window;
