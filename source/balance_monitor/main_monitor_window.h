@@ -26,3 +26,5 @@ private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
 };
+
+extern MainMonitorWindow* g_main_window;

@@ -5,11 +5,16 @@
 #include <QToolBar>
 #include <QDockWidget>
 #include <QTextEdit>
+#include <QStatusBar>
 #include "main_monitor_window.h"
+
+extern MainMonitorWindow* g_main_window = nullptr;
 
 MainMonitorWindow::MainMonitorWindow()
 {
+    g_main_window = this;
     main_monitor_window.setupUi(this);
+    statusBar()->showMessage(tr("Gkm-World Position: Unknown"));
 }
 
 void MainMonitorWindow::showEvent(QShowEvent* event)

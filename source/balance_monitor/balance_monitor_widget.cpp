@@ -5,18 +5,25 @@
 #include <cstdint>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
+#include <string>
+#include <sstream>
 #include <QPainter>
+#include <QApplication>
+#include <QStatusBar>
+#include "main_monitor_window.h"
 #include "balance_monitor_widget.h"
 
 BalanceMonitorWidget::BalanceMonitorWidget(QWidget *parent) : QWidget(parent)
 {
+    setMouseTracking(true);
+    cached_zoom = zoom();
 }
 
 void BalanceMonitorWidget::paintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
 
-    cached_zoom = zoom();
     const QRect viewport = painter.viewport();
     screen_center_x = viewport.center().x();
     screen_center_y = viewport.center().y();
@@ -74,20 +81,40 @@ void BalanceMonitorWidget::wheelEvent(QWheelEvent* event)
     {
         zoom_step = MAX_ZOOM_STEP;
     }
+    cached_zoom = zoom();
     update();
 }
 
 void BalanceMonitorWidget::mouseMoveEvent(QMouseEvent* event)
 {
+    const QPointF current_point = event->localPos();
+
     if (left_mouse_pressed)
     {
-        const QPointF current_point = event->localPos();
         const QPointF delta = previous_point - current_point;
         const double actual_zoom = zoom();
         view_point_x = previous_view_point_x + delta.x() / actual_zoom;
         view_point_y = previous_view_point_y - delta.y() / actual_zoom;
         update();
     }
+
+    const QPoint center = rect().center();
+    const QPoint delta = current_point.toPoint() - center;
+    const double world_delta_x = delta.x() / cached_zoom;
+    const double world_delta_y = delta.y() / cached_zoom;
+    const double gkm_world_position_x = view_point_x + world_delta_x;
+    const double gkm_world_position_y = view_point_y - world_delta_y;
+
+    QString mouse_position_in_status = tr("Gkm-World Position: ");
+    std::stringstream mouse_position;
+    mouse_position << std::fixed << std::setprecision(2) << gkm_world_position_x << ";" << gkm_world_position_y;
+    mouse_position_in_status += mouse_position.str().c_str();
+    //QString scenter_position_in_status = tr("Gkm-World Screen Center Position: ");
+    //std::stringstream scenter_position;
+    //scenter_position << std::fixed << std::setprecision(2) << view_point_x << ";" << view_point_y;
+    //scenter_position_in_status += scenter_position.str().c_str();
+    QString position_in_status = mouse_position_in_status; // +" " + scenter_position_in_status;
+    g_main_window->statusBar()->showMessage(position_in_status);
 }
 
 void BalanceMonitorWidget::mousePressEvent(QMouseEvent* event)
