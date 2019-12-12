@@ -13,14 +13,14 @@
   <property name="windowTitle">
    <string>Gkm-World Balance Monitor</string>
   </property>
-  <widget class="BalanceMonitorWidget" name="centralwidget"/>
+  <widget class="BalancerMonitorWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar"/>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>BalanceMonitorWidget</class>
+   <class>BalancerMonitorWidget</class>
    <extends>QWidget</extends>
-   <header>balance_monitor_widget.h</header>
+   <header>balancer_monitor_widget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

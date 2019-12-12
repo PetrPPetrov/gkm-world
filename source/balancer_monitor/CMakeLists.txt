@@ -1,7 +1,7 @@
 # Copyright 2018-2019 Petr Petrovich Petrov. All rights reserved.
 # License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
-project(balance_monitor)
+project(balancer_monitor)
 
 find_package(Boost 1.60 REQUIRED)
 
@@ -43,7 +43,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-add_executable(balance_monitor WIN32
+add_executable(balancer_monitor WIN32
 ${BALANCE_MONITOR_UI_FILES}
 ${BALANCE_MONITOR_MOC_FILES}
 ${HEADERS}
@@ -52,10 +52,10 @@ ${COMMON}
 ${COMMON_SOURCE}
 )
 
-target_link_libraries(balance_monitor Qt5::Core Qt5::Widgets)
+target_link_libraries(balancer_monitor Qt5::Core Qt5::Widgets)
 source_group(Common FILES ${COMMON} ${COMMON_SOURCE})
 source_group(UiMoc FILES ${BALANCE_MONITOR_UI_FILES} ${BALANCE_MONITOR_MOC_FILES})
 
 if(WIN32)
-  set_target_properties(balance_monitor PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${RUN_AREA_DIR})
+  set_target_properties(balancer_monitor PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${RUN_AREA_DIR})
 endif()

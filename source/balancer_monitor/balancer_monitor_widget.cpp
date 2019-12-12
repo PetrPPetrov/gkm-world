@@ -12,15 +12,15 @@
 #include <QApplication>
 #include <QStatusBar>
 #include "main_monitor_window.h"
-#include "balance_monitor_widget.h"
+#include "balancer_monitor_widget.h"
 
-BalanceMonitorWidget::BalanceMonitorWidget(QWidget *parent) : QWidget(parent)
+BalancerMonitorWidget::BalancerMonitorWidget(QWidget *parent) : QWidget(parent)
 {
     setMouseTracking(true);
     cached_zoom = zoom();
 }
 
-void BalanceMonitorWidget::paintEvent(QPaintEvent* event)
+void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
 
@@ -70,7 +70,7 @@ void BalanceMonitorWidget::paintEvent(QPaintEvent* event)
     }
 }
 
-void BalanceMonitorWidget::wheelEvent(QWheelEvent* event)
+void BalancerMonitorWidget::wheelEvent(QWheelEvent* event)
 {
     zoom_step += (event->angleDelta().y() / 120);
     if (zoom_step < MIN_ZOOM_STEP)
@@ -85,7 +85,7 @@ void BalanceMonitorWidget::wheelEvent(QWheelEvent* event)
     update();
 }
 
-void BalanceMonitorWidget::mouseMoveEvent(QMouseEvent* event)
+void BalancerMonitorWidget::mouseMoveEvent(QMouseEvent* event)
 {
     const QPointF current_point = event->localPos();
 
@@ -117,7 +117,7 @@ void BalanceMonitorWidget::mouseMoveEvent(QMouseEvent* event)
     g_main_window->statusBar()->showMessage(position_in_status);
 }
 
-void BalanceMonitorWidget::mousePressEvent(QMouseEvent* event)
+void BalancerMonitorWidget::mousePressEvent(QMouseEvent* event)
 {
     if (event->buttons() & Qt::LeftButton)
     {
@@ -128,7 +128,7 @@ void BalanceMonitorWidget::mousePressEvent(QMouseEvent* event)
     }
 }
 
-void BalanceMonitorWidget::mouseReleaseEvent(QMouseEvent* event)
+void BalancerMonitorWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     left_mouse_pressed = false;
     previous_point = event->localPos();
@@ -136,17 +136,17 @@ void BalanceMonitorWidget::mouseReleaseEvent(QMouseEvent* event)
     previous_view_point_y = view_point_y;
 }
 
-int BalanceMonitorWidget::to_screen_x(double x_) const
+int BalancerMonitorWidget::to_screen_x(double x_) const
 {
     return static_cast<int>((x_ - view_point_x) * cached_zoom + screen_center_x);
 }
 
-int BalanceMonitorWidget::to_screen_y(double y_) const
+int BalancerMonitorWidget::to_screen_y(double y_) const
 {
     return static_cast<int>((y_ - view_point_y) * -cached_zoom + screen_center_y);
 }
 
-double BalanceMonitorWidget::zoom() const
+double BalancerMonitorWidget::zoom() const
 {
     const double scale = std::pow(ZOOM_BASE, INITIAL_ZOOM_STEP);
     return std::pow(ZOOM_BASE, zoom_step) / scale;

@@ -8,12 +8,12 @@
 #include <QResizeEvent>
 #include "global_types.h"
 
-class BalanceMonitorWidget : public QWidget
+class BalancerMonitorWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    BalanceMonitorWidget(QWidget *parent);
+    BalancerMonitorWidget(QWidget *parent);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
