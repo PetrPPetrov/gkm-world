@@ -25,6 +25,10 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
+    void onConnect();
+    void onClose();
+
+private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
     QPlainTextEdit* log = nullptr;

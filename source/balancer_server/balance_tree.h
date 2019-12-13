@@ -29,7 +29,6 @@ class BalanceTree
     std::uint32_t token = 0;
     std::size_t level = 0;
     SquareCell bounding_box;
-    std::int32_t size = MAXIMAL_NODE_SIZE;
     BalanceTree* parent = nullptr;
     bool leaf_node = true;
     std::array<BalanceTree*, CountOfChildren> children;

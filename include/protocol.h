@@ -353,6 +353,26 @@ namespace Packet
         }
     };
 
+    struct MonitoringBalancerServerInfo : public Base
+    {
+        MonitoringBalancerServerInfo()
+        {
+            type = EType::MonitoringBalancerServerInfo;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringBalancerServerInfoAnswer : public Base
+    {
+        SquareCell global_bounding_box;
+
+        MonitoringBalancerServerInfoAnswer()
+        {
+            type = EType::MonitoringBalancerServerInfoAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
     // I got this information about magic packet
     // from https://ru.wikipedia.org/wiki/Wake-on-LAN
     struct WakeOnLan
@@ -415,6 +435,10 @@ namespace Packet
             return sizeof(SplitNode);
         case EType::SplitNodeAnswer:
             return sizeof(SplitNodeAnswer);
+        case EType::MonitoringBalancerServerInfo:
+            return sizeof(MonitoringBalancerServerInfo);
+        case EType::MonitoringBalancerServerInfoAnswer:
+            return sizeof(MonitoringBalancerServerInfoAnswer);
         default:
             return 0;
         }

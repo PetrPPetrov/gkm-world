@@ -39,6 +39,9 @@ namespace Packet
         SplitNode, // Not used
         SplitNodeAnswer, // Not used
         // Markers
+        MonitoringApi = 200,
+        MonitoringBalancerServerInfo = MonitoringApi,
+        MonitoringBalancerServerInfoAnswer,
         Last,
         First = Login
     };

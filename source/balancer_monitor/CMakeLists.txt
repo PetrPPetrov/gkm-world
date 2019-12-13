@@ -15,6 +15,7 @@ set(CMAKE_PREFIX_PATH ${QT_ROOT})
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Gui REQUIRED)
 find_package(Qt5Widgets REQUIRED)
+find_package(Qt5Network REQUIRED)
 
 include_directories(
 ${PROJECT_SOURCE_DIR}/../../include
@@ -52,7 +53,7 @@ ${COMMON}
 ${COMMON_SOURCE}
 )
 
-target_link_libraries(balancer_monitor Qt5::Core Qt5::Widgets)
+target_link_libraries(balancer_monitor Qt5::Core Qt5::Widgets Qt5::Network)
 source_group(Common FILES ${COMMON} ${COMMON_SOURCE})
 source_group(UiMoc FILES ${BALANCE_MONITOR_UI_FILES} ${BALANCE_MONITOR_MOC_FILES})
 
