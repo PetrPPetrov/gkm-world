@@ -4,6 +4,7 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 #include <QObject>
 #include <QMainWindow>
 #include <QFileDialog>
@@ -11,7 +12,9 @@
 #include <QDockWidget>
 #include <QPlainTextEdit>
 #include <QTreeView>
+#include <QThread>
 #include "ui_main_monitor_window.h"
+#include "monitor_udp_connection.h"
 
 class MainMonitorWindow : public QMainWindow
 {
@@ -27,11 +30,25 @@ protected:
 private:
     void onConnect();
     void onClose();
+    void onQuit();
+
+signals:
+    void message(const QString& message);
+    void connectionFatal(const QString& message);
+    void monitoringBalancerServerInfoAnswer(Packet::MonitoringBalancerServerInfoAnswer packet);
+
+private slots:
+    void onMessage(const QString& message);
+    void onConnectionFatal(const QString& message);
+    void onMonitoringBalancerServerInfoAnswer(Packet::MonitoringBalancerServerInfoAnswer packet);
 
 private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
     QPlainTextEdit* log = nullptr;
+    QAction* connect_act = nullptr;
+    QAction* close_act = nullptr;
+    MonitorUDPConnection* connection = nullptr;
 };
 
 extern MainMonitorWindow* g_main_window;
