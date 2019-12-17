@@ -22,8 +22,8 @@ MainMonitorWindow::MainMonitorWindow()
 
     connect(this, SIGNAL(message(QString)), this, SLOT(onMessage(QString)));
     connect(this, SIGNAL(connectionFatal(QString)), this, SLOT(onConnectionFatal(QString)));
-    connect(this, SIGNAL(monitoringBalancerServerInfoAnswer(Packet::MonitoringBalancerServerInfoAnswer)),
-            this, SLOT(onMonitoringBalancerServerInfoAnswer(Packet::MonitoringBalancerServerInfoAnswer)));
+    connect(this, SIGNAL(monitoringBalancerServerInfoAnswer(QByteArray)),
+            this, SLOT(onMonitoringBalancerServerInfoAnswer(QByteArray)));
 
     statusBar()->showMessage(tr("Gkm-World Position: Unknown"));
 
@@ -123,10 +123,15 @@ void MainMonitorWindow::onClose()
     connection = nullptr;
     close_act->setEnabled(false);
     connect_act->setEnabled(true);
+    server_info = nullptr;
 }
 
 void MainMonitorWindow::onQuit()
 {
+    if (connection)
+    {
+        onClose();
+    }
     QMainWindow::close();
 }
 
@@ -141,6 +146,13 @@ void MainMonitorWindow::onConnectionFatal(const QString& message)
     onClose();
 }
 
-void MainMonitorWindow::onMonitoringBalancerServerInfoAnswer(Packet::MonitoringBalancerServerInfoAnswer packet)
+void MainMonitorWindow::onMonitoringBalancerServerInfoAnswer(QByteArray data)
 {
+    if (!server_info)
+    {
+        server_info = std::make_shared<BalancerServerInfo>();
+    }
+    const Packet::MonitoringBalancerServerInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringBalancerServerInfoAnswer*>(data.data());
+    server_info->bounding_box = answer->global_bounding_box;
+    update();
 }

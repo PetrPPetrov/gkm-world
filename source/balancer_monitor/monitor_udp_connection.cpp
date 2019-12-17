@@ -16,6 +16,8 @@ MonitorUDPConnection::MonitorUDPConnection(const QString& host_name, unsigned sh
 
 void MonitorUDPConnection::onClose()
 {
+    main_window->message(tr("Disconnected."));
+    main_window->message(tr("=============================="));
     connection_thread.exit(0);
 }
 
@@ -27,7 +29,10 @@ void MonitorUDPConnection::onGetBalancerServerInfo()
 
 void MonitorUDPConnection::onThreadStart()
 {
-    main_window->message(tr("Connecting to balancer server- ") + balancer_server_host_name + ":" + std::to_string(balancer_server_port_number).c_str());
+    main_window->message(tr("=============================="));
+    main_window->message(tr("Connecting to balancer server..."));
+    main_window->message(tr("host name - '%1'").arg(balancer_server_host_name));
+    main_window->message(tr("port number - %1").arg(balancer_server_port_number));
     QHostInfo::lookupHost(balancer_server_host_name, this, SLOT(onResolve(QHostInfo)));
     socket = new QUdpSocket(this);
     connect(socket, &QUdpSocket::readyRead, this, &MonitorUDPConnection::onReadyRead);
@@ -37,7 +42,7 @@ void MonitorUDPConnection::onResolve(QHostInfo host_info)
 {
     if (host_info.error() != QHostInfo::NoError)
     {
-        main_window->connectionFatal("DNS resolution failed");
+        main_window->connectionFatal("DNS resolution failed.");
         return;
     }
     bool found = false;
@@ -49,12 +54,13 @@ void MonitorUDPConnection::onResolve(QHostInfo host_info)
     }
     if (!found)
     {
-        main_window->connectionFatal("DNS resolution failed");
+        main_window->connectionFatal("DNS resolution failed.");
     }
     else
     {
-        main_window->message(tr("Resoved IP address- ") + balancer_server_host_address.toString());
+        main_window->message(tr("Resoved IP address - %1").arg(balancer_server_host_address.toString()));
     }
+    onGetBalancerServerInfo();
 }
 
 void MonitorUDPConnection::onReadyRead()
@@ -75,7 +81,7 @@ void MonitorUDPConnection::onReadyRead()
         case Packet::EType::MonitoringBalancerServerInfoAnswer:
             if (buffer.size() >= sizeof(Packet::MonitoringBalancerServerInfoAnswer))
             {
-                main_window->monitoringBalancerServerInfoAnswer(*reinterpret_cast<const Packet::MonitoringBalancerServerInfoAnswer*>(received_base_packet));
+                main_window->monitoringBalancerServerInfoAnswer(buffer);
             }
             break;
         default:

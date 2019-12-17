@@ -37,17 +37,17 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
         draw_cell_lines = false;
     }
 
+    const std::int32_t cells_to_draw_width = static_cast<std::int32_t>(world_to_draw_width / CELL_SIZE) + 1;
+    const std::int32_t cells_to_draw_height = static_cast<std::int32_t>(world_to_draw_height / CELL_SIZE) + 1;
+    const std::int32_t cur_cell_x = static_cast<std::int32_t>(view_point_x / CELL_SIZE);
+    const std::int32_t cur_cell_y = static_cast<std::int32_t>(view_point_y / CELL_SIZE);
+    const std::int32_t start_cell_x = cur_cell_x - cells_to_draw_width / 2 - 1;
+    const std::int32_t start_cell_y = cur_cell_y - cells_to_draw_height / 2 - 1;
+    const std::int32_t end_cell_x = cur_cell_x + cells_to_draw_width / 2 + 1;
+    const std::int32_t end_cell_y = cur_cell_y + cells_to_draw_height / 2 + 1;
+
     if (draw_cell_lines)
     {
-        const std::int32_t cells_to_draw_width = static_cast<std::int32_t>(world_to_draw_width / CELL_SIZE) + 1;
-        const std::int32_t cells_to_draw_height = static_cast<std::int32_t>(world_to_draw_height / CELL_SIZE) + 1;
-        const std::int32_t cur_cell_x = static_cast<std::int32_t>(view_point_x / CELL_SIZE);
-        const std::int32_t cur_cell_y = static_cast<std::int32_t>(view_point_y / CELL_SIZE);
-        const std::int32_t start_cell_x = cur_cell_x - cells_to_draw_width / 2 - 1;
-        const std::int32_t start_cell_y = cur_cell_y - cells_to_draw_height / 2 - 1;
-        const std::int32_t end_cell_x = cur_cell_x + cells_to_draw_width / 2 + 1;
-        const std::int32_t end_cell_y = cur_cell_y + cells_to_draw_height / 2 + 1;
-
         QPen thin_pen;
         thin_pen.setColor(QColor(0, 148, 0));
         thin_pen.setStyle(Qt::DotLine);
@@ -66,6 +66,29 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
                 to_screen_x(start_cell_x * CELL_SIZE), to_screen_y(y * CELL_SIZE),
                 to_screen_x((end_cell_x + 1) * CELL_SIZE), to_screen_y(y * CELL_SIZE)
             );
+        }
+    }
+
+    if (g_main_window->server_info)
+    {
+        QColor out_of_global_box(150, 0, 0);
+        QBrush out_of_global_box_brush(out_of_global_box, Qt::BDiagPattern);
+        SquareCell global_box = g_main_window->server_info->bounding_box;
+        for (std::int32_t x = start_cell_x; x <= end_cell_x; ++x)
+        {
+            for (std::int32_t y = start_cell_y; y <= end_cell_y; ++y)
+            {
+                if (!inside(global_box, CellIndex(x, y)))
+                {
+                    painter.fillRect(
+                        to_screen_x(x * CELL_SIZE),
+                        to_screen_y(y * CELL_SIZE),
+                        to_screen_w(CELL_SIZE),
+                        to_screen_h(CELL_SIZE),
+                        out_of_global_box_brush
+                    );
+                }
+            }
         }
     }
 }
@@ -136,14 +159,24 @@ void BalancerMonitorWidget::mouseReleaseEvent(QMouseEvent* event)
     previous_view_point_y = view_point_y;
 }
 
-int BalancerMonitorWidget::to_screen_x(double x_) const
+int BalancerMonitorWidget::to_screen_x(double x) const
 {
-    return static_cast<int>((x_ - view_point_x) * cached_zoom + screen_center_x);
+    return static_cast<int>((x - view_point_x) * cached_zoom + screen_center_x);
 }
 
-int BalancerMonitorWidget::to_screen_y(double y_) const
+int BalancerMonitorWidget::to_screen_y(double y) const
 {
-    return static_cast<int>((y_ - view_point_y) * -cached_zoom + screen_center_y);
+    return static_cast<int>((y - view_point_y) * -cached_zoom + screen_center_y);
+}
+
+int BalancerMonitorWidget::to_screen_w(double w) const
+{
+    return static_cast<int>(w * cached_zoom);
+}
+
+int BalancerMonitorWidget::to_screen_h(double h) const
+{
+    return static_cast<int>(h * -cached_zoom);
 }
 
 double BalancerMonitorWidget::zoom() const

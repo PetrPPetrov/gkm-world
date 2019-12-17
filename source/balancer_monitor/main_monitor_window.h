@@ -15,6 +15,7 @@
 #include <QThread>
 #include "ui_main_monitor_window.h"
 #include "monitor_udp_connection.h"
+#include "balancer_server_info.h"
 
 class MainMonitorWindow : public QMainWindow
 {
@@ -23,6 +24,8 @@ class MainMonitorWindow : public QMainWindow
 public:
     MainMonitorWindow();
     QPlainTextEdit* getLog() const;
+
+    BalancerServerInfo::Ptr server_info;
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -35,12 +38,12 @@ private:
 signals:
     void message(const QString& message);
     void connectionFatal(const QString& message);
-    void monitoringBalancerServerInfoAnswer(Packet::MonitoringBalancerServerInfoAnswer packet);
+    void monitoringBalancerServerInfoAnswer(QByteArray data);
 
 private slots:
     void onMessage(const QString& message);
     void onConnectionFatal(const QString& message);
-    void onMonitoringBalancerServerInfoAnswer(Packet::MonitoringBalancerServerInfoAnswer packet);
+    void onMonitoringBalancerServerInfoAnswer(QByteArray data);
 
 private:
     bool first_show = true;

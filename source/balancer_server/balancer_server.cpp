@@ -26,6 +26,7 @@ BalancerServer::BalancerServer() :
 
     std::ifstream config_file("balancer_server.cfg");
     ConfigurationReader config_reader;
+    config_reader.addParameter("balancer_server_v6_listen", v6_listen);
     config_reader.addParameter("balancer_server_port_number", port_number);
     config_reader.addParameter("global_bounding_box_start_x", global_bounding_box_start_x);
     config_reader.addParameter("global_bounding_box_start_y", global_bounding_box_start_y);
@@ -60,7 +61,10 @@ BalancerServer::BalancerServer() :
         LOG_INFO << "node_server_max_process_count " << new_node_server_info->max_process_count << std::endl;
     }
 
-    socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port_number));
+    socket = boost::asio::ip::udp::socket(
+        io_service,
+        boost::asio::ip::udp::endpoint(v6_listen ? boost::asio::ip::udp::v6() : boost::asio::ip::udp::v4(), port_number)
+    );
 
     global_bounding_box.start.x = global_bounding_box_start_x;
     global_bounding_box.start.y = global_bounding_box_start_y;
@@ -90,8 +94,8 @@ BalancerServer::BalancerServer() :
 
     uuid_to_tree.allocate(uuid_to_tree.allocateIndex()); // Allocate BalanceTree with 0 token
     balance_tree = createNewBalanceNode(global_bounding_box, nullptr);
-    balance_tree->staticSplit(2);
-    balance_tree->startNodeServers();
+    //balance_tree->staticSplit(1);
+    //balance_tree->startNodeServers();
 }
 
 void BalancerServer::start()
@@ -101,6 +105,7 @@ void BalancerServer::start()
     setReceiveHandler(Packet::EType::InitializePositionInternal, boost::bind(&BalancerServer::onInitializePositionInternal, this, _1));
     setReceiveHandler(Packet::EType::InitializePositionInternalAnswer, boost::bind(&BalancerServer::onInitializePositionInternalAnswer, this, _1));
     setReceiveHandler(Packet::EType::GetNodeInfo, boost::bind(&BalancerServer::onGetNodeInfo, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringBalancerServerInfo, boost::bind(&BalancerServer::onMonitoringBalancerServerInfo, this, _1));
     io_service.run();
 }
 
@@ -309,6 +314,19 @@ bool BalancerServer::onGetNodeInfo(size_t received_bytes)
         answer->success = false;
     }
 
+    standardSend(answer);
+    return true;
+}
+
+bool BalancerServer::onMonitoringBalancerServerInfo(size_t received_bytes)
+{
+#ifdef _DEBUG
+    LOG_DEBUG << "onMonitoringBalancerServerInfo" << std::endl;
+#endif
+
+    const auto packet = getReceiveBufferAs<Packet::MonitoringBalancerServerInfo>();
+    auto answer = createPacket<Packet::MonitoringBalancerServerInfoAnswer>(packet->packet_number);
+    answer->global_bounding_box = global_bounding_box;
     standardSend(answer);
     return true;
 }

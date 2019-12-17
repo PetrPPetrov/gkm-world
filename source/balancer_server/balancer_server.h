@@ -39,6 +39,7 @@ struct NodeInfo
 
 class BalancerServer : public Transport
 {
+    bool v6_listen = false;
     unsigned short port_number = 17013;
     boost::asio::signal_set signals;
     bool proxy_server_end_point_initialized = false;
@@ -72,5 +73,6 @@ private:
     bool onInitializePositionInternal(size_t received_bytes);
     bool onInitializePositionInternalAnswer(size_t received_bytes);
     bool onGetNodeInfo(size_t received_bytes);
+    bool onMonitoringBalancerServerInfo(size_t received_bytes);
     void initAvailableNodes();
 };

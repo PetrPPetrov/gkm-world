@@ -34,8 +34,10 @@ private:
     double screen_center_x = 0.0;
     double screen_center_y = 0.0;
 
-    int to_screen_x(double x_) const; // We do not use worldTransformation property of QPainter
-    int to_screen_y(double y_) const;
+    int to_screen_x(double x) const; // We do not use worldTransformation property of QPainter
+    int to_screen_y(double y) const;
+    int to_screen_w(double w) const;
+    int to_screen_h(double h) const;
     double zoom() const;
     double cached_zoom = 1.0;
     const double ZOOM_BASE = 1.1;
