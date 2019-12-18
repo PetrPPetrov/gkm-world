@@ -10,6 +10,7 @@ MonitorUDPConnection::MonitorUDPConnection(const QString& host_name, unsigned sh
     moveToThread(&connection_thread);
     connect(this, SIGNAL(close()), this, SLOT(onClose()));
     connect(this, SIGNAL(getBalancerServerInfo()), this, SLOT(onGetBalancerServerInfo()));
+    connect(this, SIGNAL(getBalanceTreeInfo(unsigned)), this, SLOT(onGetBalanceTreeInfo(unsigned)));
     connect(&connection_thread, SIGNAL(started()), this, SLOT(onThreadStart()));
     connection_thread.start();
 }
@@ -24,6 +25,13 @@ void MonitorUDPConnection::onClose()
 void MonitorUDPConnection::onGetBalancerServerInfo()
 {
     Packet::MonitoringBalancerServerInfo request;
+    socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
+}
+
+void MonitorUDPConnection::onGetBalanceTreeInfo(unsigned tree_node_token)
+{
+    Packet::MonitoringBalanceTreeInfo request;
+    request.tree_node_token = tree_node_token;
     socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
 }
 
@@ -42,7 +50,7 @@ void MonitorUDPConnection::onResolve(QHostInfo host_info)
 {
     if (host_info.error() != QHostInfo::NoError)
     {
-        main_window->connectionFatal("DNS resolution failed.");
+        main_window->connectionFatal(tr("DNS resolution failed."));
         return;
     }
     bool found = false;
@@ -54,7 +62,7 @@ void MonitorUDPConnection::onResolve(QHostInfo host_info)
     }
     if (!found)
     {
-        main_window->connectionFatal("DNS resolution failed.");
+        main_window->connectionFatal(tr("DNS resolution failed."));
     }
     else
     {
@@ -76,16 +84,23 @@ void MonitorUDPConnection::onReadyRead()
     if (buffer.size() >= sizeof(Packet::Base))
     {
         auto received_base_packet = reinterpret_cast<const Packet::Base*>(buffer.data());
-        switch (received_base_packet->type)
+        if (buffer.size() >= Packet::getSize(received_base_packet->type))
         {
-        case Packet::EType::MonitoringBalancerServerInfoAnswer:
-            if (buffer.size() >= sizeof(Packet::MonitoringBalancerServerInfoAnswer))
+            switch (received_base_packet->type)
             {
+            case Packet::EType::MonitoringBalancerServerInfoAnswer:
                 main_window->monitoringBalancerServerInfoAnswer(buffer);
+                break;
+            case Packet::EType::MonitoringBalanceTreeInfoAnswer:
+                main_window->monitoringBalanceTreeInfoAnswer(buffer);
+                break;
+            default:
+                break;
             }
-            break;
-        default:
-            break;
+        }
+        else
+        {
+            main_window->message(tr("invalid data size: %1").arg(buffer.size()));
         }
     }
 }

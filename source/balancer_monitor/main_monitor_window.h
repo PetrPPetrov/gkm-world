@@ -39,11 +39,13 @@ signals:
     void message(const QString& message);
     void connectionFatal(const QString& message);
     void monitoringBalancerServerInfoAnswer(QByteArray data);
+    void monitoringBalanceTreeInfoAnswer(QByteArray data);
 
 private slots:
     void onMessage(const QString& message);
     void onConnectionFatal(const QString& message);
     void onMonitoringBalancerServerInfoAnswer(QByteArray data);
+    void onMonitoringBalanceTreeInfoAnswer(QByteArray data);
 
 private:
     bool first_show = true;

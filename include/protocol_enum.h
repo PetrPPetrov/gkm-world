@@ -42,6 +42,10 @@ namespace Packet
         MonitoringApi = 200,
         MonitoringBalancerServerInfo = MonitoringApi,
         MonitoringBalancerServerInfoAnswer,
+        MonitoringBalanceTreeInfo,
+        MonitoringBalanceTreeInfoAnswer,
+        MonitoringBalanceTreeNeighborInfo,
+        MonitoringBalanceTreeNeighborInfoAnswer,
         Last,
         First = Login
     };

@@ -7,24 +7,12 @@
 #include "global_types.h"
 #include "transport.h"
 #include "node.h"
+#include "balance_tree/common.h"
 
 class BalancerServer;
 
-const std::uint32_t NEIGHBOR_COUNT_AT_SIDE = MAXIMAL_NODE_SIZE / MINIMAL_NODE_SIZE;
-
 class BalanceTree
 {
-    enum EChildIndex : std::uint8_t
-    {
-        ChildLowerLeft,
-        ChildUpperLeft,
-        ChildUpperRight,
-        ChildLowerRight,
-        ChildLast,
-        ChildFirst = ChildLowerLeft,
-        CountOfChildren = ChildLast
-    };
-
     BalancerServer& balancer_server;
     std::uint32_t token = 0;
     std::size_t level = 0;
@@ -32,8 +20,7 @@ class BalanceTree
     BalanceTree* parent = nullptr;
     bool leaf_node = true;
     std::array<BalanceTree*, CountOfChildren> children;
-    typedef std::array<BalanceTree*, 4 * (NEIGHBOR_COUNT_AT_SIDE + 1)> Neighbors;
-    Neighbors neighbors;
+    std::array<BalanceTree*, 4 * (NEIGHBOR_COUNT_AT_SIDE + 1)> neighbors;
     std::uint32_t user_count = 0;
     unsigned short node_server_port_number = 0;
     boost::asio::ip::udp::endpoint node_server_end_point;

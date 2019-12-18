@@ -106,6 +106,7 @@ void BalancerServer::start()
     setReceiveHandler(Packet::EType::InitializePositionInternalAnswer, boost::bind(&BalancerServer::onInitializePositionInternalAnswer, this, _1));
     setReceiveHandler(Packet::EType::GetNodeInfo, boost::bind(&BalancerServer::onGetNodeInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalancerServerInfo, boost::bind(&BalancerServer::onMonitoringBalancerServerInfo, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringBalanceTreeInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeInfo, this, _1));
     io_service.run();
 }
 
@@ -329,6 +330,13 @@ bool BalancerServer::onMonitoringBalancerServerInfo(size_t received_bytes)
     answer->global_bounding_box = global_bounding_box;
     standardSend(answer);
     return true;
+}
+
+bool BalancerServer::onMonitoringBalanceTreeInfo(size_t received_bytes)
+{
+#ifdef _DEBUG
+    LOG_DEBUG << "onMonitoringBalanceTreeInfo" << std::endl;
+#endif
 }
 
 void BalancerServer::initAvailableNodes()

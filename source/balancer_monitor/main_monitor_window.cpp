@@ -24,6 +24,8 @@ MainMonitorWindow::MainMonitorWindow()
     connect(this, SIGNAL(connectionFatal(QString)), this, SLOT(onConnectionFatal(QString)));
     connect(this, SIGNAL(monitoringBalancerServerInfoAnswer(QByteArray)),
             this, SLOT(onMonitoringBalancerServerInfoAnswer(QByteArray)));
+    connect(this, SIGNAL(monitoringBalanceTreeInfoAnswer(QByteArray)),
+        this, SLOT(onMonitoringBalanceTreeInfoAnswer(QByteArray)));
 
     statusBar()->showMessage(tr("Gkm-World Position: Unknown"));
 
@@ -153,6 +155,47 @@ void MainMonitorWindow::onMonitoringBalancerServerInfoAnswer(QByteArray data)
         server_info = std::make_shared<BalancerServerInfo>();
     }
     const Packet::MonitoringBalancerServerInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringBalancerServerInfoAnswer*>(data.data());
-    server_info->bounding_box = answer->global_bounding_box;
+    if (data.size() >= Packet::getSize(answer))
+    {
+        log->appendPlainText(tr("Received balancer server info"));
+        server_info->bounding_box = answer->global_bounding_box;
+        server_info->tree_root_token = answer->tree_root_token;
+        server_info->wait_info_for_token = server_info->tree_root_token;
+        connection->getBalanceTreeInfo(server_info->tree_root_token);
+    }
+    else
+    {
+        log->appendPlainText(tr("invalid data size: %1").arg(data.size()));
+    }
+
     update();
+}
+
+void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
+{
+    const Packet::MonitoringBalanceTreeInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringBalanceTreeInfoAnswer*>(data.data());
+    if (data.size() >= Packet::getSize(answer))
+    {
+        if (server_info->wait_info_for_token != answer->tree_node_token)
+        {
+            log->appendPlainText(tr("unexpected tree node token answer %1, expected %2").arg(answer->tree_node_token, server_info->wait_info_for_token));
+            return;
+        }
+        log->appendPlainText(tr("Received balance tree info, token %1").arg(answer->tree_node_token));
+        BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(server_info->wait_info_for_token);
+        if (!tree_info)
+        {
+            BalancerTreeInfo* tree_info = new(server_info->token_to_tree_node.allocate(server_info->wait_info_for_token)) BalancerTreeInfo;
+        }
+        tree_info->token = server_info->wait_info_for_token;
+        tree_info->bounding_box = answer->bounding_box;
+        tree_info->children = answer->children;
+        tree_info->leaf_node = answer->leaf_node;
+        tree_info->level = answer->level;
+        tree_info->user_count = answer->user_count;
+    }
+    else
+    {
+        log->appendPlainText(tr("invalid data size: %1").arg(data.size()));
+    }
 }

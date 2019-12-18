@@ -21,10 +21,12 @@ public:
 signals:
     void close();
     void getBalancerServerInfo();
+    void getBalanceTreeInfo(unsigned tree_node_token);
 
 private slots:
     void onClose();
     void onGetBalancerServerInfo();
+    void onGetBalanceTreeInfo(unsigned tree_node_token);
 
     void onThreadStart();
     void onResolve(QHostInfo);

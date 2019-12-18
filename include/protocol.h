@@ -9,6 +9,7 @@
 #include "logic.h"
 #include "protocol_enum.h"
 #include "mac_address.h"
+#include "balance_tree/common.h"
 
 #pragma pack(push, 1)
 
@@ -365,10 +366,62 @@ namespace Packet
     struct MonitoringBalancerServerInfoAnswer : public Base
     {
         SquareCell global_bounding_box;
+        std::uint32_t tree_root_token = 0;
 
         MonitoringBalancerServerInfoAnswer()
         {
             type = EType::MonitoringBalancerServerInfoAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringBalanceTreeInfo : public Base
+    {
+        std::uint32_t tree_node_token = 0;
+
+        MonitoringBalanceTreeInfo()
+        {
+            type = EType::MonitoringBalanceTreeInfo;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringBalanceTreeInfoAnswer : public Base
+    {
+        std::uint32_t tree_node_token = 0;
+        std::size_t level = 0;
+        SquareCell bounding_box;
+        bool leaf_node = true;
+        std::array<std::uint32_t, CountOfChildren> children;
+        std::uint32_t user_count = 0;
+
+        MonitoringBalanceTreeInfoAnswer()
+        {
+            type = EType::MonitoringBalanceTreeInfoAnswer;
+            children.fill(0);
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringBalanceTreeNeighborInfo : public Base
+    {
+        std::uint32_t tree_node_token = 0;
+        CellIndex neighbor_cell;
+
+        MonitoringBalanceTreeNeighborInfo()
+        {
+            type = EType::MonitoringBalanceTreeNeighborInfo;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringBalanceTreeNeighborInfoAnswer : public Base
+    {
+        std::uint32_t neighbor_node_token = 0;
+
+        MonitoringBalanceTreeNeighborInfoAnswer()
+        {
+            type = EType::MonitoringBalanceTreeNeighborInfoAnswer;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
         }
     };
@@ -439,6 +492,14 @@ namespace Packet
             return sizeof(MonitoringBalancerServerInfo);
         case EType::MonitoringBalancerServerInfoAnswer:
             return sizeof(MonitoringBalancerServerInfoAnswer);
+        case EType::MonitoringBalanceTreeInfo:
+            return sizeof(MonitoringBalanceTreeInfo);
+        case EType::MonitoringBalanceTreeInfoAnswer:
+            return sizeof(MonitoringBalanceTreeInfoAnswer);
+        case EType::MonitoringBalanceTreeNeighborInfo:
+            return sizeof(MonitoringBalanceTreeNeighborInfo);
+        case EType::MonitoringBalanceTreeNeighborInfoAnswer:
+            return sizeof(MonitoringBalanceTreeNeighborInfoAnswer);
         default:
             return 0;
         }
