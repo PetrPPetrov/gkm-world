@@ -53,19 +53,40 @@ MainMonitorWindow::MainMonitorWindow()
 
     QMenu* view_menu = menuBar()->addMenu(tr("&View"));
 
-    QDockWidget* dock = new QDockWidget(tr("Log"), this);
-    dock->setAllowedAreas(Qt::AllDockWidgetAreas);
-    log = new QPlainTextEdit(dock);
-    log->setReadOnly(true);
-    dock->setWidget(log);
-    addDockWidget(Qt::RightDockWidgetArea, dock);
+    QDockWidget* tree_node_dock = new QDockWidget(tr("Node Tree"), this);
+    tree_node_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    tree_view = new QTreeView(tree_node_dock);
+    tree_view->setIndentation(10);
+    tree_view->setHeaderHidden(true);
+    tree_view->setUniformRowHeights(true);
+    tree_node_dock->setWidget(tree_view);
+    addDockWidget(Qt::RightDockWidgetArea, tree_node_dock);
+    view_menu->addAction(tree_node_dock->toggleViewAction());
 
-    view_menu->addAction(dock->toggleViewAction());
+    QDockWidget* log_dock = new QDockWidget(tr("Log"), this);
+    log_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    log = new QPlainTextEdit(log_dock);
+    log->setReadOnly(true);
+    log->ensureCursorVisible();
+    log->setCenterOnScroll(true);
+    log_dock->setWidget(log);
+    addDockWidget(Qt::RightDockWidgetArea, log_dock);
+    view_menu->addAction(log_dock->toggleViewAction());
+
+    QAction* clear_log_act = new QAction(tr("Clear Log"), this);
+    clear_log_act->setStatusTip(tr("Clear the log"));
+    connect(clear_log_act, &QAction::triggered, this, &MainMonitorWindow::onClearLog);
+    view_menu->addAction(clear_log_act);
 }
 
 QPlainTextEdit* MainMonitorWindow::getLog() const
 {
     return log;
+}
+
+BalancerServerInfo::Ptr MainMonitorWindow::getServerInfo() const
+{
+    return server_info;
 }
 
 void MainMonitorWindow::showEvent(QShowEvent* event)
@@ -126,6 +147,7 @@ void MainMonitorWindow::onClose()
     close_act->setEnabled(false);
     connect_act->setEnabled(true);
     server_info = nullptr;
+    update();
 }
 
 void MainMonitorWindow::onQuit()
@@ -135,6 +157,11 @@ void MainMonitorWindow::onQuit()
         onClose();
     }
     QMainWindow::close();
+}
+
+void MainMonitorWindow::onClearLog()
+{
+    log->clear();
 }
 
 void MainMonitorWindow::onMessage(const QString& message)
@@ -216,6 +243,13 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
                     connection->getBalanceTreeInfo(child_token);
                 }
             }
+        }
+        if (server_info->wait_info_for_token.empty())
+        {
+            // We received all balancer node tree
+            node_tree = std::make_shared<NodeTree>(server_info);
+            tree_view->setModel(node_tree.get());
+            tree_view->update();
         }
     }
     else

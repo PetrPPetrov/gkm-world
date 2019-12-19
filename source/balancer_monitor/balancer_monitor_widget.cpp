@@ -69,11 +69,12 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
         }
     }
 
-    if (g_main_window->server_info)
+    auto server_info = g_main_window->getServerInfo();
+    if (server_info)
     {
         QColor out_of_global_box(150, 0, 0);
         QBrush out_of_global_box_brush(out_of_global_box, Qt::BDiagPattern);
-        SquareCell global_box = g_main_window->server_info->bounding_box;
+        SquareCell global_box = server_info->bounding_box;
         for (std::int32_t x = start_cell_x; x <= end_cell_x; ++x)
         {
             for (std::int32_t y = start_cell_y; y <= end_cell_y; ++y)

@@ -16,6 +16,7 @@
 #include "ui_main_monitor_window.h"
 #include "monitor_udp_connection.h"
 #include "balancer_server_info.h"
+#include "node_tree.h"
 
 class MainMonitorWindow : public QMainWindow
 {
@@ -24,8 +25,7 @@ class MainMonitorWindow : public QMainWindow
 public:
     MainMonitorWindow();
     QPlainTextEdit* getLog() const;
-
-    BalancerServerInfo::Ptr server_info;
+    BalancerServerInfo::Ptr getServerInfo() const;
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -34,6 +34,7 @@ private:
     void onConnect();
     void onClose();
     void onQuit();
+    void onClearLog();
 
 signals:
     void message(const QString& message);
@@ -51,9 +52,13 @@ private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
     QPlainTextEdit* log = nullptr;
+    QTreeView* tree_view = nullptr;
     QAction* connect_act = nullptr;
     QAction* close_act = nullptr;
     MonitorUDPConnection* connection = nullptr;
+
+    BalancerServerInfo::Ptr server_info;
+    NodeTree::Ptr node_tree = nullptr;
 };
 
 extern MainMonitorWindow* g_main_window;
