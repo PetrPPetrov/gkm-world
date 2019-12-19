@@ -36,6 +36,8 @@ public:
 
     bool registerNewUser(const Packet::InitializePositionInternal& packet);
     void getInfo(Packet::GetNodeInfoAnswer* answer) const;
+    void getMonitoringInfo(Packet::MonitoringBalanceTreeInfoAnswer* answer) const;
+    void getMonitoringNeighborInfo(Packet::MonitoringBalanceTreeNeighborInfoAnswer* answer, CellIndex neighbor_cell) const;
 
     void startNodeServer();
     void startNodeServers();

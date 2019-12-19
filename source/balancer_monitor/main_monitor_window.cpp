@@ -157,11 +157,18 @@ void MainMonitorWindow::onMonitoringBalancerServerInfoAnswer(QByteArray data)
     const Packet::MonitoringBalancerServerInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringBalancerServerInfoAnswer*>(data.data());
     if (data.size() >= Packet::getSize(answer))
     {
-        log->appendPlainText(tr("Received balancer server info"));
+        log->appendPlainText(tr("received balancer server info"));
         server_info->bounding_box = answer->global_bounding_box;
         server_info->tree_root_token = answer->tree_root_token;
-        server_info->wait_info_for_token = server_info->tree_root_token;
-        connection->getBalanceTreeInfo(server_info->tree_root_token);
+        if (server_info->tree_root_token)
+        {
+            server_info->wait_info_for_token.insert(server_info->tree_root_token);
+            connection->getBalanceTreeInfo(server_info->tree_root_token);
+        }
+        else
+        {
+            log->appendPlainText(tr("root tree does not exist"));
+        }
     }
     else
     {
@@ -176,23 +183,40 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
     const Packet::MonitoringBalanceTreeInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringBalanceTreeInfoAnswer*>(data.data());
     if (data.size() >= Packet::getSize(answer))
     {
-        if (server_info->wait_info_for_token != answer->tree_node_token)
+        if (server_info->wait_info_for_token.find(answer->tree_node_token) == server_info->wait_info_for_token.end())
         {
-            log->appendPlainText(tr("unexpected tree node token answer %1, expected %2").arg(answer->tree_node_token, server_info->wait_info_for_token));
+            log->appendPlainText(tr("unexpected tree node token answer %1").arg(answer->tree_node_token));
             return;
         }
-        log->appendPlainText(tr("Received balance tree info, token %1").arg(answer->tree_node_token));
-        BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(server_info->wait_info_for_token);
+        if (!answer->success)
+        {
+            log->appendPlainText(tr("balance tree node with token %1 does not exist").arg(answer->tree_node_token));
+            return;
+        }
+        log->appendPlainText(tr("received balance tree info, token %1").arg(answer->tree_node_token));
+        BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(answer->tree_node_token);
         if (!tree_info)
         {
-            BalancerTreeInfo* tree_info = new(server_info->token_to_tree_node.allocate(server_info->wait_info_for_token)) BalancerTreeInfo;
+            tree_info = new(server_info->token_to_tree_node.allocate(answer->tree_node_token)) BalancerTreeInfo;
         }
-        tree_info->token = server_info->wait_info_for_token;
+        tree_info->token = answer->tree_node_token;
         tree_info->bounding_box = answer->bounding_box;
         tree_info->children = answer->children;
         tree_info->leaf_node = answer->leaf_node;
         tree_info->level = answer->level;
         tree_info->user_count = answer->user_count;
+        server_info->wait_info_for_token.erase(answer->tree_node_token);
+        if (!tree_info->leaf_node)
+        {
+            for (auto child_token : tree_info->children)
+            {
+                if (child_token)
+                {
+                    server_info->wait_info_for_token.insert(child_token);
+                    connection->getBalanceTreeInfo(child_token);
+                }
+            }
+        }
     }
     else
     {

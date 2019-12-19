@@ -75,6 +75,28 @@ void BalanceTree::getInfo(Packet::GetNodeInfoAnswer* answer) const
     // TODO:
 }
 
+void BalanceTree::getMonitoringInfo(Packet::MonitoringBalanceTreeInfoAnswer* answer) const
+{
+    answer->tree_node_token = token;
+    answer->level = level;
+    answer->bounding_box = bounding_box;
+    answer->leaf_node = leaf_node;
+    for (std::uint8_t i = ChildFirst; i < ChildLast; ++i)
+    {
+        answer->children[i] = children[i] ? children[i]->getToken() : 0;
+    }
+    answer->user_count = user_count;
+    answer->success = true;
+}
+
+void BalanceTree::getMonitoringNeighborInfo(Packet::MonitoringBalanceTreeNeighborInfoAnswer* answer, CellIndex neighbor_cell) const
+{
+    answer->tree_node_token = token;
+    BalanceTree* neighbor_tree = getNeighbor(neighbor_cell);
+    answer->neighbor_node_token = neighbor_tree ? neighbor_tree->getToken() : 0;
+    answer->success = true;
+}
+
 void BalanceTree::startNodeServer()
 {
     if (!leaf_node)

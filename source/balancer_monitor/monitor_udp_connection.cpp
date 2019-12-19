@@ -17,7 +17,7 @@ MonitorUDPConnection::MonitorUDPConnection(const QString& host_name, unsigned sh
 
 void MonitorUDPConnection::onClose()
 {
-    main_window->message(tr("Disconnected."));
+    main_window->message(tr("disconnected"));
     main_window->message(tr("=============================="));
     connection_thread.exit(0);
 }
@@ -38,7 +38,7 @@ void MonitorUDPConnection::onGetBalanceTreeInfo(unsigned tree_node_token)
 void MonitorUDPConnection::onThreadStart()
 {
     main_window->message(tr("=============================="));
-    main_window->message(tr("Connecting to balancer server..."));
+    main_window->message(tr("connecting to balancer server..."));
     main_window->message(tr("host name - '%1'").arg(balancer_server_host_name));
     main_window->message(tr("port number - %1").arg(balancer_server_port_number));
     QHostInfo::lookupHost(balancer_server_host_name, this, SLOT(onResolve(QHostInfo)));
@@ -66,7 +66,7 @@ void MonitorUDPConnection::onResolve(QHostInfo host_info)
     }
     else
     {
-        main_window->message(tr("Resoved IP address - %1").arg(balancer_server_host_address.toString()));
+        main_window->message(tr("resoved IP address - %1").arg(balancer_server_host_address.toString()));
     }
     onGetBalancerServerInfo();
 }

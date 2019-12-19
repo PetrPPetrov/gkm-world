@@ -75,5 +75,6 @@ private:
     bool onGetNodeInfo(size_t received_bytes);
     bool onMonitoringBalancerServerInfo(size_t received_bytes);
     bool onMonitoringBalanceTreeInfo(size_t received_bytes);
+    bool onMonitoringBalanceTreeNeighborInfo(size_t received_bytes);
     void initAvailableNodes();
 };

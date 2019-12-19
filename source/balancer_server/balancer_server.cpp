@@ -94,7 +94,7 @@ BalancerServer::BalancerServer() :
 
     uuid_to_tree.allocate(uuid_to_tree.allocateIndex()); // Allocate BalanceTree with 0 token
     balance_tree = createNewBalanceNode(global_bounding_box, nullptr);
-    //balance_tree->staticSplit(1);
+    balance_tree->staticSplit(1);
     //balance_tree->startNodeServers();
 }
 
@@ -328,6 +328,7 @@ bool BalancerServer::onMonitoringBalancerServerInfo(size_t received_bytes)
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalancerServerInfo>();
     auto answer = createPacket<Packet::MonitoringBalancerServerInfoAnswer>(packet->packet_number);
     answer->global_bounding_box = global_bounding_box;
+    answer->tree_root_token = balance_tree ? balance_tree->getToken() : 0;
     standardSend(answer);
     return true;
 }
@@ -337,6 +338,41 @@ bool BalancerServer::onMonitoringBalanceTreeInfo(size_t received_bytes)
 #ifdef _DEBUG
     LOG_DEBUG << "onMonitoringBalanceTreeInfo" << std::endl;
 #endif
+
+    const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeInfo>();
+    auto answer = createPacket<Packet::MonitoringBalanceTreeInfoAnswer>(packet->packet_number);
+    BalanceTree* found_tree = uuid_to_tree.find(packet->tree_node_token);
+    if (found_tree)
+    {
+        found_tree->getMonitoringInfo(answer);
+    }
+    else
+    {
+        answer->success = false;
+    }
+    standardSend(answer);
+    return true;
+}
+
+bool BalancerServer::onMonitoringBalanceTreeNeighborInfo(size_t received_bytes)
+{
+#ifdef _DEBUG
+    LOG_DEBUG << "onMonitoringBalanceTreeNeighborInfo" << std::endl;
+#endif
+
+    const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeNeighborInfo>();
+    auto answer = createPacket<Packet::MonitoringBalanceTreeNeighborInfoAnswer>(packet->packet_number);
+    BalanceTree* found_tree = uuid_to_tree.find(packet->tree_node_token);
+    if (found_tree)
+    {
+        found_tree->getMonitoringNeighborInfo(answer, packet->neighbor_cell);
+    }
+    else
+    {
+        answer->success = false;
+    }
+    standardSend(answer);
+    return true;
 }
 
 void BalancerServer::initAvailableNodes()

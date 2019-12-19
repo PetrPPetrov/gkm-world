@@ -388,6 +388,7 @@ namespace Packet
 
     struct MonitoringBalanceTreeInfoAnswer : public Base
     {
+        bool success = false;
         std::uint32_t tree_node_token = 0;
         std::size_t level = 0;
         SquareCell bounding_box;
@@ -417,6 +418,8 @@ namespace Packet
 
     struct MonitoringBalanceTreeNeighborInfoAnswer : public Base
     {
+        bool success = false;
+        std::uint32_t tree_node_token = 0;
         std::uint32_t neighbor_node_token = 0;
 
         MonitoringBalanceTreeNeighborInfoAnswer()

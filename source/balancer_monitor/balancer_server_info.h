@@ -4,6 +4,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include "global_types.h"
 #include "balance_tree/common.h"
 #include "fast_index_map.h"
@@ -25,7 +26,7 @@ struct BalancerServerInfo
 
     SquareCell bounding_box;
     std::uint32_t tree_root_token;
-    std::uint32_t wait_info_for_token;
+    std::set<std::uint32_t> wait_info_for_token;
 
     Memory::FastIndexMap<BalancerTreeInfo> token_to_tree_node;
 };
