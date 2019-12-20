@@ -12,6 +12,7 @@
 #include <QDockWidget>
 #include <QPlainTextEdit>
 #include <QTreeView>
+#include <QTableView>
 #include <QThread>
 #include "ui_main_monitor_window.h"
 #include "monitor_udp_connection.h"
@@ -35,6 +36,7 @@ private:
     void onClose();
     void onQuit();
     void onClearLog();
+    void onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
 signals:
     void message(const QString& message);
@@ -52,13 +54,15 @@ private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
     QPlainTextEdit* log = nullptr;
-    QTreeView* tree_view = nullptr;
+    QTreeView* node_tree_view = nullptr;
+    QTableView* property_view = nullptr;
     QAction* connect_act = nullptr;
     QAction* close_act = nullptr;
     MonitorUDPConnection* connection = nullptr;
 
     BalancerServerInfo::Ptr server_info;
-    NodeTree::Ptr node_tree = nullptr;
+    TreeModel::Ptr node_tree = nullptr;
+    ListModel::Ptr property_tree = nullptr;
 };
 
 extern MainMonitorWindow* g_main_window;

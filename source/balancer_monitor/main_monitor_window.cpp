@@ -10,6 +10,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QSpinBox>
+#include <QHeaderView>
 #include <QPushButton>
 #include "main_monitor_window.h"
 
@@ -55,13 +56,23 @@ MainMonitorWindow::MainMonitorWindow()
 
     QDockWidget* tree_node_dock = new QDockWidget(tr("Node Tree"), this);
     tree_node_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
-    tree_view = new QTreeView(tree_node_dock);
-    tree_view->setIndentation(10);
-    tree_view->setHeaderHidden(true);
-    tree_view->setUniformRowHeights(true);
-    tree_node_dock->setWidget(tree_view);
+    node_tree_view = new QTreeView(tree_node_dock);
+    node_tree_view->setIndentation(10);
+    node_tree_view->setHeaderHidden(true);
+    node_tree_view->setUniformRowHeights(true);
+    tree_node_dock->setWidget(node_tree_view);
     addDockWidget(Qt::RightDockWidgetArea, tree_node_dock);
     view_menu->addAction(tree_node_dock->toggleViewAction());
+
+    QDockWidget* property_dock = new QDockWidget(tr("Properties"), this);
+    property_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    property_view = new QTableView(property_dock);
+    property_view->setAutoScroll(true);
+    property_view->verticalHeader()->setVisible(false);
+    property_view->horizontalHeader()->setVisible(false);
+    property_dock->setWidget(property_view);
+    addDockWidget(Qt::RightDockWidgetArea, property_dock);
+    view_menu->addAction(property_dock->toggleViewAction());
 
     QDockWidget* log_dock = new QDockWidget(tr("Log"), this);
     log_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
@@ -164,6 +175,25 @@ void MainMonitorWindow::onClearLog()
     log->clear();
 }
 
+void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    if (!selected.empty() && !selected.front().indexes().empty())
+    {
+        QModelIndex index = selected.front().indexes().at(0);
+        TreeItem* current_item = static_cast<TreeItem*>(index.internalPointer());
+        if (current_item)
+        {
+            NodeTreeItem* current_node_tree = dynamic_cast<NodeTreeItem*>(current_item);
+            if (current_node_tree && current_node_tree->getNode())
+            {
+                property_tree = std::make_shared<ListModel>(getPropertyList(current_node_tree->getNode()));
+                property_view->setModel(property_tree.get());
+                property_view->update();
+            }
+        }
+    }
+}
+
 void MainMonitorWindow::onMessage(const QString& message)
 {
     log->appendPlainText(message);
@@ -247,9 +277,11 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
         if (server_info->wait_info_for_token.empty())
         {
             // We received all balancer node tree
-            node_tree = std::make_shared<NodeTree>(server_info);
-            tree_view->setModel(node_tree.get());
-            tree_view->update();
+            node_tree = std::make_shared<TreeModel>(std::make_shared<NodeTreeItem>(server_info));
+            node_tree_view->setModel(node_tree.get());
+            // TODO: Move this line somewhere to do not connect it each time
+            connect(node_tree_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainMonitorWindow::onNodeTreeSelectionChanged);
+            node_tree_view->update();
         }
     }
     else

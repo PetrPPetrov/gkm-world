@@ -4,11 +4,73 @@
 #include <QString>
 #include "node_tree.h"
 
-NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info)
-    : parent_item(nullptr), node(nullptr)
+TreeItem::~TreeItem()
 {
-    QString node_name = QString("Balancer Server");
-    item_data.push_back(node_name);
+}
+
+TreeItem::TreeItem(const QString& property_value) : TreeItem(property_value, nullptr)
+{
+}
+
+TreeItem::TreeItem(const QString& name, const QString& value) : parent_item(nullptr)
+{
+    item_data.push_back(name);
+    item_data.push_back(value);
+}
+
+TreeItem::TreeItem(const QString& property_value, TreeItem* parent) : parent_item(parent)
+{
+    item_data.push_back(property_value);
+}
+
+TreeItem* TreeItem::child(int row)
+{
+    if (row < 0 || row >= children.size())
+        return nullptr;
+    return children.at(row).get();
+}
+
+int TreeItem::childCount() const
+{
+    return static_cast<int>(children.size());
+}
+
+int TreeItem::columnCount() const
+{
+    return static_cast<int>(item_data.size());
+}
+
+QVariant TreeItem::data(int column) const
+{
+    if (column < 0 || column >= item_data.size())
+        return QVariant();
+    return item_data.at(column);
+}
+
+int TreeItem::row() const
+{
+    if (parent_item)
+    {
+        for (int i = 0; i < parent_item->children.size(); ++i)
+        {
+            if (parent_item->children.at(i).get() == const_cast<TreeItem*>(this))
+            {
+                return i;
+            }
+        }
+    }
+
+    return 0;
+}
+
+TreeItem* TreeItem::parentItem()
+{
+    return parent_item;
+}
+
+NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info)
+    : TreeItem(QString("Balancer Server")), node(nullptr)
+{
     if (server_info->tree_root_token)
     {
         BalancerTreeInfo* root_node = server_info->token_to_tree_node.find(server_info->tree_root_token);
@@ -20,10 +82,8 @@ NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info)
 }
 
 NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info, BalancerTreeInfo* node_, NodeTreeItem* parent)
-    : parent_item(parent), node(node_)
+    : TreeItem(QString("Node %1").arg(node_->token), parent), node(node_)
 {
-    QString node_name = QString("Node %1").arg(node->token);
-    item_data.push_back(node_name);
     for (auto child_token : node->children)
     {
         if (child_token)
@@ -37,63 +97,34 @@ NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info, BalancerT
     }
 }
 
-NodeTreeItem* NodeTreeItem::child(int row)
+BalancerTreeInfo* NodeTreeItem::getNode() const
 {
-    if (row < 0 || row >= children.size())
-        return nullptr;
-    return children.at(row).get();
+    return node;
 }
 
-int NodeTreeItem::childCount() const
+std::vector<TreeItem::Ptr> getPropertyList(BalancerTreeInfo* node)
 {
-    return static_cast<int>(children.size());
+    std::vector<TreeItem::Ptr> result;
+    result.push_back(std::make_shared<TreeItem>(QString("token"), QString("%1").arg(node->token)));
+    result.push_back(std::make_shared<TreeItem>(QString("level"), QString("%1").arg(node->level)));
+    result.push_back(std::make_shared<TreeItem>(QString("bbox.start.x"), QString("%1").arg(node->bounding_box.start.x)));
+    result.push_back(std::make_shared<TreeItem>(QString("bbox.start.y"), QString("%1").arg(node->bounding_box.start.y)));
+    result.push_back(std::make_shared<TreeItem>(QString("bbox.start.size"), QString("%1").arg(node->bounding_box.size)));
+    result.push_back(std::make_shared<TreeItem>(QString("user_count"), QString("%1").arg(node->user_count)));
+    return result;
 }
 
-int NodeTreeItem::columnCount() const
+TreeModel::TreeModel(const TreeItem::Ptr& root_item_, QObject* parent)
+    : QAbstractItemModel(parent), root_item(root_item_)
 {
-    return static_cast<int>(item_data.size());
 }
 
-QVariant NodeTreeItem::data(int column) const
-{
-    if (column < 0 || column >= item_data.size())
-        return QVariant();
-    return item_data.at(column);
-}
-
-int NodeTreeItem::row() const
-{
-    if (parent_item)
-    {
-        for (int i = 0; i < parent_item->children.size(); ++i)
-        {
-            if (parent_item->children.at(i).get() == const_cast<NodeTreeItem*>(this))
-            {
-                return i;
-            }
-        }
-    }
-
-    return 0;
-}
-
-NodeTreeItem* NodeTreeItem::parentItem()
-{
-    return parent_item;
-}
-
-NodeTree::NodeTree(const BalancerServerInfo::Ptr& server_info_, QObject* parent)
-    : QAbstractItemModel(parent), server_info(server_info_)
-{
-    root_item = std::make_shared<NodeTreeItem>(server_info);
-}
-
-QVariant NodeTree::data(const QModelIndex& index, int role) const
+QVariant TreeModel::data(const QModelIndex& index, int role) const
 {
     if (!index.isValid())
         return QVariant();
 
-    NodeTreeItem* item = static_cast<NodeTreeItem*>(index.internalPointer());
+    TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
 
     if (role != Qt::DisplayRole)
         return QVariant();
@@ -101,25 +132,12 @@ QVariant NodeTree::data(const QModelIndex& index, int role) const
     return item->data(index.column());
 }
 
-bool NodeTree::setData(const QModelIndex& index, const QVariant& value, int role)
+bool TreeModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
-    if (role != Qt::CheckStateRole)
-    {
-        return false;
-    }
-
-    NodeTreeItem* item = static_cast<NodeTreeItem*>(index.internalPointer());
-    bool checked = static_cast<Qt::CheckState>(value.toInt()) == Qt::Checked;
-    for (int child_number = 0; child_number < rowCount(index); ++child_number)
-    {
-        QModelIndex child_index = index.child(child_number, 0);
-        setData(child_index, value, Qt::CheckStateRole);
-    }
-    emit dataChanged(index, index);
-    return true;
+    return false;
 }
 
-Qt::ItemFlags NodeTree::flags(const QModelIndex& index) const
+Qt::ItemFlags TreeModel::flags(const QModelIndex& index) const
 {
     if (!index.isValid())
         return Qt::NoItemFlags;
@@ -127,37 +145,37 @@ Qt::ItemFlags NodeTree::flags(const QModelIndex& index) const
     return QAbstractItemModel::flags(index) | Qt::ItemIsUserCheckable;
 }
 
-QModelIndex NodeTree::index(int row, int column, const QModelIndex& index) const
+QModelIndex TreeModel::index(int row, int column, const QModelIndex& index) const
 {
     if (!hasIndex(row, column, index))
     {
         return QModelIndex();
     }
-    NodeTreeItem* item = root_item.get();
+    TreeItem* item = root_item.get();
     if (index.isValid())
     {
-        item = static_cast<NodeTreeItem*>(index.internalPointer())->child(row);
+        item = static_cast<TreeItem*>(index.internalPointer())->child(row);
     }
     return createIndex(row, column, item);
 }
 
-QModelIndex NodeTree::parent(const QModelIndex& index) const
+QModelIndex TreeModel::parent(const QModelIndex& index) const
 {
     if (!index.isValid())
         return QModelIndex();
 
-    NodeTreeItem* current_item = static_cast<NodeTreeItem*>(index.internalPointer());
+    TreeItem* current_item = static_cast<TreeItem*>(index.internalPointer());
     if (current_item == root_item.get())
         return QModelIndex(); // Return invalid index for the root node
 
     return createIndex(current_item->row(), 0, current_item->parentItem());
 }
 
-int NodeTree::rowCount(const QModelIndex& index) const
+int TreeModel::rowCount(const QModelIndex& index) const
 {
     if (index.isValid())
     {
-        return static_cast<NodeTreeItem*>(index.internalPointer())->childCount();
+        return static_cast<TreeItem*>(index.internalPointer())->childCount();
     }
     else
     {
@@ -165,14 +183,74 @@ int NodeTree::rowCount(const QModelIndex& index) const
     }
 }
 
-int NodeTree::columnCount(const QModelIndex& index) const
+int TreeModel::columnCount(const QModelIndex& index) const
 {
     if (index.isValid())
     {
-        return static_cast<NodeTreeItem*>(index.internalPointer())->columnCount();
+        return static_cast<TreeItem*>(index.internalPointer())->columnCount();
     }
     else
     {
         return root_item->columnCount();
     }
+}
+
+ListModel::ListModel(const std::vector<TreeItem::Ptr>& items_, QObject* parent)
+    : QAbstractItemModel(parent), items(items_)
+{
+}
+
+QVariant ListModel::data(const QModelIndex& index, int role) const
+{
+    if (!index.isValid())
+        return QVariant();
+
+    TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
+
+    if (role != Qt::DisplayRole)
+        return QVariant();
+
+    return item->data(index.column());
+}
+
+bool ListModel::setData(const QModelIndex& index, const QVariant& value, int role)
+{
+    return false;
+}
+
+Qt::ItemFlags ListModel::flags(const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return Qt::NoItemFlags;
+
+    return QAbstractItemModel::flags(index);
+}
+
+QModelIndex ListModel::index(int row, int column, const QModelIndex& index) const
+{
+    if (!hasIndex(row, column, index))
+    {
+        return QModelIndex();
+    }
+    if (row >= 0 && row < items.size())
+    {
+        TreeItem* item = items[row].get();
+        return createIndex(row, column, item);
+    }
+    return QModelIndex();
+}
+
+QModelIndex ListModel::parent(const QModelIndex& index) const
+{
+    return QModelIndex();
+}
+
+int ListModel::rowCount(const QModelIndex& index) const
+{
+    return static_cast<int>(items.size());
+}
+
+int ListModel::columnCount(const QModelIndex& index) const
+{
+    return 2;
 }
