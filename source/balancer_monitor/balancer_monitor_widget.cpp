@@ -74,6 +74,10 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
     {
         QColor out_of_global_box(150, 0, 0);
         QBrush out_of_global_box_brush(out_of_global_box, Qt::BDiagPattern);
+
+        QColor inside_selected_node(0, 250, 0);
+        QBrush inside_selected_node_brush(inside_selected_node, Qt::DiagCrossPattern);
+
         SquareCell global_box = server_info->bounding_box;
         for (std::int32_t x = start_cell_x; x <= end_cell_x; ++x)
         {
@@ -88,6 +92,24 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
                         to_screen_h(CELL_SIZE),
                         out_of_global_box_brush
                     );
+                }
+                if (server_info->selected_node && inside(server_info->selected_node->bounding_box, CellIndex(x, y)))
+                {
+                    painter.fillRect(
+                        to_screen_x(x * CELL_SIZE),
+                        to_screen_y(y * CELL_SIZE),
+                        to_screen_w(CELL_SIZE),
+                        to_screen_h(CELL_SIZE),
+                        inside_selected_node_brush
+                    );
+                    //painter.drawText(
+                    //    to_screen_x(x * CELL_SIZE),
+                    //    to_screen_y(y * CELL_SIZE),
+                    //    to_screen_w(CELL_SIZE),
+                    //    to_screen_h(CELL_SIZE),
+                    //    Qt::AlignCenter,
+                    //    "Hello"
+                    //);
                 }
             }
         }

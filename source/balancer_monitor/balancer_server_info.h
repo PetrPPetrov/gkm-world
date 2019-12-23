@@ -5,6 +5,8 @@
 
 #include <memory>
 #include <set>
+#include <map>
+#include <algorithm>
 #include "global_types.h"
 #include "balance_tree/common.h"
 #include "fast_index_map.h"
@@ -18,6 +20,9 @@ struct BalancerTreeInfo
     std::array<std::uint32_t, CountOfChildren> children;
     std::array<std::uint32_t, 4 * (NEIGHBOR_COUNT_AT_SIDE + 1)> neighbors;
     std::uint32_t user_count = 0;
+
+    // (X, Y) -> neighbor token. (X,Y) is cell address of external cell
+    std::map<std::pair<std::int32_t, std::int32_t>, std::list<std::uint32_t>> neighbor_nodes;
 };
 
 struct BalancerServerInfo
@@ -29,4 +34,6 @@ struct BalancerServerInfo
     std::set<std::uint32_t> wait_info_for_token;
 
     Memory::FastIndexMap<BalancerTreeInfo> token_to_tree_node;
+
+    BalancerTreeInfo* selected_node = nullptr;
 };

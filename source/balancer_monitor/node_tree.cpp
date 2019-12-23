@@ -82,7 +82,7 @@ NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info)
 }
 
 NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info, BalancerTreeInfo* node_, NodeTreeItem* parent)
-    : TreeItem(QString("Node %1").arg(node_->token), parent), node(node_)
+    : TreeItem(QString("Node Server %1").arg(node_->token), parent), node(node_)
 {
     for (auto child_token : node->children)
     {
@@ -105,12 +105,31 @@ BalancerTreeInfo* NodeTreeItem::getNode() const
 std::vector<TreeItem::Ptr> getPropertyList(BalancerTreeInfo* node)
 {
     std::vector<TreeItem::Ptr> result;
+    result.push_back(std::make_shared<TreeItem>(QString("type"), QString("node server")));
     result.push_back(std::make_shared<TreeItem>(QString("token"), QString("%1").arg(node->token)));
     result.push_back(std::make_shared<TreeItem>(QString("level"), QString("%1").arg(node->level)));
     result.push_back(std::make_shared<TreeItem>(QString("bbox.start.x"), QString("%1").arg(node->bounding_box.start.x)));
     result.push_back(std::make_shared<TreeItem>(QString("bbox.start.y"), QString("%1").arg(node->bounding_box.start.y)));
     result.push_back(std::make_shared<TreeItem>(QString("bbox.start.size"), QString("%1").arg(node->bounding_box.size)));
     result.push_back(std::make_shared<TreeItem>(QString("user_count"), QString("%1").arg(node->user_count)));
+    if (!node->leaf_node)
+    {
+        for (unsigned char i = ChildFirst; i < ChildLast; ++i)
+        {
+            result.push_back(std::make_shared<TreeItem>(QString("child %1").arg(i), QString("%1").arg(node->children[i])));
+        }
+    }
+    return result;
+}
+
+std::vector<TreeItem::Ptr> getPropertyList(const BalancerServerInfo::Ptr& server_info)
+{
+    std::vector<TreeItem::Ptr> result;
+    result.push_back(std::make_shared<TreeItem>(QString("type"), QString("balancer server")));
+    result.push_back(std::make_shared<TreeItem>(QString("bbox.start.x"), QString("%1").arg(server_info->bounding_box.start.x)));
+    result.push_back(std::make_shared<TreeItem>(QString("bbox.start.y"), QString("%1").arg(server_info->bounding_box.start.y)));
+    result.push_back(std::make_shared<TreeItem>(QString("bbox.start.size"), QString("%1").arg(server_info->bounding_box.size)));
+    result.push_back(std::make_shared<TreeItem>(QString("root node token"), QString("%1").arg(server_info->tree_root_token)));
     return result;
 }
 

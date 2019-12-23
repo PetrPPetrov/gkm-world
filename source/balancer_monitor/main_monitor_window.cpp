@@ -177,6 +177,7 @@ void MainMonitorWindow::onClearLog()
 
 void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
+    bool is_selected = false;
     if (!selected.empty() && !selected.front().indexes().empty())
     {
         QModelIndex index = selected.front().indexes().at(0);
@@ -189,9 +190,26 @@ void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selecte
                 property_tree = std::make_shared<ListModel>(getPropertyList(current_node_tree->getNode()));
                 property_view->setModel(property_tree.get());
                 property_view->update();
+                server_info->selected_node = current_node_tree->getNode();
+                is_selected = true;
+            }
+            else if (current_node_tree && !current_node_tree->getNode())
+            {
+                property_tree = std::make_shared<ListModel>(getPropertyList(server_info));
+                property_view->setModel(property_tree.get());
+                property_view->update();
+                server_info->selected_node = server_info->token_to_tree_node.find(server_info->tree_root_token);
+                is_selected = true;
             }
         }
     }
+    if (!is_selected)
+    {
+        property_tree = nullptr;
+        property_view->setModel(nullptr);
+        server_info->selected_node = nullptr;
+    }
+    update();
 }
 
 void MainMonitorWindow::onMessage(const QString& message)

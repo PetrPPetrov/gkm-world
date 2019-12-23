@@ -51,6 +51,7 @@ private:
 };
 
 std::vector<TreeItem::Ptr> getPropertyList(BalancerTreeInfo* node);
+std::vector<TreeItem::Ptr> getPropertyList(const BalancerServerInfo::Ptr& server_info);
 
 class TreeModel : public QAbstractItemModel
 {
