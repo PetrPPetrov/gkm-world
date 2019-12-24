@@ -420,6 +420,7 @@ namespace Packet
     {
         bool success = false;
         std::uint32_t tree_node_token = 0;
+        CellIndex neighbor_cell;
         std::uint32_t neighbor_node_token = 0;
 
         MonitoringBalanceTreeNeighborInfoAnswer()

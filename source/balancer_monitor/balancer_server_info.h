@@ -32,8 +32,6 @@ struct BalancerServerInfo
     SquareCell bounding_box;
     std::uint32_t tree_root_token;
     std::set<std::uint32_t> wait_info_for_token;
-
     Memory::FastIndexMap<BalancerTreeInfo> token_to_tree_node;
-
     BalancerTreeInfo* selected_node = nullptr;
 };

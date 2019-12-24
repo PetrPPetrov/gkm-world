@@ -27,6 +27,8 @@ MainMonitorWindow::MainMonitorWindow()
             this, SLOT(onMonitoringBalancerServerInfoAnswer(QByteArray)));
     connect(this, SIGNAL(monitoringBalanceTreeInfoAnswer(QByteArray)),
         this, SLOT(onMonitoringBalanceTreeInfoAnswer(QByteArray)));
+    connect(this, SIGNAL(monitoringBalanceTreeNeighborInfoAnswer(QByteArray)),
+        this, SLOT(onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray)));
 
     statusBar()->showMessage(tr("Gkm-World Position: Unknown"));
 
@@ -84,6 +86,20 @@ MainMonitorWindow::MainMonitorWindow()
     addDockWidget(Qt::RightDockWidgetArea, log_dock);
     view_menu->addAction(log_dock->toggleViewAction());
 
+    show_selected_node_act = new QAction(tr("Show Selected Node"), this);
+    show_selected_node_act->setStatusTip(tr("Show Selected Node"));
+    show_selected_node_act->setCheckable(true);
+    show_selected_node_act->setChecked(true);
+    connect(show_selected_node_act, &QAction::triggered, this, &MainMonitorWindow::onShowSelectedNode);
+    view_menu->addAction(show_selected_node_act);
+
+    show_neighbor_act = new QAction(tr("Show Neighbor Nodes"), this);
+    show_neighbor_act->setStatusTip(tr("Show Neighbor Nodes"));
+    show_neighbor_act->setCheckable(true);
+    show_neighbor_act->setChecked(false);
+    connect(show_neighbor_act, &QAction::triggered, this, &MainMonitorWindow::onShowNeighbor);
+    view_menu->addAction(show_neighbor_act);
+
     QAction* clear_log_act = new QAction(tr("Clear Log"), this);
     clear_log_act->setStatusTip(tr("Clear the log"));
     connect(clear_log_act, &QAction::triggered, this, &MainMonitorWindow::onClearLog);
@@ -93,6 +109,11 @@ MainMonitorWindow::MainMonitorWindow()
 QPlainTextEdit* MainMonitorWindow::getLog() const
 {
     return log;
+}
+
+bool MainMonitorWindow::isShowSelectedNode() const
+{
+    return show_selected_node_act->isChecked();
 }
 
 BalancerServerInfo::Ptr MainMonitorWindow::getServerInfo() const
@@ -158,6 +179,10 @@ void MainMonitorWindow::onClose()
     close_act->setEnabled(false);
     connect_act->setEnabled(true);
     server_info = nullptr;
+    node_tree = nullptr;
+    node_tree_view->setModel(nullptr);
+    property_tree = nullptr;
+    property_view->setModel(nullptr);
     update();
 }
 
@@ -168,6 +193,16 @@ void MainMonitorWindow::onQuit()
         onClose();
     }
     QMainWindow::close();
+}
+
+void MainMonitorWindow::onShowSelectedNode(bool checked)
+{
+    update();
+}
+
+void MainMonitorWindow::onShowNeighbor(bool checked)
+{
+    update();
 }
 
 void MainMonitorWindow::onClearLog()
@@ -292,6 +327,22 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
                 }
             }
         }
+        else
+        {
+            for (int x = 0; x < tree_info->bounding_box.size + 2; ++x)
+            {
+                int cur_x = tree_info->bounding_box.start.x - 1 + x;
+                connection->getBalanceTreeNeighborInfo(tree_info->token, cur_x, tree_info->bounding_box.start.y - 1);
+                connection->getBalanceTreeNeighborInfo(tree_info->token, cur_x, tree_info->bounding_box.start.y + tree_info->bounding_box.size);
+            }
+            for (int y = 0; y < tree_info->bounding_box.size; ++y)
+            {
+                int cur_y = tree_info->bounding_box.start.y + y;
+                connection->getBalanceTreeNeighborInfo(tree_info->token, tree_info->bounding_box.start.x - 1, cur_y);
+                connection->getBalanceTreeNeighborInfo(tree_info->token, tree_info->bounding_box.start.x + tree_info->bounding_box.size, cur_y);
+            }
+        }
+
         if (server_info->wait_info_for_token.empty())
         {
             // We received all balancer node tree
@@ -300,6 +351,44 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
             // TODO: Move this line somewhere to do not connect it each time
             connect(node_tree_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainMonitorWindow::onNodeTreeSelectionChanged);
             node_tree_view->update();
+        }
+    }
+    else
+    {
+        log->appendPlainText(tr("invalid data size: %1").arg(data.size()));
+    }
+}
+
+void MainMonitorWindow::onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray data)
+{
+    const Packet::MonitoringBalanceTreeNeighborInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringBalanceTreeNeighborInfoAnswer*>(data.data());
+    if (data.size() >= Packet::getSize(answer))
+    {
+        if (!answer->success)
+        {
+            log->appendPlainText(tr("balance tree node with token %1 does not exist").arg(answer->tree_node_token));
+            return;
+        }
+        log->appendPlainText(tr("received balance tree neighbor info, token %1").arg(answer->tree_node_token));
+        BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(answer->tree_node_token);
+        if (!tree_info)
+        {
+            log->appendPlainText(tr("balance tree node with token %1 is null").arg(answer->tree_node_token));
+            return;
+        }
+        if (!tree_info->leaf_node)
+        {
+            log->appendPlainText(tr("balance tree node with token %1 is not leaf node").arg(answer->tree_node_token));
+            return;
+        }
+        if (tree_info->neighbor_nodes.find(std::pair<std::int32_t, std::int32_t>(answer->neighbor_cell.x, answer->neighbor_cell.y)) == tree_info->neighbor_nodes.end())
+        {
+            tree_info->neighbor_nodes.emplace(std::pair<std::int32_t, std::int32_t>(answer->neighbor_cell.x, answer->neighbor_cell.y), answer->neighbor_node_token);
+        }
+        else
+        {
+            log->appendPlainText(tr("neighbor with coordinates %1, %2 (tree node with token %3) is already received").arg(answer->neighbor_cell.x, answer->neighbor_cell.y, answer->tree_node_token));
+            return;
         }
     }
     else

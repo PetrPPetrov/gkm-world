@@ -107,6 +107,7 @@ void BalancerServer::start()
     setReceiveHandler(Packet::EType::GetNodeInfo, boost::bind(&BalancerServer::onGetNodeInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalancerServerInfo, boost::bind(&BalancerServer::onMonitoringBalancerServerInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeInfo, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringBalanceTreeNeighborInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeNeighborInfo, this, _1));
     io_service.run();
 }
 

@@ -11,6 +11,7 @@ MonitorUDPConnection::MonitorUDPConnection(const QString& host_name, unsigned sh
     connect(this, SIGNAL(close()), this, SLOT(onClose()));
     connect(this, SIGNAL(getBalancerServerInfo()), this, SLOT(onGetBalancerServerInfo()));
     connect(this, SIGNAL(getBalanceTreeInfo(unsigned)), this, SLOT(onGetBalanceTreeInfo(unsigned)));
+    connect(this, SIGNAL(getBalanceTreeNeighborInfo(unsigned, int, int)), this, SLOT(onGetBalanceTreeNeighborInfo(unsigned, int, int)));
     connect(&connection_thread, SIGNAL(started()), this, SLOT(onThreadStart()));
     connection_thread.start();
 }
@@ -32,6 +33,15 @@ void MonitorUDPConnection::onGetBalanceTreeInfo(unsigned tree_node_token)
 {
     Packet::MonitoringBalanceTreeInfo request;
     request.tree_node_token = tree_node_token;
+    socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
+}
+
+void MonitorUDPConnection::onGetBalanceTreeNeighborInfo(unsigned tree_node_token, int x, int y)
+{
+    Packet::MonitoringBalanceTreeNeighborInfo request;
+    request.tree_node_token = tree_node_token;
+    request.neighbor_cell.x = x;
+    request.neighbor_cell.y = y;
     socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
 }
 
@@ -93,6 +103,9 @@ void MonitorUDPConnection::onReadyRead()
                 break;
             case Packet::EType::MonitoringBalanceTreeInfoAnswer:
                 main_window->monitoringBalanceTreeInfoAnswer(buffer);
+                break;
+            case Packet::EType::MonitoringBalanceTreeNeighborInfoAnswer:
+                main_window->monitoringBalanceTreeNeighborInfoAnswer(buffer);
                 break;
             default:
                 break;

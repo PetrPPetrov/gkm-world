@@ -92,6 +92,7 @@ void BalanceTree::getMonitoringInfo(Packet::MonitoringBalanceTreeInfoAnswer* ans
 void BalanceTree::getMonitoringNeighborInfo(Packet::MonitoringBalanceTreeNeighborInfoAnswer* answer, CellIndex neighbor_cell) const
 {
     answer->tree_node_token = token;
+    answer->neighbor_cell = neighbor_cell;
     BalanceTree* neighbor_tree = getNeighbor(neighbor_cell);
     answer->neighbor_node_token = neighbor_tree ? neighbor_tree->getToken() : 0;
     answer->success = true;

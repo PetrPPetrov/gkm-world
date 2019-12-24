@@ -187,7 +187,7 @@ private:
         if (type_code < Packet::TYPE_FIRST || type_code >= Packet::TYPE_LAST)
         {
 #ifdef _DEBUG
-            LOG_DEBUG << "unknown packet type, packet type = " << type_code << std::endl;
+            LOG_DEBUG << "unknown packet type, packet type = " << static_cast<unsigned>(type_code) << std::endl;
 #endif
             return;
         }
@@ -215,7 +215,7 @@ private:
         else
         {
 #ifdef _DEBUG
-            LOG_DEBUG << "unknown packet type, packet type = " << type_code << std::endl;
+            LOG_DEBUG << "unknown packet type, packet type = " << static_cast<unsigned>(type_code) << std::endl;
 #endif
         }
 

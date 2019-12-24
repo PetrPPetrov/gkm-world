@@ -93,7 +93,7 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
                         out_of_global_box_brush
                     );
                 }
-                if (server_info->selected_node && inside(server_info->selected_node->bounding_box, CellIndex(x, y)))
+                if (g_main_window->isShowSelectedNode() && server_info->selected_node && inside(server_info->selected_node->bounding_box, CellIndex(x, y)))
                 {
                     painter.fillRect(
                         to_screen_x(x * CELL_SIZE),

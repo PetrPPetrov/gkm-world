@@ -26,6 +26,7 @@ class MainMonitorWindow : public QMainWindow
 public:
     MainMonitorWindow();
     QPlainTextEdit* getLog() const;
+    bool isShowSelectedNode() const;
     BalancerServerInfo::Ptr getServerInfo() const;
 
 protected:
@@ -35,6 +36,8 @@ private:
     void onConnect();
     void onClose();
     void onQuit();
+    void onShowSelectedNode(bool checked);
+    void onShowNeighbor(bool checked);
     void onClearLog();
     void onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
@@ -43,12 +46,14 @@ signals:
     void connectionFatal(const QString& message);
     void monitoringBalancerServerInfoAnswer(QByteArray data);
     void monitoringBalanceTreeInfoAnswer(QByteArray data);
+    void monitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
 
 private slots:
     void onMessage(const QString& message);
     void onConnectionFatal(const QString& message);
     void onMonitoringBalancerServerInfoAnswer(QByteArray data);
     void onMonitoringBalanceTreeInfoAnswer(QByteArray data);
+    void onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
 
 private:
     bool first_show = true;
@@ -58,6 +63,8 @@ private:
     QTableView* property_view = nullptr;
     QAction* connect_act = nullptr;
     QAction* close_act = nullptr;
+    QAction* show_selected_node_act = nullptr;
+    QAction* show_neighbor_act = nullptr;
     MonitorUDPConnection* connection = nullptr;
 
     BalancerServerInfo::Ptr server_info;
