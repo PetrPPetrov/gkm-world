@@ -116,6 +116,11 @@ bool MainMonitorWindow::isShowSelectedNode() const
     return show_selected_node_act->isChecked();
 }
 
+bool MainMonitorWindow::isShowNeighbor() const
+{
+    return show_neighbor_act->isChecked();
+}
+
 BalancerServerInfo::Ptr MainMonitorWindow::getServerInfo() const
 {
     return server_info;
@@ -378,12 +383,13 @@ void MainMonitorWindow::onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray dat
         }
         if (!tree_info->leaf_node)
         {
-            log->appendPlainText(tr("balance tree node with token %1 is not leaf node").arg(answer->tree_node_token));
+            log->appendPlainText(tr("balance tree node with token %1 is not a leaf node").arg(answer->tree_node_token));
             return;
         }
-        if (tree_info->neighbor_nodes.find(std::pair<std::int32_t, std::int32_t>(answer->neighbor_cell.x, answer->neighbor_cell.y)) == tree_info->neighbor_nodes.end())
+        std::pair<std::int32_t, std::int32_t> coordinate(answer->neighbor_cell.x, answer->neighbor_cell.y);
+        if (tree_info->neighbor_nodes.find(coordinate) == tree_info->neighbor_nodes.end())
         {
-            tree_info->neighbor_nodes.emplace(std::pair<std::int32_t, std::int32_t>(answer->neighbor_cell.x, answer->neighbor_cell.y), answer->neighbor_node_token);
+            tree_info->neighbor_nodes.emplace(coordinate, answer->neighbor_node_token);
         }
         else
         {

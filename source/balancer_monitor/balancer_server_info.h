@@ -22,7 +22,7 @@ struct BalancerTreeInfo
     std::uint32_t user_count = 0;
 
     // (X, Y) -> neighbor token. (X,Y) is cell address of external cell
-    std::map<std::pair<std::int32_t, std::int32_t>, std::list<std::uint32_t>> neighbor_nodes;
+    std::map<std::pair<std::int32_t, std::int32_t>, std::uint32_t> neighbor_nodes;
 };
 
 struct BalancerServerInfo

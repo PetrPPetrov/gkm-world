@@ -27,6 +27,7 @@ public:
     MainMonitorWindow();
     QPlainTextEdit* getLog() const;
     bool isShowSelectedNode() const;
+    bool isShowNeighbor() const;
     BalancerServerInfo::Ptr getServerInfo() const;
 
 protected:

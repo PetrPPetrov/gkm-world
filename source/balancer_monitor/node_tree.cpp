@@ -82,7 +82,7 @@ NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info)
 }
 
 NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info, BalancerTreeInfo* node_, NodeTreeItem* parent)
-    : TreeItem(QString("Node Server %1").arg(node_->token), parent), node(node_)
+    : TreeItem(QString(node_->leaf_node ? "Node Server %1" : "Group Node %1").arg(node_->token), parent), node(node_)
 {
     for (auto child_token : node->children)
     {
@@ -105,7 +105,14 @@ BalancerTreeInfo* NodeTreeItem::getNode() const
 std::vector<TreeItem::Ptr> getPropertyList(BalancerTreeInfo* node)
 {
     std::vector<TreeItem::Ptr> result;
-    result.push_back(std::make_shared<TreeItem>(QString("type"), QString("node server")));
+    if (node->leaf_node)
+    {
+        result.push_back(std::make_shared<TreeItem>(QString("type"), QString("node server")));
+    }
+    else
+    {
+        result.push_back(std::make_shared<TreeItem>(QString("type"), QString("group node")));
+    }
     result.push_back(std::make_shared<TreeItem>(QString("token"), QString("%1").arg(node->token)));
     result.push_back(std::make_shared<TreeItem>(QString("level"), QString("%1").arg(node->level)));
     result.push_back(std::make_shared<TreeItem>(QString("bbox.start.x"), QString("%1").arg(node->bounding_box.start.x)));

@@ -93,23 +93,34 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
                         out_of_global_box_brush
                     );
                 }
-                if (g_main_window->isShowSelectedNode() && server_info->selected_node && inside(server_info->selected_node->bounding_box, CellIndex(x, y)))
+                if (g_main_window->isShowSelectedNode() && server_info->selected_node)
                 {
-                    painter.fillRect(
-                        to_screen_x(x * CELL_SIZE),
-                        to_screen_y(y * CELL_SIZE),
-                        to_screen_w(CELL_SIZE),
-                        to_screen_h(CELL_SIZE),
-                        inside_selected_node_brush
-                    );
-                    //painter.drawText(
-                    //    to_screen_x(x * CELL_SIZE),
-                    //    to_screen_y(y * CELL_SIZE),
-                    //    to_screen_w(CELL_SIZE),
-                    //    to_screen_h(CELL_SIZE),
-                    //    Qt::AlignCenter,
-                    //    "Hello"
-                    //);
+                    if (inside(server_info->selected_node->bounding_box, CellIndex(x, y)))
+                    {
+                        painter.fillRect(
+                            to_screen_x(x * CELL_SIZE),
+                            to_screen_y(y * CELL_SIZE),
+                            to_screen_w(CELL_SIZE),
+                            to_screen_h(CELL_SIZE),
+                            inside_selected_node_brush
+                        );
+                    }
+                    if (g_main_window->isShowNeighbor())
+                    {
+                        std::pair<std::int32_t, std::int32_t> coordinate(x, y);
+                        auto find_neighbor = server_info->selected_node->neighbor_nodes.find(coordinate);
+                        if (find_neighbor != server_info->selected_node->neighbor_nodes.end())
+                        {
+                            painter.drawText(
+                                to_screen_x(x * CELL_SIZE),
+                                to_screen_y(y * CELL_SIZE),
+                                to_screen_w(CELL_SIZE),
+                                to_screen_h(CELL_SIZE),
+                                Qt::AlignCenter,
+                                tr("Neighbor %1").arg(find_neighbor->second)
+                            );
+                        }
+                    }
                 }
             }
         }
