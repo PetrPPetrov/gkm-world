@@ -40,6 +40,8 @@ private:
     void onShowSelectedNode(bool checked);
     void onShowNeighbor(bool checked);
     void onClearLog();
+    void onStaticSplit();
+    void onStaticMerge();
     void onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
 signals:

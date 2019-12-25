@@ -12,7 +12,7 @@
 class UDPConnection
 {
 public:
-    UDPConnection(const std::string& ip_address, unsigned short port_number);
+    UDPConnection(const std::string& ip_address, std::uint16_t port_number);
     void login(const std::string& email, const std::string& password, const std::string& full_name);
     void logout();
     void initializePosition(const PlayerLocation& player_location);

@@ -29,7 +29,7 @@ ProxyServer::ProxyServer() :
 #endif
 
     socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port_number));
-    balancer_server_end_point = boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::from_string(balancer_server_ip), balancer_server_port_number);
+    balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
 
     loadRegisteredUsers(registered_users_file_name);
 }
@@ -344,7 +344,7 @@ bool ProxyServer::onInitializePositionInternalAnswer(size_t received_bytes)
 
     user_online_info->in_game = true;
 
-    user_online_info->node_server_end_point = boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4(packet->node_server_address), packet->node_server_port_number);
+    user_online_info->node_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(packet->node_server_address), packet->node_server_port_number);
 
     if (user_online_info->node_server_end_point.address().is_loopback())
     {

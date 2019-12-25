@@ -98,7 +98,7 @@ void program(int argc, char* argv[])
     }
 
     std::string server_ip_address = "127.0.0.1";
-    unsigned short server_port_number = 17012;
+    std::uint16_t server_port_number = 17012;
     std::list<double> control_point_x_positions;
     std::list<double> control_point_y_positions;
     g_player_location.x_pos = 5000;

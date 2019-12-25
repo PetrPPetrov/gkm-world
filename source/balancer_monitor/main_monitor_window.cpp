@@ -104,6 +104,18 @@ MainMonitorWindow::MainMonitorWindow()
     clear_log_act->setStatusTip(tr("Clear the log"));
     connect(clear_log_act, &QAction::triggered, this, &MainMonitorWindow::onClearLog);
     view_menu->addAction(clear_log_act);
+
+    QMenu* action_menu = menuBar()->addMenu(tr("&Action"));
+
+    QAction* static_split_act = new QAction(tr("Static Split"), this);
+    static_split_act->setStatusTip(tr("Static Split of the Selected Node Server"));
+    connect(static_split_act, &QAction::triggered, this, &MainMonitorWindow::onStaticSplit);
+    action_menu->addAction(static_split_act);
+
+    QAction* static_merge_act = new QAction(tr("Static Merge"), this);
+    static_merge_act->setStatusTip(tr("Static Merge of the Selected Group Node"));
+    connect(static_merge_act, &QAction::triggered, this, &MainMonitorWindow::onStaticMerge);
+    action_menu->addAction(static_merge_act);
 }
 
 QPlainTextEdit* MainMonitorWindow::getLog() const
@@ -172,7 +184,7 @@ void MainMonitorWindow::onConnect()
     {
         connect_act->setEnabled(false);
         close_act->setEnabled(true);
-        connection = new MonitorUDPConnection(host_name_edit.text(), static_cast<unsigned short>(port_number_edit.value()), this);
+        connection = new MonitorUDPConnection(host_name_edit.text(), static_cast<std::uint16_t>(port_number_edit.value()), this);
     }
 }
 
@@ -213,6 +225,14 @@ void MainMonitorWindow::onShowNeighbor(bool checked)
 void MainMonitorWindow::onClearLog()
 {
     log->clear();
+}
+
+void MainMonitorWindow::onStaticSplit()
+{
+}
+
+void MainMonitorWindow::onStaticMerge()
+{
 }
 
 void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
@@ -320,6 +340,8 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
         tree_info->leaf_node = answer->leaf_node;
         tree_info->level = answer->level;
         tree_info->user_count = answer->user_count;
+        tree_info->node_server_address = ip_address_t(answer->node_server_address);
+        tree_info->node_server_port_number = answer->node_server_port_number;
         server_info->wait_info_for_token.erase(answer->tree_node_token);
         if (!tree_info->leaf_node)
         {

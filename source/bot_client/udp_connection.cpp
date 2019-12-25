@@ -3,7 +3,7 @@
 
 #include "udp_connection.h"
 
-UDPConnection::UDPConnection(const std::string& ip_address, unsigned short port_number)
+UDPConnection::UDPConnection(const std::string& ip_address, std::uint16_t port_number)
     : end_point(boost::asio::ip::address::from_string(ip_address), port_number), socket(io_service)
 {
     socket.connect(end_point);

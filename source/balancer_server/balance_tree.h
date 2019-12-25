@@ -22,7 +22,7 @@ class BalanceTree
     std::array<BalanceTree*, CountOfChildren> children;
     std::array<BalanceTree*, 4 * (NEIGHBOR_COUNT_AT_SIDE + 1)> neighbors;
     std::uint32_t user_count = 0;
-    unsigned short node_server_port_number = 0;
+    std::uint16_t node_server_port_number = 0;
     boost::asio::ip::udp::endpoint node_server_end_point;
 
 public:

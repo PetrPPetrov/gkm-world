@@ -5,11 +5,15 @@
 
 #include <cstdint>
 #include <boost/asio/ip/address_v4.hpp>
+#include <boost/asio/ip/address_v6.hpp>
 #include "global_types.h"
 #include "logic.h"
 #include "protocol_enum.h"
 #include "mac_address.h"
 #include "balance_tree/common.h"
+
+typedef boost::asio::ip::address_v6 ip_address_t;
+#define to_v to_v6
 
 #pragma pack(push, 1)
 
@@ -176,8 +180,8 @@ namespace Packet
     struct InitializePositionInternalAnswer : public Base
     {
         bool success = false;
-        boost::asio::ip::address_v4::bytes_type node_server_address = { 0 };
-        unsigned short node_server_port_number = 0;
+        ip_address_t::bytes_type node_server_address = { 0 };
+        std::uint16_t node_server_port_number = 0;
         std::uint32_t user_token = 0;
         PlayerLocation corrected_location;
         std::uint32_t client_packet_number = 0;
@@ -259,8 +263,8 @@ namespace Packet
     struct AddNodeServerToProxy : public Base
     {
         std::uint32_t user_token = 0;
-        boost::asio::ip::address_v4::bytes_type node_server_address;
-        unsigned short node_server_port;
+        ip_address_t::bytes_type node_server_address;
+        std::uint16_t node_server_port;
         std::uint32_t node_server_token;
 
         AddNodeServerToProxy()
@@ -273,8 +277,8 @@ namespace Packet
     struct RemoveNodeServerFromProxy : public Base
     {
         std::uint32_t user_token = 0;
-        boost::asio::ip::address_v4::bytes_type node_server_address;
-        unsigned short node_server_port;
+        ip_address_t::bytes_type node_server_address;
+        std::uint16_t node_server_port;
         std::uint32_t node_server_token;
 
         RemoveNodeServerFromProxy()
@@ -297,10 +301,10 @@ namespace Packet
     {
         bool success = false;
         SquareCell bounding_box;
-        std::array<boost::asio::ip::address_v4::bytes_type, 12> neighbor_addresses;
-        std::array<unsigned short, 12> neighbor_ports;
+        std::array<ip_address_t::bytes_type, 12> neighbor_addresses;
+        std::array<std::uint16_t, 12> neighbor_ports;
         std::array<std::uint32_t, 12> neighbor_tokens;
-        boost::asio::ip::address_v4::bytes_type parent_address;
+        ip_address_t::bytes_type parent_address;
         unsigned short parent_port;
         std::uint32_t parent_token;
 
@@ -313,7 +317,7 @@ namespace Packet
 
     struct SpawnNodeServer : public Base
     {
-        unsigned short node_server_port;
+        std::uint16_t node_server_port;
 
         SpawnNodeServer()
         {
@@ -334,8 +338,8 @@ namespace Packet
     struct SplitNode : public Base
     {
         SquareCell bounding_box;
-        std::array<boost::asio::ip::address_v4::bytes_type, 12> neighbor_addresses;
-        std::array<unsigned short, 12> neighbor_ports;
+        std::array<ip_address_t::bytes_type, 12> neighbor_addresses;
+        std::array<std::uint16_t, 12> neighbor_ports;
         std::array<std::uint32_t, 12> neighbor_tokens;
 
         SplitNode()
@@ -395,6 +399,8 @@ namespace Packet
         bool leaf_node = true;
         std::array<std::uint32_t, CountOfChildren> children;
         std::uint32_t user_count = 0;
+        ip_address_t::bytes_type node_server_address;
+        std::uint16_t node_server_port_number = 0;
 
         MonitoringBalanceTreeInfoAnswer()
         {

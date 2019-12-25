@@ -4,7 +4,7 @@
 #include "monitor_udp_connection.h"
 #include "main_monitor_window.h"
 
-MonitorUDPConnection::MonitorUDPConnection(const QString& host_name, unsigned short port_number, MainMonitorWindow* main_window_)
+MonitorUDPConnection::MonitorUDPConnection(const QString& host_name, std::uint16_t port_number, MainMonitorWindow* main_window_)
     : QObject(nullptr), main_window(main_window_), balancer_server_host_name(host_name), balancer_server_port_number(port_number)
 {
     moveToThread(&connection_thread);

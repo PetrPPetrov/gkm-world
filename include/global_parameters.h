@@ -15,8 +15,8 @@ const std::int32_t MINIMAL_NODE_SIZE = 4;
 const std::int32_t MAXIMAL_NODE_SIZE = 2048;
 
 const std::size_t PACKET_POOL_SIZE = 4096;
-const unsigned short NODE_SERVER_PORT_NUMBER_BASE = 17014;
-const unsigned short NODE_SERVER_PORT_NUMBER_MAX = 50000;
+const std::uint16_t NODE_SERVER_PORT_NUMBER_BASE = 17014;
+const std::uint16_t NODE_SERVER_PORT_NUMBER_MAX = 50000;
 
 const std::uint32_t NODE_MAX_USER = 1000;
 const std::uint32_t NODE_MIN_USER = 100;

@@ -22,7 +22,7 @@
 #include <windows.h>
 #endif
 
-NodeServer::NodeServer(unsigned short port_number_, LogicThread& logic_thread_) :
+NodeServer::NodeServer(std::uint16_t port_number_, LogicThread& logic_thread_) :
     port_number(port_number_), logic_thread(logic_thread_), signals(io_service, SIGINT, SIGTERM)
 {
     socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port_number));
@@ -37,9 +37,9 @@ NodeServer::NodeServer(unsigned short port_number_, LogicThread& logic_thread_) 
     LOG_DEBUG << "balancer_server_port_number " << balancer_server_port_number << std::endl;
 #endif
 
-    balancer_server_end_point = boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::from_string(balancer_server_ip), balancer_server_port_number);
+    balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
 
-    node_server_end_point = boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4(), port_number);
+    node_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(), port_number);
     node_server_token = 0;
 
     node_server_path = findNodeServerPath();
@@ -120,7 +120,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
             answer->user_token = new_user->user_location.user_token;
             answer->client_packet_number = packet->client_packet_number;
             answer->corrected_location = new_user->user_location;
-            answer->node_server_address = node_server_end_point.address().to_v4().to_bytes();
+            answer->node_server_address = node_server_end_point.address().to_v().to_bytes();
             answer->node_server_port_number = node_server_end_point.port();
             answer->proxy_packet_number = packet->proxy_packet_number;
             answer->success = true;
@@ -135,7 +135,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
             auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->packet_number);
             answer->user_token = packet->user_token;
             answer->client_packet_number = packet->client_packet_number;
-            answer->node_server_address = node_server_end_point.address().to_v4().to_bytes();
+            answer->node_server_address = node_server_end_point.address().to_v().to_bytes();
             answer->node_server_port_number = node_server_end_point.port();
             answer->proxy_packet_number = packet->proxy_packet_number;
             answer->success = false;
@@ -153,7 +153,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
         answer->user_token = packet->user_token;
         answer->client_packet_number = packet->client_packet_number;
         answer->corrected_location = user_location->user_location;
-        answer->node_server_address = node_server_end_point.address().to_v4().to_bytes();
+        answer->node_server_address = node_server_end_point.address().to_v().to_bytes();
         answer->node_server_port_number = node_server_end_point.port();
         answer->proxy_packet_number = packet->proxy_packet_number;
         answer->success = true;
@@ -221,7 +221,7 @@ bool NodeServer::onGetNodeInfoAnswer(size_t received_bytes)
     for (size_t i = NeighborFirst; i < NeighborLast; ++i)
     {
         neighbor_end_points[i] = boost::asio::ip::udp::endpoint(
-            boost::asio::ip::address_v4(packet->neighbor_addresses[i]), packet->neighbor_ports[i]);
+            ip_address_t(packet->neighbor_addresses[i]), packet->neighbor_ports[i]);
         neighbor_tokens[i] = packet->neighbor_tokens[i];
 #ifdef _DEBUG
         LOG_DEBUG << "neighbor_end_points[ " << i << "] " << neighbor_end_points[i] << std::endl;
@@ -229,7 +229,7 @@ bool NodeServer::onGetNodeInfoAnswer(size_t received_bytes)
 #endif
     }
     parent_end_point = boost::asio::ip::udp::endpoint(
-        boost::asio::ip::address_v4(packet->parent_address), packet->parent_port);
+        ip_address_t(packet->parent_address), packet->parent_port);
     parent_token = packet->parent_token;
 #ifdef _DEBUG
     LOG_DEBUG << "parent_end_point " << parent_end_point << std::endl;

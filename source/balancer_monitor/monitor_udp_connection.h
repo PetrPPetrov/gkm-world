@@ -16,7 +16,7 @@ class MonitorUDPConnection : public QObject
     Q_OBJECT
 
 public:
-    MonitorUDPConnection(const QString& host_name, unsigned short port_number, MainMonitorWindow* main_window);
+    MonitorUDPConnection(const QString& host_name, std::uint16_t port_number, MainMonitorWindow* main_window);
 
 signals:
     void close();
@@ -40,5 +40,5 @@ private:
     QUdpSocket* socket = nullptr;
     QString balancer_server_host_name;
     QHostAddress balancer_server_host_address;
-    unsigned short balancer_server_port_number;
+    std::uint16_t balancer_server_port_number;
 };

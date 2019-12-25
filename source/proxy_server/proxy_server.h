@@ -14,12 +14,12 @@
 
 class ProxyServer : public Transport
 {
-    unsigned short port_number = 17012;
+    std::uint16_t port_number = 17012;
     std::string registered_users_file_name = "users.txt";
     boost::asio::signal_set signals;
 
     std::string balancer_server_ip = "127.0.0.1";
-    unsigned short balancer_server_port_number = 17013;
+    std::uint16_t balancer_server_port_number = 17013;
     boost::asio::ip::udp::endpoint balancer_server_end_point;
 
     typedef std::map<std::string, UserInfo::ptr> login_to_user_info_t;

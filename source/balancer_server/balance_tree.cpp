@@ -86,6 +86,7 @@ void BalanceTree::getMonitoringInfo(Packet::MonitoringBalanceTreeInfoAnswer* ans
         answer->children[i] = children[i] ? children[i]->getToken() : 0;
     }
     answer->user_count = user_count;
+    answer->node_server_port_number = node_server_port_number;
     answer->success = true;
 }
 

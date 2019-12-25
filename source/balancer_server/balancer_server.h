@@ -23,7 +23,7 @@ struct NodeServerInfo
     typedef std::shared_ptr<SelfType> Ptr;
 
     Network::MacAddress mac_address;
-    boost::asio::ip::address_v4 ip_address;
+    ip_address_t ip_address;
     unsigned short max_process_count = 1;
     bool power_on = false;
 
@@ -33,14 +33,13 @@ struct NodeServerInfo
 struct NodeInfo
 {
     Network::MacAddress mac_address;
-    boost::asio::ip::address_v4 ip_address;
-    unsigned short port_number = NODE_SERVER_PORT_NUMBER_BASE;
+    ip_address_t ip_address;
+    std::uint16_t port_number = NODE_SERVER_PORT_NUMBER_BASE;
 };
 
 class BalancerServer : public Transport
 {
-    bool v6_listen = false;
-    unsigned short port_number = 17013;
+    std::uint16_t port_number = 17013;
     boost::asio::signal_set signals;
     bool proxy_server_end_point_initialized = false;
     boost::asio::ip::udp::endpoint proxy_server_end_point;
@@ -55,7 +54,7 @@ class BalancerServer : public Transport
     typedef std::map<boost::asio::ip::udp::endpoint, BalanceTree*> end_point_to_tree_t;
     end_point_to_tree_t end_point_to_tree;
 
-    typedef std::map<boost::asio::ip::address_v4::bytes_type, NodeServerInfo::Ptr> available_node_servers_t;
+    typedef std::map<ip_address_t::bytes_type, NodeServerInfo::Ptr> available_node_servers_t;
     available_node_servers_t available_node_servers;
     std::list<NodeInfo> available_nodes;
 

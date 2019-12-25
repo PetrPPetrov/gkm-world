@@ -126,6 +126,17 @@ std::vector<TreeItem::Ptr> getPropertyList(BalancerTreeInfo* node)
             result.push_back(std::make_shared<TreeItem>(QString("child %1").arg(i), QString("%1").arg(node->children[i])));
         }
     }
+    else
+    {
+        if (node->node_server_port_number == 0)
+        {
+            result.push_back(std::make_shared<TreeItem>(QString("is_running"), QString("false")));
+        }
+        else
+        {
+            result.push_back(std::make_shared<TreeItem>(QString("is_running"), QString("true")));
+        }
+    }
     return result;
 }
 

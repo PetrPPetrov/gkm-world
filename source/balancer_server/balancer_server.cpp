@@ -26,7 +26,6 @@ BalancerServer::BalancerServer() :
 
     std::ifstream config_file("balancer_server.cfg");
     ConfigurationReader config_reader;
-    config_reader.addParameter("balancer_server_v6_listen", v6_listen);
     config_reader.addParameter("balancer_server_port_number", port_number);
     config_reader.addParameter("global_bounding_box_start_x", global_bounding_box_start_x);
     config_reader.addParameter("global_bounding_box_start_y", global_bounding_box_start_y);
@@ -48,7 +47,7 @@ BalancerServer::BalancerServer() :
     {
         NodeServerInfo::Ptr new_node_server_info = std::make_shared<NodeServerInfo>();
         new_node_server_info->mac_address = *mac_address_it;
-        new_node_server_info->ip_address = boost::asio::ip::address_v4::from_string(*ip_address_it++);
+        new_node_server_info->ip_address = ip_address_t::from_string(*ip_address_it++);
         if (new_node_server_info->ip_address.is_loopback())
         {
             // Local node server is always power on
@@ -61,10 +60,7 @@ BalancerServer::BalancerServer() :
         LOG_INFO << "node_server_max_process_count " << new_node_server_info->max_process_count << std::endl;
     }
 
-    socket = boost::asio::ip::udp::socket(
-        io_service,
-        boost::asio::ip::udp::endpoint(v6_listen ? boost::asio::ip::udp::v6() : boost::asio::ip::udp::v4(), port_number)
-    );
+    socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(ip_address_t(), port_number));
 
     global_bounding_box.start.x = global_bounding_box_start_x;
     global_bounding_box.start.y = global_bounding_box_start_y;
@@ -255,14 +251,14 @@ bool BalancerServer::onInitializePositionInternalAnswer(size_t received_bytes)
     const auto packet = getReceiveBufferAs<Packet::InitializePositionInternalAnswer>();
 #ifdef _DEBUG
     LOG_DEBUG << "user token " << packet->user_token << std::endl;
-    LOG_DEBUG << "node server ip " << boost::asio::ip::address_v4(packet->node_server_address) << std::endl;
+    LOG_DEBUG << "node server ip " << ip_address_t(packet->node_server_address) << std::endl;
 #endif
 
     auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->proxy_packet_number);
     answer->user_token = packet->user_token;
     answer->client_packet_number = packet->client_packet_number;
     answer->corrected_location = packet->corrected_location;
-    answer->node_server_address = remote_end_point.address().to_v4().to_bytes();
+    answer->node_server_address = remote_end_point.address().to_v().to_bytes();
     answer->node_server_port_number = remote_end_point.port();
     answer->success = packet->success;
     standardSendTo(answer, proxy_server_end_point);
@@ -291,14 +287,14 @@ bool BalancerServer::onGetNodeInfo(size_t received_bytes)
     auto node_it = end_point_to_tree.find(remote_end_point);
     if (node_it != end_point_to_tree.end())
     {
-        auto found_node_info_it = available_node_servers.find(remote_end_point.address().to_v4().to_bytes());
+        auto found_node_info_it = available_node_servers.find(remote_end_point.address().to_v().to_bytes());
         if (found_node_info_it != available_node_servers.end())
         {
             if (!found_node_info_it->second->power_on)
             {
                 found_node_info_it->second->power_on = true;
                 // Add other node info for this node server
-                for (unsigned short port_number = NODE_SERVER_PORT_NUMBER_BASE + 1; port_number < NODE_SERVER_PORT_NUMBER_BASE + found_node_info_it->second->max_process_count; ++port_number)
+                for (std::uint16_t port_number = NODE_SERVER_PORT_NUMBER_BASE + 1; port_number < NODE_SERVER_PORT_NUMBER_BASE + found_node_info_it->second->max_process_count; ++port_number)
                 {
                     NodeInfo new_node_info;
                     new_node_info.ip_address = found_node_info_it->second->ip_address;
@@ -383,7 +379,7 @@ void BalancerServer::initAvailableNodes()
     {
         if (node_server_info.second->ip_address.is_loopback())
         {
-            for (unsigned short port_number = NODE_SERVER_PORT_NUMBER_BASE; port_number < NODE_SERVER_PORT_NUMBER_BASE + node_server_info.second->max_process_count; ++port_number)
+            for (std::uint16_t port_number = NODE_SERVER_PORT_NUMBER_BASE; port_number < NODE_SERVER_PORT_NUMBER_BASE + node_server_info.second->max_process_count; ++port_number)
             {
                 NodeInfo new_node_info;
                 new_node_info.ip_address = node_server_info.second->ip_address;

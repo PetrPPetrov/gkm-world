@@ -16,11 +16,11 @@
 
 class NodeServer : public Transport
 {
-    const unsigned short port_number;
+    std::uint16_t port_number;
     boost::asio::signal_set signals;
 
     std::string balancer_server_ip = "127.0.0.1";
-    unsigned short balancer_server_port_number = 17013;
+    std::uint16_t balancer_server_port_number = 17013;
     boost::asio::ip::udp::endpoint balancer_server_end_point;
 
     typedef Memory::FastIndexMap<UserLocation> uuid_to_user_location_t;
@@ -40,7 +40,7 @@ class NodeServer : public Transport
     boost::filesystem::path node_server_path;
 
 public:
-    NodeServer(unsigned short port_number, LogicThread& logic_thread);
+    NodeServer(std::uint16_t port_number, LogicThread& logic_thread);
     void start();
 
 private:

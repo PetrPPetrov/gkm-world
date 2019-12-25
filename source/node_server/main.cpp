@@ -12,10 +12,10 @@ int main(int argc, char** argv)
 {
     std::cout << "Gkm-World Node Server Copyright (c) 2018 by GkmSoft" << std::endl;
 
-    unsigned short port_number = 17014;
+    std::uint16_t port_number = 17014;
     if (argc >= 2)
     {
-        port_number = static_cast<unsigned short>(std::stoi(argv[1]));
+        port_number = static_cast<std::uint16_t>(std::stoi(argv[1]));
     }
     else
     {
