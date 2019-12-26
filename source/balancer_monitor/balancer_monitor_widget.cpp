@@ -8,6 +8,8 @@
 #include <iomanip>
 #include <string>
 #include <sstream>
+#include <vector>
+#include <boost/polygon/polygon.hpp>
 #include <QPainter>
 #include <QApplication>
 #include <QStatusBar>
@@ -72,58 +74,178 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
     auto server_info = g_main_window->getServerInfo();
     if (server_info)
     {
+        typedef boost::polygon::point_data<std::int32_t> Point;
+        typedef boost::polygon::rectangle_data<std::int32_t> Rectangle;
+        typedef boost::polygon::polygon_90_data<std::int32_t> Polygon90;
+        typedef boost::polygon::polygon_90_set_data<std::int32_t> Polygon90Set;
+        using namespace boost::polygon::operators;
+
+        Polygon90Set result_outside_polygon;
+
+        Rectangle outer_rectangle(start_cell_x, start_cell_y, end_cell_x, end_cell_y);
+        result_outside_polygon += outer_rectangle;
+
+        SquareCell global_box = server_info->bounding_box;
+        Rectangle global_box_rectangle(global_box.start.x, global_box.start.y, global_box.start.x + global_box.size, global_box.start.y + global_box.size);
+        result_outside_polygon -= global_box_rectangle;
+
         QColor out_of_global_box(150, 0, 0);
         QBrush out_of_global_box_brush(out_of_global_box, Qt::BDiagPattern);
 
-        QColor inside_selected_node(0, 250, 0);
-        QBrush inside_selected_node_brush(inside_selected_node, Qt::DiagCrossPattern);
-
-        SquareCell global_box = server_info->bounding_box;
-        for (std::int32_t x = start_cell_x; x <= end_cell_x; ++x)
+        std::vector<Rectangle> rectangles;
+        result_outside_polygon.get(rectangles);
+        const size_t rectangle_count = rectangles.size();
+        for (size_t i = 0; i < rectangle_count; ++i)
         {
-            for (std::int32_t y = start_cell_y; y <= end_cell_y; ++y)
+            Rectangle& rectangle = rectangles[i];
+            painter.fillRect(
+                to_screen_x(xl(rectangle) * CELL_SIZE),
+                to_screen_y(yl(rectangle) * CELL_SIZE),
+                to_screen_w((xh(rectangle) - xl(rectangle)) * CELL_SIZE),
+                to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
+                out_of_global_box_brush
+            );
+        }
+
+        if (g_main_window->isShowSelectedNode() && server_info->selected_node)
+        {
+            Polygon90Set result_selection_polygon;
+            SquareCell selection_box = server_info->selected_node->bounding_box;
+            Rectangle selection_box_rectangle(selection_box.start.x, selection_box.start.y, selection_box.start.x + selection_box.size, selection_box.start.y + selection_box.size);
+            result_selection_polygon += selection_box_rectangle;
+            result_selection_polygon *= outer_rectangle;
+
+            QColor inside_selected_node(0, 250, 0);
+            QBrush inside_selected_node_brush(inside_selected_node, Qt::DiagCrossPattern);
+
+            rectangles.clear();
+            result_selection_polygon.get(rectangles);
+            const size_t rectangle_count = rectangles.size();
+            for (size_t i = 0; i < rectangle_count; ++i)
             {
-                if (!inside(global_box, CellIndex(x, y)))
-                {
-                    painter.fillRect(
-                        to_screen_x(x * CELL_SIZE),
-                        to_screen_y(y * CELL_SIZE),
-                        to_screen_w(CELL_SIZE),
-                        to_screen_h(CELL_SIZE),
-                        out_of_global_box_brush
-                    );
-                }
-                if (g_main_window->isShowSelectedNode() && server_info->selected_node)
-                {
-                    if (inside(server_info->selected_node->bounding_box, CellIndex(x, y)))
-                    {
-                        painter.fillRect(
-                            to_screen_x(x * CELL_SIZE),
-                            to_screen_y(y * CELL_SIZE),
-                            to_screen_w(CELL_SIZE),
-                            to_screen_h(CELL_SIZE),
-                            inside_selected_node_brush
-                        );
-                    }
-                    if (g_main_window->isShowNeighbor())
-                    {
-                        std::pair<std::int32_t, std::int32_t> coordinate(x, y);
-                        auto find_neighbor = server_info->selected_node->neighbor_nodes.find(coordinate);
-                        if (find_neighbor != server_info->selected_node->neighbor_nodes.end())
-                        {
-                            painter.drawText(
-                                to_screen_x(x * CELL_SIZE),
-                                to_screen_y(y * CELL_SIZE),
-                                to_screen_w(CELL_SIZE),
-                                to_screen_h(CELL_SIZE),
-                                Qt::AlignCenter,
-                                tr("Neighbor %1").arg(find_neighbor->second)
-                            );
-                        }
-                    }
-                }
+                Rectangle& rectangle = rectangles[i];
+                painter.fillRect(
+                    to_screen_x(xl(rectangle) * CELL_SIZE),
+                    to_screen_y(yl(rectangle) * CELL_SIZE),
+                    to_screen_w((xh(rectangle) - xl(rectangle)) * CELL_SIZE),
+                    to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
+                    inside_selected_node_brush
+                );
             }
         }
+
+
+        //std::vector<Point> points(4);
+
+        //QColor inside_selected_node(0, 250, 0);
+        //QBrush inside_selected_node_brush(inside_selected_node, Qt::DiagCrossPattern);
+
+        //for (std::int32_t x = start_cell_x; x <= end_cell_x; ++x)
+        //{
+        //    for (std::int32_t y = start_cell_y; y <= end_cell_y; ++y)
+        //    {
+        //        if (!inside(global_box, CellIndex(x, y)))
+        //        {
+        //            using namespace boost::polygon::operators;
+        //            points[0] = Point(x, y);
+        //            points[1] = Point(x + 1, y);
+        //            points[2] = Point(x + 1, y + 1);
+        //            points[3] = Point(x, y + 1);
+        //            Polygon90 polygon;
+        //            boost::polygon::set_points(polygon, points.begin(), points.end());
+        //            result_outside_polygon += polygon;
+        //        }
+        //    }
+        //}
+
+        //std::vector<Polygon90> polygons;
+        //result_outside_polygon.get(polygons);
+
+        //std::vector<Rectangle> rectangles;
+        //result_outside_polygon.get(rectangles);
+
+        //const size_t rectangle_count = rectangles.size();
+        //for (size_t i = 0; i < rectangle_count; ++i)
+        //{
+        //    Rectangle& rectangle = rectangles[i];
+        //    painter.fillRect(
+        //        to_screen_x(xl(rectangle) * CELL_SIZE),
+        //        to_screen_y(yl(rectangle) * CELL_SIZE),
+        //        to_screen_w((xh(rectangle) - xl(rectangle)) * CELL_SIZE),
+        //        to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
+        //        out_of_global_box_brush
+        //    );
+
+            //rectangle.get()
+
+            //size_t point_count = 0;
+            //using namespace boost::polygon;
+            //for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
+            //{
+            //    ++point_count;
+            //}
+            //assert(point_count);
+            //std::vector<std::int32_t> points;
+            //points.resize(point_count * 2);
+            //size_t j = 0;
+            //for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
+            //{
+            //    points[j * 2] = (*point_it).x();
+            //    points[j * 2 + 1] = (*point_it).y();
+            //    ++j;
+            //    //points[j] = QPoint(to_screen_w((*point_it).x() * CELL_SIZE), to_screen_h((*point_it).y() * CELL_SIZE));
+            //}
+            //j = 0;
+
+            //points.
+            //std::vector<QPoint> points(point_count);
+            //size_t j = 0;
+            //for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
+            //{
+            //    points[j] = QPoint(to_screen_w((*point_it).x() * CELL_SIZE), to_screen_h((*point_it).y() * CELL_SIZE));
+            //}
+            //painter.fillPolygon()
+        //}
+
+        //            painter.fillRect(
+        //                to_screen_x(x * CELL_SIZE),
+        //                to_screen_y(y * CELL_SIZE),
+        //                to_screen_w(CELL_SIZE),
+        //                to_screen_h(CELL_SIZE),
+        //                out_of_global_box_brush
+        //            );
+        //        }
+        //        if (g_main_window->isShowSelectedNode() && server_info->selected_node)
+        //        {
+        //            if (inside(server_info->selected_node->bounding_box, CellIndex(x, y)))
+        //            {
+        //                painter.fillRect(
+        //                    to_screen_x(x * CELL_SIZE),
+        //                    to_screen_y(y * CELL_SIZE),
+        //                    to_screen_w(CELL_SIZE),
+        //                    to_screen_h(CELL_SIZE),
+        //                    inside_selected_node_brush
+        //                );
+        //            }
+        //            if (g_main_window->isShowNeighbor())
+        //            {
+        //                std::pair<std::int32_t, std::int32_t> coordinate(x, y);
+        //                auto find_neighbor = server_info->selected_node->neighbor_nodes.find(coordinate);
+        //                if (find_neighbor != server_info->selected_node->neighbor_nodes.end())
+        //                {
+        //                    painter.drawText(
+        //                        to_screen_x(x * CELL_SIZE),
+        //                        to_screen_y(y * CELL_SIZE),
+        //                        to_screen_w(CELL_SIZE),
+        //                        to_screen_h(CELL_SIZE),
+        //                        Qt::AlignCenter,
+        //                        tr("Neighbor %1").arg(find_neighbor->second)
+        //                    );
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
     }
 }
 

@@ -29,6 +29,8 @@ MainMonitorWindow::MainMonitorWindow()
         this, SLOT(onMonitoringBalanceTreeInfoAnswer(QByteArray)));
     connect(this, SIGNAL(monitoringBalanceTreeNeighborInfoAnswer(QByteArray)),
         this, SLOT(onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray)));
+    connect(this, SIGNAL(monitoringBalanceTreeStaticSplitAnswer(QByteArray)),
+        this, SLOT(onMonitoringBalanceTreeStaticSplitAnswer(QByteArray)));
 
     statusBar()->showMessage(tr("Gkm-World Position: Unknown"));
 
@@ -229,6 +231,21 @@ void MainMonitorWindow::onClearLog()
 
 void MainMonitorWindow::onStaticSplit()
 {
+    if (server_info && server_info->selected_node)
+    {
+        auto selected_node = server_info->selected_node;
+        if (!selected_node->leaf_node)
+        {
+            log->appendPlainText(tr("can not use static split method, balance tree node with token %1 is not leaf node").arg(selected_node->token));
+            return;
+        }
+        if (selected_node->node_server_port_number)
+        {
+            log->appendPlainText(tr("can not use static split method, balance tree node with token %1 has node server running").arg(selected_node->token));
+            return;
+        }
+        connection->staticSplit(selected_node->token);
+    }
 }
 
 void MainMonitorWindow::onStaticMerge()
@@ -309,7 +326,6 @@ void MainMonitorWindow::onMonitoringBalancerServerInfoAnswer(QByteArray data)
     {
         log->appendPlainText(tr("invalid data size: %1").arg(data.size()));
     }
-
     update();
 }
 
@@ -356,18 +372,18 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
         }
         else
         {
-            for (int x = 0; x < tree_info->bounding_box.size + 2; ++x)
-            {
-                int cur_x = tree_info->bounding_box.start.x - 1 + x;
-                connection->getBalanceTreeNeighborInfo(tree_info->token, cur_x, tree_info->bounding_box.start.y - 1);
-                connection->getBalanceTreeNeighborInfo(tree_info->token, cur_x, tree_info->bounding_box.start.y + tree_info->bounding_box.size);
-            }
-            for (int y = 0; y < tree_info->bounding_box.size; ++y)
-            {
-                int cur_y = tree_info->bounding_box.start.y + y;
-                connection->getBalanceTreeNeighborInfo(tree_info->token, tree_info->bounding_box.start.x - 1, cur_y);
-                connection->getBalanceTreeNeighborInfo(tree_info->token, tree_info->bounding_box.start.x + tree_info->bounding_box.size, cur_y);
-            }
+            //for (int x = 0; x < tree_info->bounding_box.size + 2; ++x)
+            //{
+            //    int cur_x = tree_info->bounding_box.start.x - 1 + x;
+            //    connection->getBalanceTreeNeighborInfo(tree_info->token, cur_x, tree_info->bounding_box.start.y - 1);
+            //    connection->getBalanceTreeNeighborInfo(tree_info->token, cur_x, tree_info->bounding_box.start.y + tree_info->bounding_box.size);
+            //}
+            //for (int y = 0; y < tree_info->bounding_box.size; ++y)
+            //{
+            //    int cur_y = tree_info->bounding_box.start.y + y;
+            //    connection->getBalanceTreeNeighborInfo(tree_info->token, tree_info->bounding_box.start.x - 1, cur_y);
+            //    connection->getBalanceTreeNeighborInfo(tree_info->token, tree_info->bounding_box.start.x + tree_info->bounding_box.size, cur_y);
+            //}
         }
 
         if (server_info->wait_info_for_token.empty())
@@ -418,6 +434,36 @@ void MainMonitorWindow::onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray dat
             log->appendPlainText(tr("neighbor with coordinates %1, %2 (tree node with token %3) is already received").arg(answer->neighbor_cell.x, answer->neighbor_cell.y, answer->tree_node_token));
             return;
         }
+    }
+    else
+    {
+        log->appendPlainText(tr("invalid data size: %1").arg(data.size()));
+    }
+}
+
+void MainMonitorWindow::onMonitoringBalanceTreeStaticSplitAnswer(QByteArray data)
+{
+    const Packet::MonitoringBalanceTreeStaticSplitAnswer* answer = reinterpret_cast<const Packet::MonitoringBalanceTreeStaticSplitAnswer*>(data.data());
+    if (data.size() >= Packet::getSize(answer))
+    {
+        if (answer->node_server_running)
+        {
+            log->appendPlainText(tr("can not use static split method, balance tree node with token %1 has node server running").arg(answer->tree_node_token));
+            return;
+        }
+        if (answer->not_leaf_node)
+        {
+            log->appendPlainText(tr("can not use static split method, balance tree node with token %1 is not leaf node").arg(answer->tree_node_token));
+            return;
+        }
+        if (!answer->success)
+        {
+            log->appendPlainText(tr("balance tree node with token %1 does not exist").arg(answer->tree_node_token));
+            return;
+        }
+        log->appendPlainText(tr("received balance tree static split success answer, token %1").arg(answer->tree_node_token));
+        server_info = std::make_shared<BalancerServerInfo>();
+        connection->getBalancerServerInfo();
     }
     else
     {

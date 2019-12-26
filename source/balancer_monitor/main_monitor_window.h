@@ -50,6 +50,7 @@ signals:
     void monitoringBalancerServerInfoAnswer(QByteArray data);
     void monitoringBalanceTreeInfoAnswer(QByteArray data);
     void monitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
+    void monitoringBalanceTreeStaticSplitAnswer(QByteArray data);
 
 private slots:
     void onMessage(const QString& message);
@@ -57,6 +58,7 @@ private slots:
     void onMonitoringBalancerServerInfoAnswer(QByteArray data);
     void onMonitoringBalanceTreeInfoAnswer(QByteArray data);
     void onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
+    void onMonitoringBalanceTreeStaticSplitAnswer(QByteArray data);
 
 private:
     bool first_show = true;

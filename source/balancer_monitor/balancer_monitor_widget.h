@@ -41,8 +41,8 @@ private:
     double zoom() const;
     double cached_zoom = 1.0;
     const double ZOOM_BASE = 1.1;
-    const std::int32_t INITIAL_ZOOM_STEP = 20;
-    const std::int32_t MIN_ZOOM_STEP = 5;
-    const std::int32_t MAX_ZOOM_STEP = 60;
+    const std::int32_t INITIAL_ZOOM_STEP = 90;
+    const std::int32_t MIN_ZOOM_STEP = 2;
+    const std::int32_t MAX_ZOOM_STEP = 140;
     std::int32_t zoom_step = INITIAL_ZOOM_STEP;
 };

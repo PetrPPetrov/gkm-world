@@ -46,6 +46,8 @@ namespace Packet
         MonitoringBalanceTreeInfoAnswer,
         MonitoringBalanceTreeNeighborInfo,
         MonitoringBalanceTreeNeighborInfoAnswer,
+        MonitoringBalanceTreeStaticSplit,
+        MonitoringBalanceTreeStaticSplitAnswer,
         Last,
         First = Login
     };

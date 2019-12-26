@@ -99,6 +99,25 @@ void BalanceTree::getMonitoringNeighborInfo(Packet::MonitoringBalanceTreeNeighbo
     answer->success = true;
 }
 
+void BalanceTree::monitoringBalanceTreeStaticSplit(Packet::MonitoringBalanceTreeStaticSplitAnswer* answer)
+{
+    answer->tree_node_token = token;
+    if (node_server_port_number)
+    {
+        answer->node_server_running = true;
+        answer->success = false;
+        return;
+    }
+    if (!leaf_node)
+    {
+        answer->not_leaf_node = true;
+        answer->success = false;
+        return;
+    }
+    staticSplit();
+    answer->success = true;
+}
+
 void BalanceTree::startNodeServer()
 {
     if (!leaf_node)

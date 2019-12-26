@@ -23,12 +23,14 @@ signals:
     void getBalancerServerInfo();
     void getBalanceTreeInfo(unsigned tree_node_token);
     void getBalanceTreeNeighborInfo(unsigned tree_node_token, int x, int y);
+    void staticSplit(unsigned tree_node_token);
 
 private slots:
     void onClose();
     void onGetBalancerServerInfo();
     void onGetBalanceTreeInfo(unsigned tree_node_token);
     void onGetBalanceTreeNeighborInfo(unsigned tree_node_token, int x, int y);
+    void onStaticSplit(unsigned tree_node_token);
 
     void onThreadStart();
     void onResolve(QHostInfo);
