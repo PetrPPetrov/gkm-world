@@ -7,6 +7,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <list>
 #include <algorithm>
 #include "global_types.h"
 #include "balance_tree/common.h"
@@ -42,4 +43,11 @@ struct BalancerServerInfo
 
     std::uint32_t wait_token = 0;
     std::vector<std::uint32_t> parent_stack;
+
+    struct NeighborRequest
+    {
+        unsigned token;
+        int x, y;
+    };
+    std::list<NeighborRequest> neighbor_requests;
 };

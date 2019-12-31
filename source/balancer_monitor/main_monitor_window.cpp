@@ -334,92 +334,94 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
     const Packet::MonitoringBalanceTreeInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringBalanceTreeInfoAnswer*>(data.data());
     if (data.size() >= Packet::getSize(answer))
     {
-        if (server_info->wait_token != answer->tree_node_token)
+        if (server_info->wait_token == answer->tree_node_token)
         {
-            log->appendPlainText(tr("unexpected tree node token answer %1, waiting for %2").arg(answer->tree_node_token, server_info->wait_token));
-            return;
-        }
-        server_info->wait_token = 0;
-        if (!answer->success)
-        {
-            log->appendPlainText(tr("balance tree node with token %1 does not exist").arg(answer->tree_node_token));
-            return;
-        }
-        log->appendPlainText(tr("received balance tree info, token %1").arg(answer->tree_node_token));
-        BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(answer->tree_node_token);
-        if (!tree_info)
-        {
-            tree_info = new(server_info->token_to_tree_node.allocate(answer->tree_node_token)) BalancerTreeInfo;
-        }
-        tree_info->token = answer->tree_node_token;
-        tree_info->bounding_box = answer->bounding_box;
-        tree_info->children = answer->children;
-        tree_info->leaf_node = answer->leaf_node;
-        tree_info->level = answer->level;
-        tree_info->user_count = answer->user_count;
-        tree_info->node_server_address = ip_address_t(answer->node_server_address);
-        tree_info->node_server_port_number = answer->node_server_port_number;
-        tree_info->current_child_index_to_send = 0;
-
-        bool sent_new_request = false;
-        if (!tree_info->leaf_node)
-        {
-            server_info->parent_stack.push_back(tree_info->token);
-            for (tree_info->current_child_index_to_send = 0; tree_info->current_child_index_to_send < ChildLast; ++tree_info->current_child_index_to_send)
+            server_info->wait_token = 0;
+            if (answer->success)
             {
-                std::uint32_t child_token = tree_info->children[tree_info->current_child_index_to_send];
-                if (child_token)
+                log->appendPlainText(tr("received balance tree info, token %1").arg(answer->tree_node_token));
+                BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(answer->tree_node_token);
+                if (!tree_info)
                 {
-                    server_info->wait_token = child_token;
-                    connection->getBalanceTreeInfo(child_token);
-                    sent_new_request = true;
-                    break;
+                    tree_info = new(server_info->token_to_tree_node.allocate(answer->tree_node_token)) BalancerTreeInfo;
                 }
-            }
-        }
+                tree_info->token = answer->tree_node_token;
+                tree_info->bounding_box = answer->bounding_box;
+                tree_info->children = answer->children;
+                tree_info->leaf_node = answer->leaf_node;
+                tree_info->level = answer->level;
+                tree_info->user_count = answer->user_count;
+                tree_info->node_server_address = ip_address_t(answer->node_server_address);
+                tree_info->node_server_port_number = answer->node_server_port_number;
+                tree_info->current_child_index_to_send = 0;
 
-        while (!sent_new_request && !server_info->parent_stack.empty())
-        {
-            std::uint32_t parent_token = server_info->parent_stack.back();
-            BalancerTreeInfo* parent_tree_info = server_info->token_to_tree_node.find(parent_token);
-            if (parent_tree_info)
-            {
-                ++parent_tree_info->current_child_index_to_send;
-                if (parent_tree_info->current_child_index_to_send < ChildLast)
+                bool sent_new_request = false;
+                if (!tree_info->leaf_node)
                 {
-                    std::uint32_t sibling_token = parent_tree_info->children[parent_tree_info->current_child_index_to_send];
-                    server_info->wait_token = sibling_token;
-                    connection->getBalanceTreeInfo(sibling_token);
-                    sent_new_request = true;
+                    server_info->parent_stack.push_back(tree_info->token);
+                    for (tree_info->current_child_index_to_send = 0; tree_info->current_child_index_to_send < ChildLast; ++tree_info->current_child_index_to_send)
+                    {
+                        std::uint32_t child_token = tree_info->children[tree_info->current_child_index_to_send];
+                        if (child_token)
+                        {
+                            server_info->wait_token = child_token;
+                            connection->getBalanceTreeInfo(child_token);
+                            sent_new_request = true;
+                            break;
+                        }
+                    }
                 }
                 else
                 {
-                    server_info->parent_stack.pop_back();
+                    generateNeighborRequests(tree_info->token);
+                }
+
+                while (!sent_new_request && !server_info->parent_stack.empty())
+                {
+                    std::uint32_t parent_token = server_info->parent_stack.back();
+                    BalancerTreeInfo* parent_tree_info = server_info->token_to_tree_node.find(parent_token);
+                    if (parent_tree_info)
+                    {
+                        ++parent_tree_info->current_child_index_to_send;
+                        if (parent_tree_info->current_child_index_to_send < ChildLast)
+                        {
+                            std::uint32_t sibling_token = parent_tree_info->children[parent_tree_info->current_child_index_to_send];
+                            server_info->wait_token = sibling_token;
+                            connection->getBalanceTreeInfo(sibling_token);
+                            sent_new_request = true;
+                        }
+                        else
+                        {
+                            server_info->parent_stack.pop_back();
+                        }
+                    }
+                }
+
+                if (server_info->parent_stack.empty())
+                {
+                    // We received all balancer node tree
+                    node_tree = std::make_shared<TreeModel>(std::make_shared<NodeTreeItem>(server_info));
+                    node_tree_view->setModel(node_tree.get());
+                    // TODO: Move this line somewhere to do not connect it each time
+                    connect(node_tree_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainMonitorWindow::onNodeTreeSelectionChanged);
+                    node_tree_view->update();
+
+                    if (!server_info->neighbor_requests.empty())
+                    {
+                        BalancerServerInfo::NeighborRequest request = server_info->neighbor_requests.front();
+                        connection->getBalanceTreeNeighborInfo(request.token, request.x, request.y);
+                        server_info->neighbor_requests.pop_front();
+                    }
                 }
             }
+            else
+            {
+                log->appendPlainText(tr("balance tree node with token %1 does not exist").arg(answer->tree_node_token));
+            }
         }
-
-        //for (int x = 0; x < tree_info->bounding_box.size + 2; ++x)
-        //{
-        //    int cur_x = tree_info->bounding_box.start.x - 1 + x;
-        //    connection->getBalanceTreeNeighborInfo(tree_info->token, cur_x, tree_info->bounding_box.start.y - 1);
-        //    connection->getBalanceTreeNeighborInfo(tree_info->token, cur_x, tree_info->bounding_box.start.y + tree_info->bounding_box.size);
-        //}
-        //for (int y = 0; y < tree_info->bounding_box.size; ++y)
-        //{
-        //    int cur_y = tree_info->bounding_box.start.y + y;
-        //    connection->getBalanceTreeNeighborInfo(tree_info->token, tree_info->bounding_box.start.x - 1, cur_y);
-        //    connection->getBalanceTreeNeighborInfo(tree_info->token, tree_info->bounding_box.start.x + tree_info->bounding_box.size, cur_y);
-        //}
-
-        if (server_info->parent_stack.empty())
+        else
         {
-            // We received all balancer node tree
-            node_tree = std::make_shared<TreeModel>(std::make_shared<NodeTreeItem>(server_info));
-            node_tree_view->setModel(node_tree.get());
-            // TODO: Move this line somewhere to do not connect it each time
-            connect(node_tree_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainMonitorWindow::onNodeTreeSelectionChanged);
-            node_tree_view->update();
+            log->appendPlainText(tr("unexpected tree node token answer %1, waiting for %2").arg(answer->tree_node_token, server_info->wait_token));
         }
     }
     else
@@ -433,32 +435,43 @@ void MainMonitorWindow::onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray dat
     const Packet::MonitoringBalanceTreeNeighborInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringBalanceTreeNeighborInfoAnswer*>(data.data());
     if (data.size() >= Packet::getSize(answer))
     {
-        if (!answer->success)
+        if (answer->success)
         {
-            log->appendPlainText(tr("balance tree node with token %1 does not exist").arg(answer->tree_node_token));
-            return;
-        }
-        log->appendPlainText(tr("received balance tree neighbor info, token %1").arg(answer->tree_node_token));
-        BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(answer->tree_node_token);
-        if (!tree_info)
-        {
-            log->appendPlainText(tr("balance tree node with token %1 is null").arg(answer->tree_node_token));
-            return;
-        }
-        if (!tree_info->leaf_node)
-        {
-            log->appendPlainText(tr("balance tree node with token %1 is not a leaf node").arg(answer->tree_node_token));
-            return;
-        }
-        std::pair<std::int32_t, std::int32_t> coordinate(answer->neighbor_cell.x, answer->neighbor_cell.y);
-        if (tree_info->neighbor_nodes.find(coordinate) == tree_info->neighbor_nodes.end())
-        {
-            tree_info->neighbor_nodes.emplace(coordinate, answer->neighbor_node_token);
+            log->appendPlainText(tr("received balance tree neighbor info, token %1").arg(answer->tree_node_token));
+            BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(answer->tree_node_token);
+            if (tree_info)
+            {
+                if (tree_info->leaf_node)
+                {
+                    std::pair<std::int32_t, std::int32_t> coordinate(answer->neighbor_cell.x, answer->neighbor_cell.y);
+                    if (tree_info->neighbor_nodes.find(coordinate) == tree_info->neighbor_nodes.end())
+                    {
+                        tree_info->neighbor_nodes.emplace(coordinate, answer->neighbor_node_token);
+                    }
+                    else
+                    {
+                        log->appendPlainText(tr("neighbor with coordinates %1, %2 (tree node with token %3) is already received").arg(answer->neighbor_cell.x, answer->neighbor_cell.y, answer->tree_node_token));
+                    }
+                    if (!server_info->neighbor_requests.empty())
+                    {
+                        BalancerServerInfo::NeighborRequest request = server_info->neighbor_requests.front();
+                        connection->getBalanceTreeNeighborInfo(request.token, request.x, request.y);
+                        server_info->neighbor_requests.pop_front();
+                    }
+                }
+                else
+                {
+                    log->appendPlainText(tr("balance tree node with token %1 is not a leaf node").arg(answer->tree_node_token));
+                }
+            }
+            else
+            {
+                log->appendPlainText(tr("balance tree node with token %1 is null").arg(answer->tree_node_token));
+            }
         }
         else
         {
-            log->appendPlainText(tr("neighbor with coordinates %1, %2 (tree node with token %3) is already received").arg(answer->neighbor_cell.x, answer->neighbor_cell.y, answer->tree_node_token));
-            return;
+            log->appendPlainText(tr("balance tree node with token %1 does not exist").arg(answer->tree_node_token));
         }
     }
     else
@@ -494,5 +507,35 @@ void MainMonitorWindow::onMonitoringBalanceTreeStaticSplitAnswer(QByteArray data
     else
     {
         log->appendPlainText(tr("invalid data size: %1").arg(data.size()));
+    }
+}
+
+void MainMonitorWindow::generateNeighborRequests(std::uint32_t token)
+{
+    BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(token);
+    if (tree_info->leaf_node)
+    {
+        BalancerServerInfo::NeighborRequest new_request;
+        new_request.token = token;
+        for (int x = 0; x < tree_info->bounding_box.size + 2; ++x)
+        {
+            int cur_x = tree_info->bounding_box.start.x - 1 + x;
+            new_request.x = cur_x;
+            new_request.y = tree_info->bounding_box.start.y - 1;
+            server_info->neighbor_requests.push_back(new_request);
+            new_request.x = cur_x;
+            new_request.y = tree_info->bounding_box.start.y + tree_info->bounding_box.size;
+            server_info->neighbor_requests.push_back(new_request);
+        }
+        for (int y = 0; y < tree_info->bounding_box.size; ++y)
+        {
+            int cur_y = tree_info->bounding_box.start.y + y;
+            new_request.x = tree_info->bounding_box.start.x - 1;
+            new_request.y = cur_y;
+            server_info->neighbor_requests.push_back(new_request);
+            new_request.x = tree_info->bounding_box.start.x + tree_info->bounding_box.size;
+            new_request.y = cur_y;
+            server_info->neighbor_requests.push_back(new_request);
+        }
     }
 }

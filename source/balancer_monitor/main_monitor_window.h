@@ -61,6 +61,9 @@ private slots:
     void onMonitoringBalanceTreeStaticSplitAnswer(QByteArray data);
 
 private:
+    void generateNeighborRequests(std::uint32_t token);
+
+private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
     QPlainTextEdit* log = nullptr;
