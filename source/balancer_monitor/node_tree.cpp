@@ -2,6 +2,7 @@
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #include <QString>
+#include <QPixmap>
 #include "node_tree.h"
 
 TreeItem::~TreeItem()
@@ -162,6 +163,22 @@ QVariant TreeModel::data(const QModelIndex& index, int role) const
         return QVariant();
 
     TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
+
+    if (role == Qt::DecorationRole)
+    {
+        NodeTreeItem* node_item = dynamic_cast<NodeTreeItem*>(item);
+        if (node_item)
+        {
+            BalancerTreeInfo* tree_info = node_item->getNode();
+            if (tree_info && tree_info->leaf_node)
+            {
+                QColor color = getColor(tree_info->token);
+                QPixmap icon(16, 16);
+                icon.fill(color);
+                return icon;
+            }
+        }
+    }
 
     if (role != Qt::DisplayRole)
         return QVariant();

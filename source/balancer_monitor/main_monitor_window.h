@@ -26,6 +26,7 @@ class MainMonitorWindow : public QMainWindow
 public:
     MainMonitorWindow();
     QPlainTextEdit* getLog() const;
+    bool isShowLeafNodes() const;
     bool isShowSelectedNode() const;
     bool isShowNeighbor() const;
     BalancerServerInfo::Ptr getServerInfo() const;
@@ -37,6 +38,7 @@ private:
     void onConnect();
     void onClose();
     void onQuit();
+    void onShowLeafNodes(bool checked);
     void onShowSelectedNode(bool checked);
     void onShowNeighbor(bool checked);
     void onClearLog();
@@ -71,6 +73,7 @@ private:
     QTableView* property_view = nullptr;
     QAction* connect_act = nullptr;
     QAction* close_act = nullptr;
+    QAction* show_leaf_nodes_act = nullptr;
     QAction* show_selected_node_act = nullptr;
     QAction* show_neighbor_act = nullptr;
     MonitorUDPConnection* connection = nullptr;

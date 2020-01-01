@@ -53,29 +53,6 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
     const std::int32_t end_cell_x = cur_cell_x + cells_to_draw_width / 2 + 1;
     const std::int32_t end_cell_y = cur_cell_y + cells_to_draw_height / 2 + 1;
 
-    if (draw_cell_lines)
-    {
-        QPen thin_pen;
-        thin_pen.setColor(QColor(0, 148, 0));
-        thin_pen.setStyle(Qt::DotLine);
-        painter.setPen(thin_pen);
-
-        for (std::int32_t x = start_cell_x; x <= end_cell_x; ++x)
-        {
-            painter.drawLine(
-                to_screen_x(x * CELL_SIZE), to_screen_y(start_cell_y * CELL_SIZE),
-                to_screen_x(x * CELL_SIZE), to_screen_y((end_cell_y + 1) * CELL_SIZE)
-            );
-        }
-        for (std::int32_t y = start_cell_y; y <= end_cell_y; ++y)
-        {
-            painter.drawLine(
-                to_screen_x(start_cell_x * CELL_SIZE), to_screen_y(y * CELL_SIZE),
-                to_screen_x((end_cell_x + 1) * CELL_SIZE), to_screen_y(y * CELL_SIZE)
-            );
-        }
-    }
-
     auto server_info = g_main_window->getServerInfo();
     if (server_info)
     {
@@ -110,6 +87,64 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
                 to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
                 out_of_global_box_brush
             );
+        }
+
+        if (g_main_window->isShowLeafNodes())
+        {
+            BalancerTreeInfo* cur_node = server_info->token_to_tree_node.find(server_info->tree_root_token);
+            std::list<BalancerTreeInfo*> parent_stack;
+            parent_stack.push_back(cur_node);
+            while (!parent_stack.empty())
+            {
+                cur_node = parent_stack.back();
+                parent_stack.pop_back();
+                if (cur_node)
+                {
+                    if (cur_node->leaf_node)
+                    {
+                        QBrush inside_node_brush(getColor(cur_node->token), Qt::SolidPattern);
+                        Polygon90Set result_polygon;
+                        SquareCell node_box = cur_node->bounding_box;
+                        Rectangle node_box_rectangle(node_box.start.x, node_box.start.y, node_box.start.x + node_box.size, node_box.start.y + node_box.size);
+                        result_polygon += node_box_rectangle;
+                        result_polygon *= outer_rectangle;
+
+                        rectangles.clear();
+                        result_polygon.get(rectangles);
+                        const size_t rectangle_count = rectangles.size();
+                        for (size_t i = 0; i < rectangle_count; ++i)
+                        {
+                            Rectangle& rectangle = rectangles[i];
+                            painter.fillRect(
+                                to_screen_x(xl(rectangle) * CELL_SIZE),
+                                to_screen_y(yl(rectangle) * CELL_SIZE),
+                                to_screen_w((xh(rectangle) - xl(rectangle)) * CELL_SIZE),
+                                to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
+                                inside_node_brush
+                            );
+                            painter.drawText(
+                                to_screen_x(xl(rectangle) * CELL_SIZE),
+                                to_screen_y(yl(rectangle) * CELL_SIZE),
+                                to_screen_w((xh(rectangle) - xl(rectangle)) * CELL_SIZE),
+                                to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
+                                Qt::AlignCenter,
+                                tr("Node Server %1").arg(cur_node->token)
+                            );
+                        }
+                    }
+                    else
+                    {
+                        for (std::uint8_t i = ChildFirst; i < ChildLast; ++i)
+                        {
+                            std::uint32_t child_token = cur_node->children[i];
+                            if (child_token)
+                            {
+                                parent_stack.push_back(server_info->token_to_tree_node.find(child_token));
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if (g_main_window->isShowSelectedNode() && server_info->selected_node)
@@ -160,6 +195,29 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
                     }
                 }
             }
+        }
+    }
+
+    if (draw_cell_lines)
+    {
+        QPen thin_pen;
+        thin_pen.setColor(QColor(0, 0, 0));
+        thin_pen.setStyle(Qt::DotLine);
+        painter.setPen(thin_pen);
+
+        for (std::int32_t x = start_cell_x; x <= end_cell_x; ++x)
+        {
+            painter.drawLine(
+                to_screen_x(x * CELL_SIZE), to_screen_y(start_cell_y * CELL_SIZE),
+                to_screen_x(x * CELL_SIZE), to_screen_y((end_cell_y + 1) * CELL_SIZE)
+            );
+        }
+        for (std::int32_t y = start_cell_y; y <= end_cell_y; ++y)
+        {
+            painter.drawLine(
+                to_screen_x(start_cell_x * CELL_SIZE), to_screen_y(y * CELL_SIZE),
+                to_screen_x((end_cell_x + 1) * CELL_SIZE), to_screen_y(y * CELL_SIZE)
+            );
         }
     }
 }

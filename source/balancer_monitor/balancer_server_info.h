@@ -9,6 +9,8 @@
 #include <vector>
 #include <list>
 #include <algorithm>
+#include <QColor>
+#include <QCryptographicHash>
 #include "global_types.h"
 #include "balance_tree/common.h"
 #include "fast_index_map.h"
@@ -42,7 +44,7 @@ struct BalancerServerInfo
     BalancerTreeInfo* selected_node = nullptr;
 
     std::uint32_t wait_token = 0;
-    std::vector<std::uint32_t> parent_stack;
+    std::list<std::uint32_t> parent_stack;
 
     struct NeighborRequest
     {
@@ -51,3 +53,29 @@ struct BalancerServerInfo
     };
     std::list<NeighborRequest> neighbor_requests;
 };
+
+static inline QColor getColor(std::uint32_t token)
+{
+    QByteArray token_data;
+    token_data.append(QString("%1").arg(token));
+    QString hash = QString(QCryptographicHash::hash(token_data, QCryptographicHash::Md5).toHex());
+    std::uint8_t color[6] = { 0 };
+    for (int i = 0; i < hash.size(); ++i)
+    {
+        char symbol = hash[i].toUpper().toLatin1();
+        char code = 0;
+        if (symbol >= 'A')
+        {
+            code = symbol - 'A' + 10;
+        }
+        else
+        {
+            code = symbol - '0';
+        }
+        color[i % 6] ^= code;
+    }
+    std::uint8_t red = (color[1] << 4) + color[0];
+    std::uint8_t green = (color[3] << 4) + color[2];
+    std::uint8_t blue = (color[5] << 4) + color[4];
+    return QColor(red, green, blue);
+}

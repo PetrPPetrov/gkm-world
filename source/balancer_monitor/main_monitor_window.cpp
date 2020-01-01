@@ -88,6 +88,13 @@ MainMonitorWindow::MainMonitorWindow()
     addDockWidget(Qt::RightDockWidgetArea, log_dock);
     view_menu->addAction(log_dock->toggleViewAction());
 
+    show_leaf_nodes_act = new QAction(tr("Show Leaf Nodes"), this);
+    show_leaf_nodes_act->setStatusTip(tr("Show Leaf Nodes"));
+    show_leaf_nodes_act->setCheckable(true);
+    show_leaf_nodes_act->setChecked(true);
+    connect(show_leaf_nodes_act, &QAction::triggered, this, &MainMonitorWindow::onShowLeafNodes);
+    view_menu->addAction(show_leaf_nodes_act);
+
     show_selected_node_act = new QAction(tr("Show Selected Node"), this);
     show_selected_node_act->setStatusTip(tr("Show Selected Node"));
     show_selected_node_act->setCheckable(true);
@@ -123,6 +130,11 @@ MainMonitorWindow::MainMonitorWindow()
 QPlainTextEdit* MainMonitorWindow::getLog() const
 {
     return log;
+}
+
+bool MainMonitorWindow::isShowLeafNodes() const
+{
+    return show_leaf_nodes_act->isChecked();
 }
 
 bool MainMonitorWindow::isShowSelectedNode() const
@@ -212,6 +224,11 @@ void MainMonitorWindow::onQuit()
         onClose();
     }
     QMainWindow::close();
+}
+
+void MainMonitorWindow::onShowLeafNodes(bool checked)
+{
+    update();
 }
 
 void MainMonitorWindow::onShowSelectedNode(bool checked)
