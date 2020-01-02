@@ -48,6 +48,8 @@ namespace Packet
         MonitoringBalanceTreeNeighborInfoAnswer,
         MonitoringBalanceTreeStaticSplit,
         MonitoringBalanceTreeStaticSplitAnswer,
+        MonitoringBalanceTreeStaticMerge,
+        MonitoringBalanceTreeStaticMergeAnswer,
         Last,
         First = Login
     };

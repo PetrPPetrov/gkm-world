@@ -105,6 +105,7 @@ void BalancerServer::start()
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeNeighborInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeNeighborInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticSplit, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticSplit, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticMerge, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticMerge, this, _1));
     io_service.run();
 }
 
@@ -385,6 +386,27 @@ bool BalancerServer::onMonitoringBalanceTreeStaticSplit(size_t received_bytes)
     if (found_tree)
     {
         found_tree->monitoringBalanceTreeStaticSplit(answer);
+    }
+    else
+    {
+        answer->success = false;
+    }
+    standardSend(answer);
+    return true;
+}
+
+bool BalancerServer::onMonitoringBalanceTreeStaticMerge(size_t received_bytes)
+{
+#ifdef _DEBUG
+    LOG_DEBUG << "onMonitoringBalanceTreeStaticMerge" << std::endl;
+#endif
+
+    const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeStaticMerge>();
+    auto answer = createPacket<Packet::MonitoringBalanceTreeStaticMergeAnswer>(packet->packet_number);
+    BalanceTree* found_tree = uuid_to_tree.find(packet->tree_node_token);
+    if (found_tree)
+    {
+        found_tree->monitoringBalanceTreeStaticMerge(answer);
     }
     else
     {

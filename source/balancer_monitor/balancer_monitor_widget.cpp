@@ -64,7 +64,7 @@ void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
 
         Polygon90Set result_outside_polygon;
 
-        Rectangle outer_rectangle(start_cell_x, start_cell_y, end_cell_x, end_cell_y);
+        Rectangle outer_rectangle(start_cell_x, start_cell_y, end_cell_x + 1, end_cell_y + 1);
         result_outside_polygon += outer_rectangle;
 
         SquareCell global_box = server_info->bounding_box;

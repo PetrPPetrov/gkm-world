@@ -461,6 +461,29 @@ namespace Packet
         }
     };
 
+    struct MonitoringBalanceTreeStaticMerge : public Base
+    {
+        std::uint32_t tree_node_token = 0;
+
+        MonitoringBalanceTreeStaticMerge()
+        {
+            type = EType::MonitoringBalanceTreeStaticMerge;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringBalanceTreeStaticMergeAnswer : public Base
+    {
+        std::uint32_t tree_node_token = 0;
+        bool success = false;
+
+        MonitoringBalanceTreeStaticMergeAnswer()
+        {
+            type = EType::MonitoringBalanceTreeStaticMergeAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
     // I got this information about magic packet
     // from https://ru.wikipedia.org/wiki/Wake-on-LAN
     struct WakeOnLan

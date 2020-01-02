@@ -76,5 +76,6 @@ private:
     bool onMonitoringBalanceTreeInfo(size_t received_bytes);
     bool onMonitoringBalanceTreeNeighborInfo(size_t received_bytes);
     bool onMonitoringBalanceTreeStaticSplit(size_t received_bytes);
+    bool onMonitoringBalanceTreeStaticMerge(size_t received_bytes);
     void initAvailableNodes();
 };

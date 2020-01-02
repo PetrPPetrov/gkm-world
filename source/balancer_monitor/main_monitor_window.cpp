@@ -98,7 +98,7 @@ MainMonitorWindow::MainMonitorWindow()
     show_selected_node_act = new QAction(tr("Show Selected Node"), this);
     show_selected_node_act->setStatusTip(tr("Show Selected Node"));
     show_selected_node_act->setCheckable(true);
-    show_selected_node_act->setChecked(true);
+    show_selected_node_act->setChecked(false);
     connect(show_selected_node_act, &QAction::triggered, this, &MainMonitorWindow::onShowSelectedNode);
     view_menu->addAction(show_selected_node_act);
 
@@ -421,7 +421,7 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
                     node_tree_view->setModel(node_tree.get());
                     // TODO: Move this line somewhere to do not connect it each time
                     connect(node_tree_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainMonitorWindow::onNodeTreeSelectionChanged);
-                    node_tree_view->update();
+                    update();
 
                     if (!server_info->neighbor_requests.empty())
                     {
@@ -529,30 +529,33 @@ void MainMonitorWindow::onMonitoringBalanceTreeStaticSplitAnswer(QByteArray data
 
 void MainMonitorWindow::generateNeighborRequests(std::uint32_t token)
 {
-    BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(token);
-    if (tree_info->leaf_node)
+    if (isShowNeighbor())
     {
-        BalancerServerInfo::NeighborRequest new_request;
-        new_request.token = token;
-        for (int x = 0; x < tree_info->bounding_box.size + 2; ++x)
+        BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(token);
+        if (tree_info->leaf_node)
         {
-            int cur_x = tree_info->bounding_box.start.x - 1 + x;
-            new_request.x = cur_x;
-            new_request.y = tree_info->bounding_box.start.y - 1;
-            server_info->neighbor_requests.push_back(new_request);
-            new_request.x = cur_x;
-            new_request.y = tree_info->bounding_box.start.y + tree_info->bounding_box.size;
-            server_info->neighbor_requests.push_back(new_request);
-        }
-        for (int y = 0; y < tree_info->bounding_box.size; ++y)
-        {
-            int cur_y = tree_info->bounding_box.start.y + y;
-            new_request.x = tree_info->bounding_box.start.x - 1;
-            new_request.y = cur_y;
-            server_info->neighbor_requests.push_back(new_request);
-            new_request.x = tree_info->bounding_box.start.x + tree_info->bounding_box.size;
-            new_request.y = cur_y;
-            server_info->neighbor_requests.push_back(new_request);
+            BalancerServerInfo::NeighborRequest new_request;
+            new_request.token = token;
+            for (int x = 0; x < tree_info->bounding_box.size + 2; ++x)
+            {
+                int cur_x = tree_info->bounding_box.start.x - 1 + x;
+                new_request.x = cur_x;
+                new_request.y = tree_info->bounding_box.start.y - 1;
+                server_info->neighbor_requests.push_back(new_request);
+                new_request.x = cur_x;
+                new_request.y = tree_info->bounding_box.start.y + tree_info->bounding_box.size;
+                server_info->neighbor_requests.push_back(new_request);
+            }
+            for (int y = 0; y < tree_info->bounding_box.size; ++y)
+            {
+                int cur_y = tree_info->bounding_box.start.y + y;
+                new_request.x = tree_info->bounding_box.start.x - 1;
+                new_request.y = cur_y;
+                server_info->neighbor_requests.push_back(new_request);
+                new_request.x = tree_info->bounding_box.start.x + tree_info->bounding_box.size;
+                new_request.y = cur_y;
+                server_info->neighbor_requests.push_back(new_request);
+            }
         }
     }
 }

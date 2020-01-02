@@ -39,6 +39,7 @@ public:
     void getMonitoringInfo(Packet::MonitoringBalanceTreeInfoAnswer* answer) const;
     void getMonitoringNeighborInfo(Packet::MonitoringBalanceTreeNeighborInfoAnswer* answer, CellIndex neighbor_cell) const;
     void monitoringBalanceTreeStaticSplit(Packet::MonitoringBalanceTreeStaticSplitAnswer* answer);
+    void monitoringBalanceTreeStaticMerge(Packet::MonitoringBalanceTreeStaticMergeAnswer* answer);
 
     void startNodeServer();
     void startNodeServers();
