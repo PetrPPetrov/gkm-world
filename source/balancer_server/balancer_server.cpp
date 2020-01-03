@@ -116,6 +116,14 @@ BalanceTree* BalancerServer::createNewBalanceNode(const SquareCell& bounding_box
     return new(new_node) BalanceTree(*this, new_node_token, bounding_box, parent);
 }
 
+void BalancerServer::destroyBalanceNode(BalanceTree* node)
+{
+    std::uint32_t node_token = node->getToken();
+    node->~BalanceTree();
+    uuid_to_tree.deallocate(node_token);
+    uuid_to_tree.deallocateIndex(node_token);
+}
+
 NodeInfo BalancerServer::getAvailableNode()
 {
     if (available_nodes.empty())

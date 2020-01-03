@@ -63,6 +63,7 @@ public:
     void start();
 
     BalanceTree* createNewBalanceNode(const SquareCell& bounding_box, BalanceTree* parent);
+    void destroyBalanceNode(BalanceTree* node);
     NodeInfo getAvailableNode();
     void startNode(NodeInfo& node_info, BalanceTree* balance_tree);
     void wakeUp(NodeServerInfo::Ptr node_server_info);

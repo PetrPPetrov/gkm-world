@@ -32,6 +32,8 @@ public:
     BalanceTree(BalancerServer& balancer_server, std::uint32_t token, SquareCell bounding_box, BalanceTree* parent);
 
     std::uint32_t getToken() const;
+    bool isLeafNode() const;
+    bool isNodeServerRunning() const;
     void dump() const;
 
     bool registerNewUser(const Packet::InitializePositionInternal& packet);
@@ -44,11 +46,43 @@ public:
     void startNodeServer();
     void startNodeServers();
 
-    void staticSplit();
+    bool staticSplit();
     void staticSplit(std::size_t required_level);
+    bool staticMerge();
 
 private:
-    static std::uint32_t getNeighborIndex(const SquareCell& box, CellIndex neighbor);
-    void setNeighbor(CellIndex neighbor_cell, BalanceTree* neighbor);
-    BalanceTree* getNeighbor(CellIndex neighbor_cell) const;
+    void destroyChildren();
+    static inline std::uint32_t getNeighborIndex(const SquareCell& box, CellIndex neighbor);
+    inline void setNeighbor(CellIndex neighbor_cell, BalanceTree* neighbor);
+    inline BalanceTree* getNeighbor(CellIndex neighbor_cell) const;
+
+    inline CellIndex getBottomLeftNeighborCell() const;
+    inline CellIndex getTopLeftNeighborCell() const;
+    inline CellIndex getTopRightNeighborCell() const;
+    inline CellIndex getBottomRightNeighborCell() const;
+
+    inline CellIndex getBottomNeighborCell(std::int32_t index) const;
+    inline CellIndex getTopNeighborCell(std::int32_t index) const;
+    inline CellIndex getLeftNeighborCell(std::int32_t index) const;
+    inline CellIndex getRightNeighborCell(std::int32_t index) const;
+
+    inline CellIndex getBottomLeftCell() const;
+    inline CellIndex getTopLeftCell() const;
+    inline CellIndex getTopRightCell() const;
+    inline CellIndex getBottomRightCell() const;
+
+    inline CellIndex getBottomCell(std::int32_t index) const;
+    inline CellIndex getTopCell(std::int32_t index) const;
+    inline CellIndex getLeftCell(std::int32_t index) const;
+    inline CellIndex getRightCell(std::int32_t index) const;
+
+    inline void setBottomLeftMe(BalanceTree* node);
+    inline void setTopLeftMe(BalanceTree* node);
+    inline void setTopRightMe(BalanceTree* node);
+    inline void setBottomRightMe(BalanceTree* node);
+
+    inline void setBottomMe(std::int32_t index, BalanceTree* node);
+    inline void setTopMe(std::int32_t index, BalanceTree* node);
+    inline void setLeftMe(std::int32_t index, BalanceTree* node);
+    inline void setRightMe(std::int32_t index, BalanceTree* node);
 };

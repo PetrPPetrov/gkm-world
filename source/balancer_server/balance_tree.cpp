@@ -31,6 +31,32 @@ std::uint32_t BalanceTree::getToken() const
     return token;
 }
 
+bool BalanceTree::isLeafNode() const
+{
+    return leaf_node;
+}
+
+bool BalanceTree::isNodeServerRunning() const
+{
+    if (leaf_node)
+    {
+        return node_server_port_number;
+    }
+
+    for (auto& child : children)
+    {
+        if (child)
+        {
+            if (child->isNodeServerRunning())
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 void BalanceTree::dump() const
 {
     const std::string indent(level, ' ');
@@ -114,8 +140,7 @@ void BalanceTree::monitoringBalanceTreeStaticSplit(Packet::MonitoringBalanceTree
         answer->success = false;
         return;
     }
-    staticSplit();
-    answer->success = true;
+    answer->success = staticSplit();
 }
 
 void BalanceTree::monitoringBalanceTreeStaticMerge(Packet::MonitoringBalanceTreeStaticMergeAnswer* answer)
@@ -166,30 +191,30 @@ void BalanceTree::startNodeServers()
     }
 }
 
-void BalanceTree::staticSplit()
+bool BalanceTree::staticSplit()
 {
     if (!leaf_node)
     {
-        return;
+        return false;
     }
 
     if (node_server_port_number)
     {
         // Static split can not be applied, use dynamic split instead
-        return;
+        return false;
     }
 
     if (bounding_box.size % 2)
     {
         // Error: odd size of node area
         assert(false);
-        return;
+        return false;
     }
 
     if (bounding_box.size / 2 < MINIMAL_NODE_SIZE)
     {
         // Warning: minimum  size of node has been reached
-        return;
+        return false;
     }
 
     SquareCell lower_left_box = bounding_box;
@@ -216,6 +241,25 @@ void BalanceTree::staticSplit()
     children[ChildUpperLeft] = upper_left_sub_tree;
     children[ChildUpperRight] = upper_right_sub_tree;
     children[ChildLowerRight] = lower_right_sub_tree;
+
+    {
+        CellIndex lower_left_index = lower_left_sub_tree->getBottomLeftNeighborCell();
+        lower_left_sub_tree->setNeighbor(lower_left_index, getNeighbor(lower_left_index));
+        CellIndex upper_left_index = lower_left_sub_tree->getTopLeftNeighborCell();
+        lower_left_sub_tree->setNeighbor(upper_left_index, getNeighbor(upper_left_index));
+        lower_left_sub_tree->setNeighbor(lower_left_sub_tree->getTopRightNeighborCell(), upper_right_sub_tree);
+        CellIndex lower_right_index = lower_left_sub_tree->getBottomRightNeighborCell();
+        lower_left_sub_tree->setNeighbor(lower_right_index, getNeighbor(lower_right_index));
+        for (std::int32_t i = 0; i < lower_left_box.size; ++i)
+        {
+            CellIndex bottom_index = lower_left_sub_tree->getBottomNeighborCell(i);
+            lower_left_sub_tree->setNeighbor(bottom_index, getNeighbor(bottom_index));
+            CellIndex left_index = lower_left_sub_tree->getLeftNeighborCell(i);
+            lower_left_sub_tree->setNeighbor(left_index, getNeighbor(left_index));
+            lower_left_sub_tree->setNeighbor(lower_left_sub_tree->getTopNeighborCell(i), upper_left_sub_tree);
+            lower_left_sub_tree->setNeighbor(lower_left_sub_tree->getRightNeighborCell(i), lower_right_sub_tree);
+        }
+    }
 
     CellIndex lower_left_neg = lower_left_box.start;
     lower_left_neg.x--;
@@ -413,6 +457,8 @@ void BalanceTree::staticSplit()
     {
         bottom_right_neighbor->setNeighbor(bottom_right_cell, lower_right_sub_tree);
     }
+
+    return true;
 }
 
 void BalanceTree::staticSplit(std::size_t required_level)
@@ -436,7 +482,92 @@ void BalanceTree::staticSplit(std::size_t required_level)
     }
 }
 
-std::uint32_t BalanceTree::getNeighborIndex(const SquareCell& box, CellIndex neighbor)
+bool BalanceTree::staticMerge()
+{
+    if (leaf_node)
+    {
+        return false;
+    }
+
+    if (isNodeServerRunning())
+    {
+        // Static merge can not be applied, use dynamic merge instead
+        return false;
+    }
+
+    destroyChildren();
+
+    for (std::uint8_t i = ChildFirst; i < ChildLast; ++i)
+    {
+        children[i] = nullptr;
+    }
+    leaf_node = true;
+
+    CellIndex bottom_left_cell_neighbor = bounding_box.start;
+    bottom_left_cell_neighbor.x--;
+    bottom_left_cell_neighbor.y--;
+    CellIndex bottom_left_cell = bounding_box.start;
+    BalanceTree* bottom_left_neighbor = getNeighbor(bottom_left_cell_neighbor);
+    if (bottom_left_neighbor)
+    {
+        bottom_left_neighbor->setNeighbor(bottom_left_cell, this);
+    }
+
+    CellIndex top_left_cell_neighbor = bounding_box.start;
+    top_left_cell_neighbor.x--;
+    top_left_cell_neighbor.y += bounding_box.size;
+    CellIndex top_left_cell = bounding_box.start;
+    top_left_cell.y += (bounding_box.size - 1);
+    BalanceTree* top_left_neighbor = getNeighbor(top_left_cell_neighbor);
+    if (top_left_neighbor)
+    {
+        top_left_neighbor->setNeighbor(top_left_cell, this);
+    }
+
+    CellIndex top_right_cell_neighbor = bounding_box.start;
+    top_right_cell_neighbor.x += bounding_box.size;
+    top_right_cell_neighbor.y += bounding_box.size;
+    CellIndex top_right_cell = top_right_cell_neighbor;
+    top_right_cell.x--;
+    top_right_cell.y--;
+    BalanceTree* top_right_neighbor = getNeighbor(top_right_cell_neighbor);
+    if (top_right_neighbor)
+    {
+        top_right_neighbor->setNeighbor(top_right_cell, this);
+    }
+
+    CellIndex bottom_right_cell_neighbor = bounding_box.start;
+    bottom_right_cell_neighbor.x += bounding_box.size;
+    bottom_right_cell_neighbor.y--;
+    CellIndex bottom_right_cell = bounding_box.start;
+    bottom_right_cell.x += (bounding_box.size - 1);
+    BalanceTree* bottom_right_neighbor = getNeighbor(bottom_right_cell_neighbor);
+    if (bottom_right_neighbor)
+    {
+        bottom_right_neighbor->setNeighbor(bottom_right_cell, this);
+    }
+
+}
+
+void BalanceTree::destroyChildren()
+{
+    for (auto& child : children)
+    {
+        if (child)
+        {
+            if (child->leaf_node)
+            {
+                balancer_server.destroyBalanceNode(child);
+            }
+            else
+            {
+                child->destroyChildren();
+            }
+        }
+    }
+}
+
+inline std::uint32_t BalanceTree::getNeighborIndex(const SquareCell& box, CellIndex neighbor)
 {
     if (neighbor.x < box.start.x && neighbor.y < box.start.y)
     {
@@ -478,16 +609,203 @@ std::uint32_t BalanceTree::getNeighborIndex(const SquareCell& box, CellIndex nei
     return 4 + 3 * NEIGHBOR_COUNT_AT_SIDE + (neighbor.x - box.start.x) / MINIMAL_NODE_SIZE;
 }
 
-void BalanceTree::setNeighbor(CellIndex neighbor_cell, BalanceTree* neighbor)
+inline void BalanceTree::setNeighbor(CellIndex neighbor_cell, BalanceTree* neighbor)
 {
     assert(!inside(bounding_box, neighbor_cell));
     auto neighbor_index = getNeighborIndex(bounding_box, neighbor_cell);
     neighbors[neighbor_index] = neighbor;
 }
 
-BalanceTree* BalanceTree::getNeighbor(CellIndex neighbor_cell) const
+inline BalanceTree* BalanceTree::getNeighbor(CellIndex neighbor_cell) const
 {
     assert(!inside(bounding_box, neighbor_cell));
     auto neighbor_index = getNeighborIndex(bounding_box, neighbor_cell);
     return neighbors[neighbor_index];
+}
+
+inline CellIndex BalanceTree::getBottomLeftNeighborCell() const
+{
+    CellIndex bottom_left_cell_neighbor = bounding_box.start;
+    bottom_left_cell_neighbor.x--;
+    bottom_left_cell_neighbor.y--;
+    return bottom_left_cell_neighbor;
+}
+
+inline CellIndex BalanceTree::getTopLeftNeighborCell() const
+{
+    CellIndex top_left_cell_neighbor = bounding_box.start;
+    top_left_cell_neighbor.x--;
+    top_left_cell_neighbor.y += bounding_box.size;
+    return top_left_cell_neighbor;
+}
+
+inline CellIndex BalanceTree::getTopRightNeighborCell() const
+{
+    CellIndex top_right_cell_neighbor = bounding_box.start;
+    top_right_cell_neighbor.x += bounding_box.size;
+    top_right_cell_neighbor.y += bounding_box.size;
+    return top_right_cell_neighbor;
+}
+
+inline CellIndex BalanceTree::getBottomRightNeighborCell() const
+{
+    CellIndex bottom_right_cell_neighbor = bounding_box.start;
+    bottom_right_cell_neighbor.x += bounding_box.size;
+    bottom_right_cell_neighbor.y--;
+    return bottom_right_cell_neighbor;
+}
+
+inline CellIndex BalanceTree::getBottomNeighborCell(std::int32_t index) const
+{
+    CellIndex result = getBottomLeftNeighborCell();
+    result.x += (index + 1);
+    return result;
+}
+
+inline CellIndex BalanceTree::getTopNeighborCell(std::int32_t index) const
+{
+    CellIndex result = getTopLeftNeighborCell();
+    result.x += (index + 1);
+    return result;
+}
+
+inline CellIndex BalanceTree::getLeftNeighborCell(std::int32_t index) const
+{
+    CellIndex result = getBottomLeftNeighborCell();
+    result.y += (index + 1);
+    return result;
+}
+
+inline CellIndex BalanceTree::getRightNeighborCell(std::int32_t index) const
+{
+    CellIndex result = getBottomRightNeighborCell();
+    result.y += (index + 1);
+    return result;
+}
+
+inline CellIndex BalanceTree::getBottomLeftCell() const
+{
+    return bounding_box.start;
+}
+
+inline CellIndex BalanceTree::getTopLeftCell() const
+{
+    CellIndex top_left_cell = bounding_box.start;
+    top_left_cell.y += (bounding_box.size - 1);
+    return top_left_cell;
+}
+
+inline CellIndex BalanceTree::getTopRightCell() const
+{
+    CellIndex top_right_cell = bounding_box.start;
+    top_right_cell.x += (bounding_box.size - 1);
+    top_right_cell.y += (bounding_box.size - 1);
+    return top_right_cell;
+}
+
+inline CellIndex BalanceTree::getBottomRightCell() const
+{
+    CellIndex bottom_right_cell = bounding_box.start;
+    bottom_right_cell.x += (bounding_box.size -1);
+    return bottom_right_cell;
+}
+
+inline CellIndex BalanceTree::getBottomCell(std::int32_t index) const
+{
+    CellIndex result = getBottomLeftCell();
+    result.x += index;
+    return result;
+}
+
+inline CellIndex BalanceTree::getTopCell(std::int32_t index) const
+{
+    CellIndex result = getTopLeftCell();
+    result.x += index;
+    return result;
+}
+
+inline CellIndex BalanceTree::getLeftCell(std::int32_t index) const
+{
+    CellIndex result = getBottomLeftCell();
+    result.y += index;
+    return result;
+}
+
+inline CellIndex BalanceTree::getRightCell(std::int32_t index) const
+{
+    CellIndex result = getBottomRightCell();
+    result.y += index;
+    return result;
+}
+
+inline void BalanceTree::setBottomLeftMe(BalanceTree* node)
+{
+    BalanceTree* neighbor = getNeighbor(getBottomLeftNeighborCell());
+    if (neighbor)
+    {
+        neighbor->setNeighbor(getBottomLeftCell(), node);
+    }
+}
+
+inline void BalanceTree::setTopLeftMe(BalanceTree* node)
+{
+    BalanceTree* neighbor = getNeighbor(getTopLeftNeighborCell());
+    if (neighbor)
+    {
+        neighbor->setNeighbor(getTopLeftCell(), node);
+    }
+}
+
+inline void BalanceTree::setTopRightMe(BalanceTree* node)
+{
+    BalanceTree* neighbor = getNeighbor(getTopRightNeighborCell());
+    if (neighbor)
+    {
+        neighbor->setNeighbor(getTopRightCell(), node);
+    }
+}
+
+inline void BalanceTree::setBottomRightMe(BalanceTree* node)
+{
+    BalanceTree* neighbor = getNeighbor(getBottomRightNeighborCell());
+    if (neighbor)
+    {
+        neighbor->setNeighbor(getBottomRightCell(), node);
+    }
+}
+
+inline void BalanceTree::setBottomMe(std::int32_t index, BalanceTree* node)
+{
+    BalanceTree* neighbor = getNeighbor(getBottomNeighborCell(index));
+    if (neighbor)
+    {
+        neighbor->setNeighbor(getBottomCell(index), node);
+    }
+}
+
+inline void BalanceTree::setTopMe(std::int32_t index, BalanceTree* node)
+{
+    BalanceTree* neighbor = getNeighbor(getTopNeighborCell(index));
+    if (neighbor)
+    {
+        neighbor->setNeighbor(getTopCell(index), node);
+    }
+}
+
+inline void BalanceTree::setLeftMe(std::int32_t index, BalanceTree* node)
+{
+    BalanceTree* neighbor = getNeighbor(getLeftNeighborCell(index));
+    if (neighbor)
+    {
+        neighbor->setNeighbor(getLeftCell(index), node);
+    }
+}
+
+inline void BalanceTree::setRightMe(std::int32_t index, BalanceTree* node)
+{
+    BalanceTree* neighbor = getNeighbor(getRightNeighborCell(index));
+    if (neighbor)
+    {
+        neighbor->setNeighbor(getRightCell(index), node);
+    }
 }
