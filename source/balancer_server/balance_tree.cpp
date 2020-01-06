@@ -260,225 +260,108 @@ bool BalanceTree::staticSplit()
             lower_left_sub_tree->setNeighbor(lower_left_sub_tree->getRightNeighborCell(i), lower_right_sub_tree);
         }
     }
+    {
+        CellIndex lower_left_index = upper_left_sub_tree->getBottomLeftNeighborCell();
+        upper_left_sub_tree->setNeighbor(lower_left_index, getNeighbor(lower_left_index));
+        CellIndex upper_left_index = upper_left_sub_tree->getTopLeftNeighborCell();
+        upper_left_sub_tree->setNeighbor(upper_left_index, getNeighbor(upper_left_index));
+        CellIndex upper_right_index = upper_left_sub_tree->getTopRightNeighborCell();
+        upper_left_sub_tree->setNeighbor(upper_right_index, getNeighbor(upper_right_index));
+        upper_left_sub_tree->setNeighbor(upper_left_sub_tree->getBottomRightNeighborCell(), lower_right_sub_tree);
+        for (std::int32_t i = 0; i < upper_left_box.size; ++i)
+        {
+            CellIndex top_index = upper_left_sub_tree->getTopNeighborCell(i);
+            upper_left_sub_tree->setNeighbor(top_index, getNeighbor(top_index));
+            CellIndex left_index = upper_left_sub_tree->getLeftNeighborCell(i);
+            upper_left_sub_tree->setNeighbor(left_index, getNeighbor(left_index));
+            upper_left_sub_tree->setNeighbor(upper_left_sub_tree->getBottomNeighborCell(i), lower_left_sub_tree);
+            upper_left_sub_tree->setNeighbor(upper_left_sub_tree->getRightNeighborCell(i), upper_right_sub_tree);
+        }
+    }
+    {
+        upper_right_sub_tree->setNeighbor(upper_right_sub_tree->getBottomLeftNeighborCell(), lower_left_sub_tree);
+        CellIndex upper_left_index = upper_right_sub_tree->getTopLeftNeighborCell();
+        upper_right_sub_tree->setNeighbor(upper_left_index, getNeighbor(upper_left_index));
+        CellIndex upper_right_index = upper_right_sub_tree->getTopRightNeighborCell();
+        upper_right_sub_tree->setNeighbor(upper_right_index, getNeighbor(upper_right_index));
+        CellIndex lower_right_index = upper_right_sub_tree->getBottomRightNeighborCell();
+        upper_right_sub_tree->setNeighbor(lower_right_index, getNeighbor(lower_right_index));
+        for (std::int32_t i = 0; i < upper_right_box.size; ++i)
+        {
+            CellIndex top_index = upper_right_sub_tree->getTopNeighborCell(i);
+            upper_right_sub_tree->setNeighbor(top_index, getNeighbor(top_index));
+            CellIndex right_index = upper_right_sub_tree->getRightNeighborCell(i);
+            upper_right_sub_tree->setNeighbor(right_index, getNeighbor(right_index));
+            upper_right_sub_tree->setNeighbor(upper_right_sub_tree->getBottomNeighborCell(i), lower_right_sub_tree);
+            upper_right_sub_tree->setNeighbor(upper_right_sub_tree->getLeftNeighborCell(i), upper_left_sub_tree);
+        }
+    }
+    {
+        CellIndex lower_left_index = lower_right_sub_tree->getBottomLeftNeighborCell();
+        lower_right_sub_tree->setNeighbor(lower_left_index, getNeighbor(lower_left_index));
+        lower_right_sub_tree->setNeighbor(lower_right_sub_tree->getTopLeftNeighborCell(), upper_left_sub_tree);
+        CellIndex upper_right_index = lower_right_sub_tree->getTopRightNeighborCell();
+        lower_right_sub_tree->setNeighbor(upper_right_index, getNeighbor(upper_right_index));
+        CellIndex lower_right_index = lower_right_sub_tree->getBottomRightNeighborCell();
+        lower_right_sub_tree->setNeighbor(lower_right_index, getNeighbor(lower_right_index));
+        for (std::int32_t i = 0; i < lower_right_box.size; ++i)
+        {
+            CellIndex bottom_index = lower_right_sub_tree->getBottomNeighborCell(i);
+            lower_right_sub_tree->setNeighbor(bottom_index, getNeighbor(bottom_index));
+            CellIndex right_index = lower_right_sub_tree->getRightNeighborCell(i);
+            lower_right_sub_tree->setNeighbor(right_index, getNeighbor(right_index));
+            lower_right_sub_tree->setNeighbor(lower_right_sub_tree->getTopNeighborCell(i), upper_right_sub_tree);
+            lower_right_sub_tree->setNeighbor(lower_right_sub_tree->getLeftNeighborCell(i), lower_left_sub_tree);
+        }
+    }
 
-    CellIndex lower_left_neg = lower_left_box.start;
-    lower_left_neg.x--;
-    lower_left_neg.y--;
-    lower_left_sub_tree->setNeighbor(lower_left_neg, getNeighbor(lower_left_neg));
-    for (std::int32_t i = 0; i < lower_left_box.size + 1; ++i)
-    {
-        CellIndex cur_x_cell = lower_left_neg;
-        cur_x_cell.x += (i + 1);
-        lower_left_sub_tree->setNeighbor(cur_x_cell, getNeighbor(cur_x_cell));
-        CellIndex cur_y_cell = lower_left_neg;
-        cur_y_cell.y += (i + 1);
-        lower_left_sub_tree->setNeighbor(cur_y_cell, getNeighbor(cur_y_cell));
-    }
-    for (std::int32_t i = 0; i < lower_left_box.size; ++i)
-    {
-        CellIndex cur_x_cell = upper_left_box.start;
-        cur_x_cell.x += i;
-        lower_left_sub_tree->setNeighbor(cur_x_cell, upper_left_sub_tree);
-        CellIndex cur_y_cell = lower_right_box.start;
-        cur_y_cell.y += i;
-        lower_left_sub_tree->setNeighbor(cur_y_cell, lower_right_sub_tree);
-    }
-    lower_left_sub_tree->setNeighbor(upper_right_box.start, upper_right_sub_tree);
-
-    CellIndex upper_left_neg = upper_left_box.start;
-    upper_left_neg.x--;
-    upper_left_neg.y--;
-    upper_left_sub_tree->setNeighbor(upper_left_neg, getNeighbor(upper_left_neg));
-    for (std::int32_t i = 0; i < upper_left_box.size + 1; ++i)
-    {
-        CellIndex cur_x_cell = upper_left_neg;
-        cur_x_cell.x += (i + 1);
-        cur_x_cell.y += (upper_left_box.size + 1);
-        upper_left_sub_tree->setNeighbor(cur_x_cell, getNeighbor(cur_x_cell));
-        CellIndex cur_y_cell = upper_left_neg;
-        cur_y_cell.y += (i + 1);
-        upper_left_sub_tree->setNeighbor(cur_y_cell, getNeighbor(cur_y_cell));
-    }
-    for (std::int32_t i = 0; i < upper_left_box.size; ++i)
-    {
-        CellIndex cur_x_cell = upper_left_neg;
-        cur_x_cell.x += (i + 1);
-        upper_left_sub_tree->setNeighbor(cur_x_cell, lower_left_sub_tree);
-        CellIndex cur_y_cell = upper_right_box.start;
-        cur_y_cell.y += i;
-        upper_left_sub_tree->setNeighbor(cur_y_cell, upper_right_sub_tree);
-    }
-    CellIndex upper_left_lr = upper_right_box.start;
-    upper_left_lr.y--;
-    upper_left_sub_tree->setNeighbor(upper_left_lr, lower_right_sub_tree);
-
-    CellIndex upper_right_neg = upper_right_box.start;
-    upper_right_neg.x--;
-    upper_right_neg.y--;
-    upper_right_sub_tree->setNeighbor(upper_right_neg, lower_left_sub_tree);
-    for (std::int32_t i = 0; i < upper_right_box.size; ++i)
-    {
-        CellIndex cur_x_cell = upper_right_neg;
-        cur_x_cell.x += (i + 1);
-        upper_right_sub_tree->setNeighbor(cur_x_cell, lower_right_sub_tree);
-        CellIndex cur_y_cell = upper_right_neg;
-        cur_y_cell.y += (i + 1);
-        upper_right_sub_tree->setNeighbor(cur_y_cell, upper_left_sub_tree);
-    }
-    for (std::int32_t i = 0; i < upper_right_box.size + 1; ++i)
-    {
-        CellIndex cur_x_cell = upper_right_neg;
-        cur_x_cell.x += i;
-        cur_x_cell.y += (upper_right_box.size + 1);
-        upper_right_sub_tree->setNeighbor(cur_x_cell, getNeighbor(cur_x_cell));
-        CellIndex cur_y_cell = upper_right_neg;
-        cur_y_cell.x += (upper_right_box.size + 1);
-        cur_y_cell.y += i;
-        upper_right_sub_tree->setNeighbor(cur_y_cell, getNeighbor(cur_y_cell));
-    }
-    CellIndex upper_right_ur = upper_right_box.start;
-    upper_right_ur.x += upper_right_box.size;
-    upper_right_ur.y += upper_right_box.size;
-    upper_right_sub_tree->setNeighbor(upper_right_ur, getNeighbor(upper_right_ur));
-
-    CellIndex lower_right_neg = lower_right_box.start;
-    lower_right_neg.x--;
-    lower_right_neg.y--;
-    lower_right_sub_tree->setNeighbor(lower_right_neg, getNeighbor(lower_right_neg));
-    for (std::int32_t i = 0; i < lower_right_box.size + 1; ++i)
-    {
-        CellIndex cur_x_cell = lower_right_neg;
-        cur_x_cell.x += (i + 1);
-        lower_right_sub_tree->setNeighbor(cur_x_cell, getNeighbor(cur_x_cell));
-        CellIndex cur_y_cell = lower_right_neg;
-        cur_y_cell.x += (lower_right_box.size + 1);
-        cur_y_cell.y += (i + 1);
-        lower_right_sub_tree->setNeighbor(cur_y_cell, getNeighbor(cur_y_cell));
-    }
-    for (std::int32_t i = 0; i < lower_right_box.size; ++i)
-    {
-        CellIndex cur_x_cell = lower_right_box.start;
-        cur_x_cell.x += i;
-        cur_x_cell.y += lower_right_box.size;
-        lower_right_sub_tree->setNeighbor(cur_x_cell, upper_right_sub_tree);
-        CellIndex cur_y_cell = lower_right_neg;
-        cur_y_cell.y += (i + 1);
-        lower_right_sub_tree->setNeighbor(cur_y_cell, lower_left_sub_tree);
-    }
-    CellIndex lower_right_ul = lower_right_neg;
-    lower_right_ul.y += (lower_right_box.size + 1);
-    lower_right_sub_tree->setNeighbor(lower_right_ul, upper_left_sub_tree);
+    setBottomLeftMe(lower_left_sub_tree);
+    setTopLeftMe(upper_left_sub_tree);
+    setTopRightMe(upper_right_sub_tree);
+    setBottomRightMe(lower_right_sub_tree);
 
     for (std::int32_t i = 0; i < bounding_box.size; ++i)
     {
-        CellIndex left_cell = bounding_box.start;
-        left_cell.y += i;
-        CellIndex left_cell_neighbor = left_cell;
-        left_cell_neighbor.x--;
-        BalanceTree* left_neighbor = getNeighbor(left_cell_neighbor);
-        if (left_neighbor)
-        {
-            left_neighbor->setNeighbor(left_cell, i < lower_left_box.size ? lower_left_sub_tree : upper_left_sub_tree);
-        }
-
-        CellIndex top_cell_neighbor = bounding_box.start;
-        top_cell_neighbor.x += i;
-        top_cell_neighbor.y += bounding_box.size;
-        CellIndex top_cell = top_cell_neighbor;
-        top_cell.y--;
-        BalanceTree* top_neighbor = getNeighbor(top_cell_neighbor);
-        if (top_neighbor)
-        {
-            top_neighbor->setNeighbor(top_cell, i < upper_left_box.size ? upper_left_sub_tree : upper_right_sub_tree);
-        }
-
-        CellIndex right_cell_neighbor = bounding_box.start;
-        right_cell_neighbor.x += bounding_box.size;
-        right_cell_neighbor.y += i;
-        CellIndex right_cell = right_cell_neighbor;
-        right_cell.x--;
-        BalanceTree* right_neighbor = getNeighbor(right_cell_neighbor);
-        if (right_neighbor)
-        {
-            right_neighbor->setNeighbor(right_cell, i < lower_right_box.size ? lower_right_sub_tree : upper_right_sub_tree);
-        }
-
-        CellIndex bottom_cell = bounding_box.start;
-        bottom_cell.x += i;
-        CellIndex bottom_cell_neighbor = bottom_cell;
-        bottom_cell_neighbor.y--;
-        BalanceTree* bottom_neighbor = getNeighbor(bottom_cell_neighbor);
-        if (bottom_neighbor)
-        {
-            bottom_neighbor->setNeighbor(bottom_cell, i < lower_left_box.size ? lower_left_sub_tree : lower_right_sub_tree);
-        }
+        setBottomMe(i, i < lower_left_box.size ? lower_left_sub_tree : lower_right_sub_tree);
+        setTopMe(i, i < upper_left_box.size ? upper_left_sub_tree : upper_right_sub_tree);
+        setLeftMe(i, i < lower_left_box.size ? lower_left_sub_tree : upper_left_sub_tree);
+        setRightMe(i, i < lower_right_box.size ? lower_right_sub_tree : upper_right_sub_tree);
     }
-
-    CellIndex bottom_left_cell_neighbor = bounding_box.start;
-    bottom_left_cell_neighbor.x--;
-    bottom_left_cell_neighbor.y--;
-    CellIndex bottom_left_cell = bounding_box.start;
-    BalanceTree* bottom_left_neighbor = getNeighbor(bottom_left_cell_neighbor);
-    if (bottom_left_neighbor)
-    {
-        bottom_left_neighbor->setNeighbor(bottom_left_cell, lower_left_sub_tree);
-    }
-
-    CellIndex top_left_cell_neighbor = bounding_box.start;
-    top_left_cell_neighbor.x--;
-    top_left_cell_neighbor.y += bounding_box.size;
-    CellIndex top_left_cell = bounding_box.start;
-    top_left_cell.y += (bounding_box.size - 1);
-    BalanceTree* top_left_neighbor = getNeighbor(top_left_cell_neighbor);
-    if (top_left_neighbor)
-    {
-        top_left_neighbor->setNeighbor(top_left_cell, upper_left_sub_tree);
-    }
-
-    CellIndex top_right_cell_neighbor = bounding_box.start;
-    top_right_cell_neighbor.x += bounding_box.size;
-    top_right_cell_neighbor.y += bounding_box.size;
-    CellIndex top_right_cell = top_right_cell_neighbor;
-    top_right_cell.x--;
-    top_right_cell.y--;
-    BalanceTree* top_right_neighbor = getNeighbor(top_right_cell_neighbor);
-    if (top_right_neighbor)
-    {
-        top_right_neighbor->setNeighbor(top_right_cell, upper_right_sub_tree);
-    }
-
-    CellIndex bottom_right_cell_neighbor = bounding_box.start;
-    bottom_right_cell_neighbor.x += bounding_box.size;
-    bottom_right_cell_neighbor.y--;
-    CellIndex bottom_right_cell = bounding_box.start;
-    bottom_right_cell.x += (bounding_box.size - 1);
-    BalanceTree* bottom_right_neighbor = getNeighbor(bottom_right_cell_neighbor);
-    if (bottom_right_neighbor)
-    {
-        bottom_right_neighbor->setNeighbor(bottom_right_cell, lower_right_sub_tree);
-    }
+    neighbors.fill(nullptr);
 
     return true;
 }
 
-void BalanceTree::staticSplit(std::size_t required_level)
+bool BalanceTree::staticSplit(std::size_t required_level)
 {
+    if (isNodeServerRunning())
+    {
+        return false;
+    }
+
     if (level >= required_level)
     {
-        return;
+        return true;
     }
 
     if (leaf_node)
     {
-        staticSplit();
+        return staticSplit();
     }
-
-    for (auto& child : children)
+    else
     {
-        if (child)
+        bool result = true;
+        for (auto& child : children)
         {
-            child->staticSplit(required_level);
+            if (child)
+            {
+                if (!child->staticSplit(required_level))
+                {
+                    result = false;
+                }
+            }
         }
+        return result;
     }
 }
 
@@ -495,6 +378,40 @@ bool BalanceTree::staticMerge()
         return false;
     }
 
+    CellIndex bottom_left_index = getBottomLeftNeighborCell();
+    setNeighbor(bottom_left_index, obtainNeighbor(bottom_left_index));
+    CellIndex bottom_right_index = getBottomRightNeighborCell();
+    setNeighbor(bottom_right_index, obtainNeighbor(bottom_right_index));
+    CellIndex top_left_index = getBottomLeftNeighborCell();
+    setNeighbor(top_left_index, obtainNeighbor(top_left_index));
+    CellIndex top_right_index = getBottomRightNeighborCell();
+    setNeighbor(top_right_index, obtainNeighbor(top_right_index));
+
+    for (std::int32_t i = 0; i < bounding_box.size; ++i)
+    {
+        CellIndex bottom_index = getBottomNeighborCell(i);
+        setNeighbor(bottom_index, obtainNeighbor(bottom_index));
+        CellIndex top_index = getTopNeighborCell(i);
+        setNeighbor(top_index, obtainNeighbor(top_index));
+        CellIndex left_index = getLeftNeighborCell(i);
+        setNeighbor(left_index, obtainNeighbor(left_index));
+        CellIndex right_index = getRightNeighborCell(i);
+        setNeighbor(right_index, obtainNeighbor(right_index));
+    }
+
+    setBottomLeftMe(this);
+    setBottomRightMe(this);
+    setTopLeftMe(this);
+    setTopRightMe(this);
+
+    for (std::int32_t i = 0; i < bounding_box.size; ++i)
+    {
+        setLeftMe(i, this);
+        setRightMe(i, this);
+        setTopMe(i, this);
+        setBottomMe(i, this);
+    }
+
     destroyChildren();
 
     for (std::uint8_t i = ChildFirst; i < ChildLast; ++i)
@@ -502,51 +419,7 @@ bool BalanceTree::staticMerge()
         children[i] = nullptr;
     }
     leaf_node = true;
-
-    CellIndex bottom_left_cell_neighbor = bounding_box.start;
-    bottom_left_cell_neighbor.x--;
-    bottom_left_cell_neighbor.y--;
-    CellIndex bottom_left_cell = bounding_box.start;
-    BalanceTree* bottom_left_neighbor = getNeighbor(bottom_left_cell_neighbor);
-    if (bottom_left_neighbor)
-    {
-        bottom_left_neighbor->setNeighbor(bottom_left_cell, this);
-    }
-
-    CellIndex top_left_cell_neighbor = bounding_box.start;
-    top_left_cell_neighbor.x--;
-    top_left_cell_neighbor.y += bounding_box.size;
-    CellIndex top_left_cell = bounding_box.start;
-    top_left_cell.y += (bounding_box.size - 1);
-    BalanceTree* top_left_neighbor = getNeighbor(top_left_cell_neighbor);
-    if (top_left_neighbor)
-    {
-        top_left_neighbor->setNeighbor(top_left_cell, this);
-    }
-
-    CellIndex top_right_cell_neighbor = bounding_box.start;
-    top_right_cell_neighbor.x += bounding_box.size;
-    top_right_cell_neighbor.y += bounding_box.size;
-    CellIndex top_right_cell = top_right_cell_neighbor;
-    top_right_cell.x--;
-    top_right_cell.y--;
-    BalanceTree* top_right_neighbor = getNeighbor(top_right_cell_neighbor);
-    if (top_right_neighbor)
-    {
-        top_right_neighbor->setNeighbor(top_right_cell, this);
-    }
-
-    CellIndex bottom_right_cell_neighbor = bounding_box.start;
-    bottom_right_cell_neighbor.x += bounding_box.size;
-    bottom_right_cell_neighbor.y--;
-    CellIndex bottom_right_cell = bounding_box.start;
-    bottom_right_cell.x += (bounding_box.size - 1);
-    BalanceTree* bottom_right_neighbor = getNeighbor(bottom_right_cell_neighbor);
-    if (bottom_right_neighbor)
-    {
-        bottom_right_neighbor->setNeighbor(bottom_right_cell, this);
-    }
-
+    return true;
 }
 
 void BalanceTree::destroyChildren()
@@ -621,6 +494,80 @@ inline BalanceTree* BalanceTree::getNeighbor(CellIndex neighbor_cell) const
     assert(!inside(bounding_box, neighbor_cell));
     auto neighbor_index = getNeighborIndex(bounding_box, neighbor_cell);
     return neighbors[neighbor_index];
+}
+
+inline void BalanceTree::specifyNeighbor(CellIndex neighbor_cell, BalanceTree* neighbor)
+{
+    if (leaf_node)
+    {
+        setNeighbor(neighbor_cell, neighbor);
+    }
+    else
+    {
+        CellIndex local = cellGlobalToLocal(neighbor_cell, bounding_box);
+        const std::int32_t middle_x = bounding_box.size / 2;
+        const std::int32_t middle_y = bounding_box.size / 2;
+        EChildIndex child_index = ChildUpperRight;
+        if (local.x < middle_x)
+        {
+            if (local.y < middle_y)
+            {
+                child_index = ChildLowerLeft;
+            }
+            else
+            {
+                child_index = ChildUpperLeft;
+            }
+        }
+        else if (local.y < middle_y)
+        {
+            child_index = ChildLowerRight;
+        }
+        BalanceTree* child = children[child_index];
+        if (child)
+        {
+            child->specifyNeighbor(neighbor_cell, neighbor);
+        }
+    }
+}
+
+inline BalanceTree* BalanceTree::obtainNeighbor(CellIndex neighbor_cell) const
+{
+    if (leaf_node)
+    {
+        return getNeighbor(neighbor_cell);
+    }
+    else
+    {
+        CellIndex local = cellGlobalToLocal(neighbor_cell, bounding_box);
+        const std::int32_t middle_x = bounding_box.size / 2;
+        const std::int32_t middle_y = bounding_box.size / 2;
+        EChildIndex child_index = ChildUpperRight;
+        if (local.x < middle_x)
+        {
+            if (local.y < middle_y)
+            {
+                child_index = ChildLowerLeft;
+            }
+            else
+            {
+                child_index = ChildUpperLeft;
+            }
+        }
+        else if (local.y < middle_y)
+        {
+            child_index = ChildLowerRight;
+        }
+        BalanceTree* child = children[child_index];
+        if (child)
+        {
+            return children[child_index]->obtainNeighbor(neighbor_cell);
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
 }
 
 inline CellIndex BalanceTree::getBottomLeftNeighborCell() const

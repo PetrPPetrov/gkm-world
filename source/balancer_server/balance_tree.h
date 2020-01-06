@@ -47,14 +47,16 @@ public:
     void startNodeServers();
 
     bool staticSplit();
-    void staticSplit(std::size_t required_level);
-    bool staticMerge();
+    bool staticSplit(std::size_t required_level);
+    bool staticMerge(); // TODO: Check if all nodes do not have node server running
 
 private:
     void destroyChildren();
     static inline std::uint32_t getNeighborIndex(const SquareCell& box, CellIndex neighbor);
     inline void setNeighbor(CellIndex neighbor_cell, BalanceTree* neighbor);
     inline BalanceTree* getNeighbor(CellIndex neighbor_cell) const;
+    inline void specifyNeighbor(CellIndex neighbor_cell, BalanceTree* neighbor);
+    inline BalanceTree* obtainNeighbor(CellIndex neighbor_cell) const;
 
     inline CellIndex getBottomLeftNeighborCell() const;
     inline CellIndex getTopLeftNeighborCell() const;
