@@ -390,14 +390,23 @@ bool BalancerServer::onMonitoringBalanceTreeStaticSplit(size_t received_bytes)
 
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeStaticSplit>();
     auto answer = createPacket<Packet::MonitoringBalanceTreeStaticSplitAnswer>(packet->packet_number);
-    BalanceTree* found_tree = uuid_to_tree.find(packet->tree_node_token);
-    if (found_tree)
+
+    if (balance_tree->isNodeServerRunning())
     {
-        found_tree->monitoringBalanceTreeStaticSplit(answer);
+        answer->node_server_running = true;
+        answer->success = false;
     }
     else
     {
-        answer->success = false;
+        BalanceTree* found_tree = uuid_to_tree.find(packet->tree_node_token);
+        if (found_tree)
+        {
+            found_tree->monitoringBalanceTreeStaticSplit(answer);
+        }
+        else
+        {
+            answer->success = false;
+        }
     }
     standardSend(answer);
     return true;
@@ -411,14 +420,22 @@ bool BalancerServer::onMonitoringBalanceTreeStaticMerge(size_t received_bytes)
 
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeStaticMerge>();
     auto answer = createPacket<Packet::MonitoringBalanceTreeStaticMergeAnswer>(packet->packet_number);
-    BalanceTree* found_tree = uuid_to_tree.find(packet->tree_node_token);
-    if (found_tree)
+
+    if (balance_tree->isNodeServerRunning())
     {
-        found_tree->monitoringBalanceTreeStaticMerge(answer);
+        answer->success = false;
     }
     else
     {
-        answer->success = false;
+        BalanceTree* found_tree = uuid_to_tree.find(packet->tree_node_token);
+        if (found_tree)
+        {
+            found_tree->monitoringBalanceTreeStaticMerge(answer);
+        }
+        else
+        {
+            answer->success = false;
+        }
     }
     standardSend(answer);
     return true;

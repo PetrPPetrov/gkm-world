@@ -146,7 +146,7 @@ void BalanceTree::monitoringBalanceTreeStaticSplit(Packet::MonitoringBalanceTree
 void BalanceTree::monitoringBalanceTreeStaticMerge(Packet::MonitoringBalanceTreeStaticMergeAnswer* answer)
 {
     answer->tree_node_token = token;
-    answer->success = true;
+    answer->success = staticMerge();
 }
 
 void BalanceTree::startNodeServer()

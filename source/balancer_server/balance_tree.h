@@ -48,7 +48,7 @@ public:
 
     bool staticSplit();
     bool staticSplit(std::size_t required_level);
-    bool staticMerge(); // TODO: Check if all nodes do not have node server running
+    bool staticMerge();
 
 private:
     void destroyChildren();
