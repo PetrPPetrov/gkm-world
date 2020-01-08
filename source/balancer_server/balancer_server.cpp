@@ -391,7 +391,7 @@ bool BalancerServer::onMonitoringBalanceTreeStaticSplit(size_t received_bytes)
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeStaticSplit>();
     auto answer = createPacket<Packet::MonitoringBalanceTreeStaticSplitAnswer>(packet->packet_number);
 
-    if (balance_tree->isNodeServerRunning())
+    if (balance_tree->isAnyNodeServerRunning())
     {
         answer->node_server_running = true;
         answer->success = false;
@@ -421,7 +421,7 @@ bool BalancerServer::onMonitoringBalanceTreeStaticMerge(size_t received_bytes)
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeStaticMerge>();
     auto answer = createPacket<Packet::MonitoringBalanceTreeStaticMergeAnswer>(packet->packet_number);
 
-    if (balance_tree->isNodeServerRunning())
+    if (balance_tree->isAnyNodeServerRunning())
     {
         answer->success = false;
     }

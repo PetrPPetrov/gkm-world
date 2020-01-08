@@ -79,3 +79,37 @@ static inline QColor getColor(std::uint32_t token)
     std::uint8_t blue = (color[5] << 4) + color[4];
     return QColor(red, green, blue);
 }
+
+static inline bool isAnyNodeServerRunning(const BalancerServerInfo::Ptr& server_info, std::uint32_t tree_node_token)
+{
+    if (server_info)
+    {
+        BalancerTreeInfo* tree_node = server_info->token_to_tree_node.find(tree_node_token);
+        if (tree_node)
+        {
+            if (tree_node->leaf_node)
+            {
+                return tree_node->node_server_port_number != 0;
+            }
+            else
+            {
+                for (std::uint8_t i = ChildFirst; i < ChildLast; ++i)
+                {
+                    if (tree_node->children[i] && isAnyNodeServerRunning(server_info, tree_node->children[i]))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}

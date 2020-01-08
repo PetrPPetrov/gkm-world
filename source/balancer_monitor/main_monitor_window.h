@@ -53,6 +53,7 @@ signals:
     void monitoringBalanceTreeInfoAnswer(QByteArray data);
     void monitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
     void monitoringBalanceTreeStaticSplitAnswer(QByteArray data);
+    void monitoringBalanceTreeStaticMergeAnswer(QByteArray data);
 
 private slots:
     void onMessage(const QString& message);
@@ -61,6 +62,7 @@ private slots:
     void onMonitoringBalanceTreeInfoAnswer(QByteArray data);
     void onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
     void onMonitoringBalanceTreeStaticSplitAnswer(QByteArray data);
+    void onMonitoringBalanceTreeStaticMergeAnswer(QByteArray data);
 
 private:
     void generateNeighborRequests(std::uint32_t token);

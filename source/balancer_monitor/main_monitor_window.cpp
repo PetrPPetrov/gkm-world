@@ -31,6 +31,8 @@ MainMonitorWindow::MainMonitorWindow()
         this, SLOT(onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray)));
     connect(this, SIGNAL(monitoringBalanceTreeStaticSplitAnswer(QByteArray)),
         this, SLOT(onMonitoringBalanceTreeStaticSplitAnswer(QByteArray)));
+    connect(this, SIGNAL(monitoringBalanceTreeStaticMergeAnswer(QByteArray)),
+        this, SLOT(onMonitoringBalanceTreeStaticMergeAnswer(QByteArray)));
 
     statusBar()->showMessage(tr("Gkm-World Position: Unknown"));
 
@@ -248,25 +250,56 @@ void MainMonitorWindow::onClearLog()
 
 void MainMonitorWindow::onStaticSplit()
 {
-    if (server_info && server_info->selected_node)
+    if (server_info)
     {
-        auto selected_node = server_info->selected_node;
-        if (!selected_node->leaf_node)
+        if (server_info->tree_root_token && isAnyNodeServerRunning(server_info, server_info->tree_root_token))
         {
-            log->appendPlainText(tr("can not use static split method, balance tree node with token %1 is not leaf node").arg(selected_node->token));
+            log->appendPlainText(tr("can not use static split method, some node servers are running"));
             return;
         }
-        if (selected_node->node_server_port_number)
+        if (server_info->selected_node)
         {
-            log->appendPlainText(tr("can not use static split method, balance tree node with token %1 has node server running").arg(selected_node->token));
-            return;
+            auto selected_node = server_info->selected_node;
+            if (!selected_node->leaf_node)
+            {
+                log->appendPlainText(tr("can not use static split method, balance tree node with token %1 is not leaf node").arg(selected_node->token));
+                return;
+            }
+            if (selected_node->node_server_port_number)
+            {
+                log->appendPlainText(tr("can not use static split method, balance tree node with token %1 has node server running").arg(selected_node->token));
+                return;
+            }
+            connection->staticSplit(selected_node->token);
         }
-        connection->staticSplit(selected_node->token);
     }
 }
 
 void MainMonitorWindow::onStaticMerge()
 {
+    if (server_info)
+    {
+        if (server_info->tree_root_token && isAnyNodeServerRunning(server_info, server_info->tree_root_token))
+        {
+            log->appendPlainText(tr("can not use static merge method, some node servers are running"));
+            return;
+        }
+        if (server_info->selected_node)
+        {
+            auto selected_node = server_info->selected_node;
+            if (selected_node->leaf_node)
+            {
+                log->appendPlainText(tr("can not use static merge method, balance tree node with token %1 is leaf node").arg(selected_node->token));
+                return;
+            }
+            if (selected_node->node_server_port_number)
+            {
+                log->appendPlainText(tr("can not use static merge method, balance tree node with token %1 has node server running").arg(selected_node->token));
+                return;
+            }
+            connection->staticMerge(selected_node->token);
+        }
+    }
 }
 
 void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
@@ -518,6 +551,26 @@ void MainMonitorWindow::onMonitoringBalanceTreeStaticSplitAnswer(QByteArray data
             return;
         }
         log->appendPlainText(tr("received balance tree static split success answer, token %1").arg(answer->tree_node_token));
+        server_info = std::make_shared<BalancerServerInfo>();
+        connection->getBalancerServerInfo();
+    }
+    else
+    {
+        log->appendPlainText(tr("invalid data size: %1").arg(data.size()));
+    }
+}
+
+void MainMonitorWindow::onMonitoringBalanceTreeStaticMergeAnswer(QByteArray data)
+{
+    const Packet::MonitoringBalanceTreeStaticMergeAnswer* answer = reinterpret_cast<const Packet::MonitoringBalanceTreeStaticMergeAnswer*>(data.data());
+    if (data.size() >= Packet::getSize(answer))
+    {
+        if (!answer->success)
+        {
+            log->appendPlainText(tr("static merge was failed on node with token %1").arg(answer->tree_node_token));
+            return;
+        }
+        log->appendPlainText(tr("received balance tree static merge success answer, token %1").arg(answer->tree_node_token));
         server_info = std::make_shared<BalancerServerInfo>();
         connection->getBalancerServerInfo();
     }

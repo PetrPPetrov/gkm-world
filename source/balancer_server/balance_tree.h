@@ -33,7 +33,7 @@ public:
 
     std::uint32_t getToken() const;
     bool isLeafNode() const;
-    bool isNodeServerRunning() const;
+    bool isAnyNodeServerRunning() const;
     void dump() const;
 
     bool registerNewUser(const Packet::InitializePositionInternal& packet);

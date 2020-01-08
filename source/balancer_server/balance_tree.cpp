@@ -36,7 +36,7 @@ bool BalanceTree::isLeafNode() const
     return leaf_node;
 }
 
-bool BalanceTree::isNodeServerRunning() const
+bool BalanceTree::isAnyNodeServerRunning() const
 {
     if (leaf_node)
     {
@@ -47,7 +47,7 @@ bool BalanceTree::isNodeServerRunning() const
     {
         if (child)
         {
-            if (child->isNodeServerRunning())
+            if (child->isAnyNodeServerRunning())
             {
                 return true;
             }
@@ -334,7 +334,7 @@ bool BalanceTree::staticSplit()
 
 bool BalanceTree::staticSplit(std::size_t required_level)
 {
-    if (isNodeServerRunning())
+    if (isAnyNodeServerRunning())
     {
         return false;
     }
@@ -372,7 +372,7 @@ bool BalanceTree::staticMerge()
         return false;
     }
 
-    if (isNodeServerRunning())
+    if (isAnyNodeServerRunning())
     {
         // Static merge can not be applied, use dynamic merge instead
         return false;
