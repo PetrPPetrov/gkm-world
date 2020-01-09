@@ -29,6 +29,8 @@ public:
     bool isShowLeafNodes() const;
     bool isShowSelectedNode() const;
     bool isShowNeighbor() const;
+    void connectedState();
+    void disconnectedState();
     BalancerServerInfo::Ptr getServerInfo() const;
 
 protected:
@@ -45,6 +47,8 @@ private:
     void onStaticSplit();
     void onStaticMerge();
     void onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+    void onNodeTreeCollapsed(const QModelIndex& index);
+    void onNodeTreeExpanded(const QModelIndex& index);
 
 signals:
     void message(const QString& message);
@@ -66,6 +70,8 @@ private slots:
 
 private:
     void generateNeighborRequests(std::uint32_t token);
+    void restoreExpandStatus();
+    void restoreExpandStatus(const QModelIndex& index);
 
 private:
     bool first_show = true;
@@ -78,11 +84,14 @@ private:
     QAction* show_leaf_nodes_act = nullptr;
     QAction* show_selected_node_act = nullptr;
     QAction* show_neighbor_act = nullptr;
+    QAction* static_split_act = nullptr;
+    QAction* static_merge_act = nullptr;
     MonitorUDPConnection* connection = nullptr;
 
     BalancerServerInfo::Ptr server_info;
     TreeModel::Ptr node_tree = nullptr;
     ListModel::Ptr property_tree = nullptr;
+    BalancerTreeExpandStatus expand_status;
 };
 
 extern MainMonitorWindow* g_main_window;

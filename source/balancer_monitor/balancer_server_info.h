@@ -6,6 +6,7 @@
 #include <memory>
 #include <set>
 #include <map>
+#include <unordered_map>
 #include <vector>
 #include <list>
 #include <algorithm>
@@ -52,6 +53,15 @@ struct BalancerServerInfo
         int x, y;
     };
     std::list<NeighborRequest> neighbor_requests;
+};
+
+struct BalancerTreeExpandStatus
+{
+    typedef std::shared_ptr<BalancerTreeExpandStatus> Ptr;
+
+    std::unordered_map<std::uint32_t, bool> tree_expand_status;
+    bool is_selected_token_valid = false;
+    std::uint32_t selected_token = 0;
 };
 
 static inline QColor getColor(std::uint32_t token)

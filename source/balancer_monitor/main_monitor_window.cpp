@@ -69,6 +69,8 @@ MainMonitorWindow::MainMonitorWindow()
     tree_node_dock->setWidget(node_tree_view);
     addDockWidget(Qt::RightDockWidgetArea, tree_node_dock);
     view_menu->addAction(tree_node_dock->toggleViewAction());
+    connect(node_tree_view, &QTreeView::collapsed, this, &MainMonitorWindow::onNodeTreeCollapsed);
+    connect(node_tree_view, &QTreeView::expanded, this, &MainMonitorWindow::onNodeTreeExpanded);
 
     QDockWidget* property_dock = new QDockWidget(tr("Properties"), this);
     property_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
@@ -118,13 +120,15 @@ MainMonitorWindow::MainMonitorWindow()
 
     QMenu* action_menu = menuBar()->addMenu(tr("&Action"));
 
-    QAction* static_split_act = new QAction(tr("Static Split"), this);
+    static_split_act = new QAction(tr("Static Split"), this);
     static_split_act->setStatusTip(tr("Static Split of the Selected Node Server"));
+    static_split_act->setEnabled(false);
     connect(static_split_act, &QAction::triggered, this, &MainMonitorWindow::onStaticSplit);
     action_menu->addAction(static_split_act);
 
-    QAction* static_merge_act = new QAction(tr("Static Merge"), this);
+    static_merge_act = new QAction(tr("Static Merge"), this);
     static_merge_act->setStatusTip(tr("Static Merge of the Selected Group Node"));
+    static_merge_act->setEnabled(false);
     connect(static_merge_act, &QAction::triggered, this, &MainMonitorWindow::onStaticMerge);
     action_menu->addAction(static_merge_act);
 }
@@ -147,6 +151,22 @@ bool MainMonitorWindow::isShowSelectedNode() const
 bool MainMonitorWindow::isShowNeighbor() const
 {
     return show_neighbor_act->isChecked();
+}
+
+void MainMonitorWindow::connectedState()
+{
+    connect_act->setEnabled(false);
+    close_act->setEnabled(true);
+    static_split_act->setEnabled(true);
+    static_merge_act->setEnabled(true);
+}
+
+void MainMonitorWindow::disconnectedState()
+{
+    connect_act->setEnabled(true);
+    close_act->setEnabled(false);
+    static_split_act->setEnabled(false);
+    static_merge_act->setEnabled(false);
 }
 
 BalancerServerInfo::Ptr MainMonitorWindow::getServerInfo() const
@@ -198,8 +218,7 @@ void MainMonitorWindow::onConnect()
 
     if (dialog.exec())
     {
-        connect_act->setEnabled(false);
-        close_act->setEnabled(true);
+        connectedState();
         connection = new MonitorUDPConnection(host_name_edit.text(), static_cast<std::uint16_t>(port_number_edit.value()), this);
     }
 }
@@ -209,8 +228,7 @@ void MainMonitorWindow::onClose()
     assert(connection);
     connection->close();
     connection = nullptr;
-    close_act->setEnabled(false);
-    connect_act->setEnabled(true);
+    disconnectedState();
     server_info = nullptr;
     node_tree = nullptr;
     node_tree_view->setModel(nullptr);
@@ -318,15 +336,19 @@ void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selecte
                 property_view->setModel(property_tree.get());
                 property_view->update();
                 server_info->selected_node = current_node_tree->getNode();
+                expand_status.selected_token = current_node_tree->getNode()->token;
                 is_selected = true;
+                expand_status.is_selected_token_valid = true;
             }
             else if (current_node_tree && !current_node_tree->getNode())
             {
                 property_tree = std::make_shared<ListModel>(getPropertyList(server_info));
                 property_view->setModel(property_tree.get());
                 property_view->update();
-                server_info->selected_node = server_info->token_to_tree_node.find(server_info->tree_root_token);
-                is_selected = true;
+                server_info->selected_node = nullptr;
+                expand_status.selected_token = 0;
+                is_selected = false;
+                expand_status.is_selected_token_valid = false;
             }
         }
     }
@@ -337,6 +359,40 @@ void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selecte
         server_info->selected_node = nullptr;
     }
     update();
+}
+
+void MainMonitorWindow::onNodeTreeCollapsed(const QModelIndex& index)
+{
+    TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
+    if (item)
+    {
+        NodeTreeItem* node_tree = dynamic_cast<NodeTreeItem*>(item);
+        if (node_tree && node_tree->getNode())
+        {
+            expand_status.tree_expand_status.erase(node_tree->getNode()->token);
+        }
+        else if (node_tree && !node_tree->getNode())
+        {
+            expand_status.tree_expand_status.erase(0);
+        }
+    }
+}
+
+void MainMonitorWindow::onNodeTreeExpanded(const QModelIndex& index)
+{
+    TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
+    if (item)
+    {
+        NodeTreeItem* node_tree = dynamic_cast<NodeTreeItem*>(item);
+        if (node_tree && node_tree->getNode())
+        {
+            expand_status.tree_expand_status.emplace(node_tree->getNode()->token, true);
+        }
+        else if (node_tree && !node_tree->getNode())
+        {
+            expand_status.tree_expand_status.emplace(0, true);
+        }
+    }
 }
 
 void MainMonitorWindow::onMessage(const QString& message)
@@ -452,6 +508,7 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
                     // We received all balancer node tree
                     node_tree = std::make_shared<TreeModel>(std::make_shared<NodeTreeItem>(server_info));
                     node_tree_view->setModel(node_tree.get());
+                    restoreExpandStatus();
                     // TODO: Move this line somewhere to do not connect it each time
                     connect(node_tree_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainMonitorWindow::onNodeTreeSelectionChanged);
                     update();
@@ -608,6 +665,50 @@ void MainMonitorWindow::generateNeighborRequests(std::uint32_t token)
                 new_request.x = tree_info->bounding_box.start.x + tree_info->bounding_box.size;
                 new_request.y = cur_y;
                 server_info->neighbor_requests.push_back(new_request);
+            }
+        }
+    }
+}
+
+void MainMonitorWindow::restoreExpandStatus()
+{
+    QAbstractItemModel* model = node_tree_view->model();
+    if (model)
+    {
+        QModelIndex root_index = model->index(0, 0);
+        restoreExpandStatus(root_index);
+    }
+}
+
+void MainMonitorWindow::restoreExpandStatus(const QModelIndex& index)
+{
+    QAbstractItemModel* model = node_tree_view->model();
+    if (model)
+    {
+        TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
+        if (item)
+        {
+            NodeTreeItem* node_tree = dynamic_cast<NodeTreeItem*>(item);
+            if (node_tree)
+            {
+                std::uint32_t token = 0;
+                if (node_tree->getNode())
+                {
+                    token = node_tree->getNode()->token;
+                }
+                if (expand_status.tree_expand_status.find(token) != expand_status.tree_expand_status.end())
+                {
+                    node_tree_view->expand(index);
+                }
+                if (expand_status.is_selected_token_valid && expand_status.selected_token == token)
+                {
+                    node_tree_view->selectionModel()->select(index, QItemSelectionModel::Select);
+                }
+                for (int i = 0; i < model->rowCount(index); ++i)
+                {
+                    QModelIndex child = model->index(i, 0, index);
+                    restoreExpandStatus(child);
+                }
             }
         }
     }
