@@ -131,6 +131,10 @@ MainMonitorWindow::MainMonitorWindow()
     static_merge_act->setEnabled(false);
     connect(static_merge_act, &QAction::triggered, this, &MainMonitorWindow::onStaticMerge);
     action_menu->addAction(static_merge_act);
+
+    node_tree_view->setContextMenuPolicy(Qt::ActionsContextMenu);
+    node_tree_view->addAction(static_split_act);
+    node_tree_view->addAction(static_merge_act);
 }
 
 QPlainTextEdit* MainMonitorWindow::getLog() const
@@ -157,8 +161,8 @@ void MainMonitorWindow::connectedState()
 {
     connect_act->setEnabled(false);
     close_act->setEnabled(true);
-    static_split_act->setEnabled(true);
-    static_merge_act->setEnabled(true);
+    static_split_act->setEnabled(false);
+    static_merge_act->setEnabled(false);
 }
 
 void MainMonitorWindow::disconnectedState()
@@ -229,11 +233,11 @@ void MainMonitorWindow::onClose()
     connection->close();
     connection = nullptr;
     disconnectedState();
-    server_info = nullptr;
     node_tree = nullptr;
     node_tree_view->setModel(nullptr);
     property_tree = nullptr;
     property_view->setModel(nullptr);
+    server_info = nullptr;
     update();
 }
 
@@ -339,9 +343,12 @@ void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selecte
                 expand_status.selected_token = current_node_tree->getNode()->token;
                 is_selected = true;
                 expand_status.is_selected_token_valid = true;
+                static_split_act->setEnabled(current_node_tree->getNode()->leaf_node);
+                static_merge_act->setEnabled(!current_node_tree->getNode()->leaf_node);
             }
             else if (current_node_tree && !current_node_tree->getNode())
             {
+                // Root node: it is Balancer Server, so, split and merge are unavailable
                 property_tree = std::make_shared<ListModel>(getPropertyList(server_info));
                 property_view->setModel(property_tree.get());
                 property_view->update();
@@ -349,6 +356,8 @@ void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selecte
                 expand_status.selected_token = 0;
                 is_selected = false;
                 expand_status.is_selected_token_valid = false;
+                static_split_act->setEnabled(false);
+                static_merge_act->setEnabled(false);
             }
         }
     }
@@ -608,7 +617,6 @@ void MainMonitorWindow::onMonitoringBalanceTreeStaticSplitAnswer(QByteArray data
             return;
         }
         log->appendPlainText(tr("received balance tree static split success answer, token %1").arg(answer->tree_node_token));
-        server_info = std::make_shared<BalancerServerInfo>();
         connection->getBalancerServerInfo();
     }
     else
@@ -628,7 +636,6 @@ void MainMonitorWindow::onMonitoringBalanceTreeStaticMergeAnswer(QByteArray data
             return;
         }
         log->appendPlainText(tr("received balance tree static merge success answer, token %1").arg(answer->tree_node_token));
-        server_info = std::make_shared<BalancerServerInfo>();
         connection->getBalancerServerInfo();
     }
     else
