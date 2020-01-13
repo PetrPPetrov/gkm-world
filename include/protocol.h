@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <boost/asio/ip/address_v4.hpp>
 #include <boost/asio/ip/address_v6.hpp>
 #include "global_types.h"
@@ -169,6 +170,8 @@ namespace Packet
         PlayerLocation user_location;
         std::uint32_t client_packet_number = 0;
         std::uint32_t proxy_packet_number = 0;
+        ip_address_t::bytes_type proxy_server_address = { 0 };
+        std::uint16_t proxy_server_port_number = 0;
 
         InitializePositionInternal()
         {
@@ -399,7 +402,7 @@ namespace Packet
         bool leaf_node = true;
         std::array<std::uint32_t, CountOfChildren> children;
         std::uint32_t user_count = 0;
-        ip_address_t::bytes_type node_server_address;
+        ip_address_t::bytes_type node_server_address = { 0 };
         std::uint16_t node_server_port_number = 0;
 
         MonitoringBalanceTreeInfoAnswer()
@@ -481,6 +484,96 @@ namespace Packet
         {
             type = EType::MonitoringBalanceTreeStaticMergeAnswer;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringSendMessage : public Base
+    {
+        ESeverityType severity_type = ESeverityType::InfoMessage;
+        EServerType server_type = EServerType::NodeServer;
+        std::uint32_t token = 0;
+        char message[256] = { 0 };
+
+        MonitoringSendMessage()
+        {
+            type = EType::MonitoringSendMessage;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+        std::string getMessage() const
+        {
+            char temp_message[sizeof(message) / sizeof(message[0])];
+            memcpy(temp_message, message, std::size(message));
+            temp_message[std::size(temp_message) - 1] = 0;
+            return temp_message;
+        }
+        void setMessage(const std::string& message_)
+        {
+            memset(message, 0, std::size(message));
+            memcpy(message, message_.c_str(), std::min(message_.size(), std::size(message)));
+        }
+    };
+
+    struct MonitoringSendMessageAnswer : public Base
+    {
+        MonitoringSendMessageAnswer()
+        {
+            type = EType::MonitoringSendMessageAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringMessageCount : public Base
+    {
+        MonitoringMessageCount()
+        {
+            type = EType::MonitoringMessageCount;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringMessageCountAnswer : public Base
+    {
+        std::uint32_t message_count = 0;
+
+        MonitoringMessageCountAnswer()
+        {
+            type = EType::MonitoringMessageCountAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringPopMessage : public Base
+    {
+        MonitoringPopMessage()
+        {
+            type = EType::MonitoringPopMessage;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringPopMessageAnswer : public Base
+    {
+        ESeverityType severity_type = ESeverityType::InfoMessage;
+        EServerType server_type = EServerType::NodeServer;
+        std::uint32_t token = 0;
+        char message[256] = { 0 };
+
+        MonitoringPopMessageAnswer()
+        {
+            type = EType::MonitoringPopMessageAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+        std::string getMessage() const
+        {
+            char temp_message[sizeof(message) / sizeof(message[0])];
+            memcpy(temp_message, message, std::size(message));
+            temp_message[std::size(temp_message) - 1] = 0;
+            return temp_message;
+        }
+        void setMessage(const std::string& message_)
+        {
+            memset(message, 0, std::size(message));
+            memcpy(message, message_.c_str(), std::min(message_.size(), std::size(message)));
         }
     };
 

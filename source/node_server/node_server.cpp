@@ -124,7 +124,8 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
             answer->node_server_port_number = node_server_end_point.port();
             answer->proxy_packet_number = packet->proxy_packet_number;
             answer->success = true;
-            standardSend(answer);
+            auto proxy_server_endpoint = boost::asio::ip::udp::endpoint(ip_address_t(packet->proxy_server_address), packet->proxy_server_port_number);
+            standardSendTo(answer, proxy_server_endpoint);
             return true;
         }
         else
@@ -139,7 +140,8 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
             answer->node_server_port_number = node_server_end_point.port();
             answer->proxy_packet_number = packet->proxy_packet_number;
             answer->success = false;
-            standardSend(answer);
+            auto proxy_server_endpoint = boost::asio::ip::udp::endpoint(ip_address_t(packet->proxy_server_address), packet->proxy_server_port_number);
+            standardSendTo(answer, proxy_server_endpoint);
             return true;
         }
     }
@@ -157,7 +159,8 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
         answer->node_server_port_number = node_server_end_point.port();
         answer->proxy_packet_number = packet->proxy_packet_number;
         answer->success = true;
-        standardSend(answer);
+        auto proxy_server_endpoint = boost::asio::ip::udp::endpoint(ip_address_t(packet->proxy_server_address), packet->proxy_server_port_number);
+        standardSendTo(answer, proxy_server_endpoint);
         return true;
     }
 

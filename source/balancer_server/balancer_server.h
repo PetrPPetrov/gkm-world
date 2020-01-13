@@ -71,7 +71,6 @@ public:
 
 private:
     bool onInitializePositionInternal(size_t received_bytes);
-    bool onInitializePositionInternalAnswer(size_t received_bytes);
     bool onGetNodeInfo(size_t received_bytes);
     bool onMonitoringBalancerServerInfo(size_t received_bytes);
     bool onMonitoringBalanceTreeInfo(size_t received_bytes);

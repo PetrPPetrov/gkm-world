@@ -99,7 +99,6 @@ void BalancerServer::start()
     doReceive();
     signals.async_wait(Log::onQuit);
     setReceiveHandler(Packet::EType::InitializePositionInternal, boost::bind(&BalancerServer::onInitializePositionInternal, this, _1));
-    setReceiveHandler(Packet::EType::InitializePositionInternalAnswer, boost::bind(&BalancerServer::onInitializePositionInternalAnswer, this, _1));
     setReceiveHandler(Packet::EType::GetNodeInfo, boost::bind(&BalancerServer::onGetNodeInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalancerServerInfo, boost::bind(&BalancerServer::onMonitoringBalancerServerInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeInfo, this, _1));
@@ -248,39 +247,6 @@ bool BalancerServer::onInitializePositionInternal(size_t received_bytes)
         answer->success = false;
         standardSend(answer);
     }
-
-    return true;
-}
-
-bool BalancerServer::onInitializePositionInternalAnswer(size_t received_bytes)
-{
-#ifdef _DEBUG
-    LOG_DEBUG << "onInitializePositionInternalAnswer" << std::endl;
-#endif
-
-    const auto packet = getReceiveBufferAs<Packet::InitializePositionInternalAnswer>();
-#ifdef _DEBUG
-    LOG_DEBUG << "user token " << packet->user_token << std::endl;
-    LOG_DEBUG << "node server ip " << ip_address_t(packet->node_server_address) << std::endl;
-#endif
-
-    auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->proxy_packet_number);
-    answer->user_token = packet->user_token;
-    answer->client_packet_number = packet->client_packet_number;
-    answer->corrected_location = packet->corrected_location;
-    answer->node_server_address = remote_end_point.address().to_v().to_bytes();
-    answer->node_server_port_number = remote_end_point.port();
-    answer->success = packet->success;
-    standardSendTo(answer, proxy_server_end_point);
-
-//#ifdef DEBUG_MONITOR
-//    COORD xy;
-//    xy.X = 0;
-//    xy.Y = 1;
-//    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), xy);
-//    balance_tree->dump();
-//    std::cout << LINE_SEPARATOR << std::endl;
-//#endif
 
     return true;
 }

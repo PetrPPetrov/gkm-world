@@ -50,6 +50,12 @@ namespace Packet
         MonitoringBalanceTreeStaticSplitAnswer,
         MonitoringBalanceTreeStaticMerge,
         MonitoringBalanceTreeStaticMergeAnswer,
+        MonitoringSendMessage,
+        MonitoringSendMessageAnswer,
+        MonitoringMessageCount,
+        MonitoringMessageCountAnswer,
+        MonitoringPopMessage,
+        MonitoringPopMessageAnswer,
         Last,
         First = Login
     };
@@ -70,4 +76,21 @@ namespace Packet
             return true;
         }
     }
+
+    enum class EServerType : std::uint8_t
+    {
+        ClientApplication,
+        ProxyServer,
+        NodeServer,
+        BalancerServer,
+        Monitor
+    };
+
+    enum class ESeverityType : std::uint8_t
+    {
+        InfoMessage,
+        WarningMessage,
+        ErrorMessage,
+        FatalMessage
+    };
 }
