@@ -2,40 +2,36 @@
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #include <iostream>
+#include <memory>
 #include <boost/asio/impl/src.hpp>
 #include "protocol.h"
 #include "log.h"
 #include "balancer_server.h"
 
-extern std::ofstream* g_log_file = nullptr;
-
 int main(int argc, char** argv)
 {
     std::cout << "Gkm-World Balancer Server Copyright (c) 2018 Petr Petrovich Petrov" << std::endl;
 
-    LogFileHolder log_file_holder;
-    g_log_file = new std::ofstream("balancer_server.log", std::ios::app);
-    LOG_INFO << "Balancer Server is starting..." << std::endl;
-
+    bool result = false;
     try
     {
-        BalancerServer balancer_server;
-        balancer_server.start();
+        std::unique_ptr<BalancerServer> balancer_server = std::make_unique<BalancerServer>();
+        result = balancer_server->start();
     }
     catch (boost::system::system_error& error)
     {
-        LOG_FATAL << "boost::system::system_error: " << error.what() << std::endl;
+        std::cerr << "boost::system::system_error: " << error.what() << std::endl;
         return EXIT_FAILURE;
     }
     catch (const std::exception& exception)
     {
-        LOG_FATAL << "std::exception: " << exception.what() << std::endl;
+        std::cerr << "std::exception: " << exception.what() << std::endl;
         return EXIT_FAILURE;
     }
     catch (...)
     {
-        LOG_FATAL << "Unknown error" << std::endl;
+        std::cerr << "Unknown error" << std::endl;
         return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
+    return result ? EXIT_SUCCESS : EXIT_FAILURE;
 }

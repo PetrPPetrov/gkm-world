@@ -35,11 +35,6 @@ BalancerServer::BalancerServer() :
     config_reader.addParameter("node_server_max_process_count", node_server_max_process_count);
     config_reader.read(config_file);
 
-    LOG_INFO << "balancer_server_port_number " << port_number << std::endl;
-    LOG_INFO << "global_bounding_box_start_x " << global_bounding_box_start_x << std::endl;
-    LOG_INFO << "global_bounding_box_start_y " << global_bounding_box_start_y << std::endl;
-    LOG_INFO << "global_bounding_box_size " << global_bounding_box_size << std::endl;
-
     auto ip_address_it = node_server_ip_address.begin();
     auto max_process_count_it = node_server_max_process_count.begin();
 
@@ -55,9 +50,6 @@ BalancerServer::BalancerServer() :
         }
         new_node_server_info->max_process_count = *max_process_count_it++;
         available_node_servers.insert(available_node_servers_t::value_type(new_node_server_info->ip_address.to_bytes(), new_node_server_info));
-        LOG_INFO << "node_server_mac_address " << to_string(new_node_server_info->mac_address) << std::endl;
-        LOG_INFO << "node_server_ip_address " << new_node_server_info->ip_address << std::endl;
-        LOG_INFO << "node_server_max_process_count " << new_node_server_info->max_process_count << std::endl;
     }
 
     socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(ip_address_t(), port_number));
@@ -68,23 +60,22 @@ BalancerServer::BalancerServer() :
 
     if (MINIMAL_NODE_SIZE > MAXIMAL_NODE_SIZE)
     {
-        // TODO: Report an error
+        throw std::runtime_error("MINIMAL_NODE_SIZE > MAXIMAL_NODE_SIZE");
     }
     if (global_bounding_box_size > MAXIMAL_NODE_SIZE)
     {
-        // TODO: Report an error
+        throw std::runtime_error("global_bounding_box_size > MAXIMAL_NODE_SIZE");
     }
     while (global_bounding_box_size > MINIMAL_NODE_SIZE)
     {
         if (global_bounding_box_size % 2)
         {
-            // TODO: Report an error; global_bounding_box_size must be even, not odd!
+            throw std::runtime_error("global_bounding_box_size must be even, not odd!");
         }
         global_bounding_box_size /= 2;
     }
 
     node_server_path = findNodeServerPath();
-    LOG_INFO << "node_server_path " << node_server_path << std::endl;
 
     initAvailableNodes();
 
@@ -94,18 +85,35 @@ BalancerServer::BalancerServer() :
     //balance_tree->startNodeServers();
 }
 
-void BalancerServer::start()
+extern Log::Logger* g_logger = nullptr;
+
+bool BalancerServer::start()
 {
-    doReceive();
-    signals.async_wait(Log::onQuit);
-    setReceiveHandler(Packet::EType::InitializePositionInternal, boost::bind(&BalancerServer::onInitializePositionInternal, this, _1));
-    setReceiveHandler(Packet::EType::GetNodeInfo, boost::bind(&BalancerServer::onGetNodeInfo, this, _1));
-    setReceiveHandler(Packet::EType::MonitoringBalancerServerInfo, boost::bind(&BalancerServer::onMonitoringBalancerServerInfo, this, _1));
-    setReceiveHandler(Packet::EType::MonitoringBalanceTreeInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeInfo, this, _1));
-    setReceiveHandler(Packet::EType::MonitoringBalanceTreeNeighborInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeNeighborInfo, this, _1));
-    setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticSplit, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticSplit, this, _1));
-    setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticMerge, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticMerge, this, _1));
-    io_service.run();
+    Log::Holder log_holder;
+    g_logger = new Log::Logger(Packet::ESeverityType::DebugMessage, "balancer_server.log", false, true);
+    LOG_INFO << "Balancer Server is starting...";
+
+    try
+    {
+        dumpParameters();
+        startImpl();
+    }
+    catch (boost::system::system_error & error)
+    {
+        LOG_FATAL << "boost::system::system_error: " << error.what();
+        return false;
+    }
+    catch (const std::exception & exception)
+    {
+        LOG_FATAL << "std::exception: " << exception.what();
+        return false;
+    }
+    catch (...)
+    {
+        LOG_FATAL << "Unknown error";
+        return false;
+    }
+    return true;
 }
 
 BalanceTree* BalancerServer::createNewBalanceNode(const SquareCell& bounding_box, BalanceTree* parent)
@@ -127,7 +135,7 @@ NodeInfo BalancerServer::getAvailableNode()
 {
     if (available_nodes.empty())
     {
-        LOG_FATAL << "no more nodes are available" << std::endl;
+        LOG_FATAL << "no more nodes are available";
         throw std::runtime_error("no more nodes are available");
     }
 
@@ -148,7 +156,7 @@ void BalancerServer::startNode(NodeInfo& node_info, BalanceTree* balance_tree)
     else
     {
         assert(false);
-        LOG_FATAL << "node server is already running" << std::endl;
+        LOG_FATAL << "node server is already running";
         throw std::runtime_error("node server is already running");
     }
 
@@ -177,7 +185,7 @@ void BalancerServer::startNode(NodeInfo& node_info, BalanceTree* balance_tree)
     else
     {
         assert(false);
-        LOG_FATAL << "can not find node server information" << std::endl;
+        LOG_FATAL << "can not find node server information";
         throw std::runtime_error("can not find node server information");
     }
 }
@@ -186,7 +194,7 @@ void BalancerServer::wakeUp(NodeServerInfo::Ptr node_server_info)
 {
     if (!node_server_info->power_on)
     {
-        LOG_INFO << "waking-up " << to_string(node_server_info->mac_address) << std::endl;
+        LOG_INFO << "waking-up " << to_string(node_server_info->mac_address);
         auto request = createPacket<Packet::WakeOnLan>();
         request->setMacAddress(node_server_info->mac_address);
         socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
@@ -220,10 +228,41 @@ void BalancerServer::onWakeupTimeout(NodeServerInfo::Ptr node_server_info, const
     }
 }
 
+void BalancerServer::dumpParameters()
+{
+    LOG_INFO << "balancer_server_port_number " << port_number;
+    LOG_INFO << "global_bounding_box_start_x " << global_bounding_box.start.x;
+    LOG_INFO << "global_bounding_box_start_y " << global_bounding_box.start.y;
+    LOG_INFO << "global_bounding_box_size " << global_bounding_box.size;
+
+    for (auto node_server_info : available_node_servers)
+    {
+        LOG_INFO << "node_server_mac_address " << to_string(node_server_info.second->mac_address);
+        LOG_INFO << "node_server_ip_address " << node_server_info.second->ip_address;
+        LOG_INFO << "node_server_max_process_count " << node_server_info.second->max_process_count;
+    }
+
+    LOG_INFO << "node_server_path " << node_server_path;
+}
+
+void BalancerServer::startImpl()
+{
+    doReceive();
+    signals.async_wait(Log::onQuit);
+    setReceiveHandler(Packet::EType::InitializePositionInternal, boost::bind(&BalancerServer::onInitializePositionInternal, this, _1));
+    setReceiveHandler(Packet::EType::GetNodeInfo, boost::bind(&BalancerServer::onGetNodeInfo, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringBalancerServerInfo, boost::bind(&BalancerServer::onMonitoringBalancerServerInfo, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringBalanceTreeInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeInfo, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringBalanceTreeNeighborInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeNeighborInfo, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticSplit, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticSplit, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticMerge, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticMerge, this, _1));
+    io_service.run();
+}
+
 bool BalancerServer::onInitializePositionInternal(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onInitializePositionInternal" << std::endl;
+    LOG_DEBUG << "onInitializePositionInternal";
 #endif
 
     if (!proxy_server_end_point_initialized)
@@ -234,7 +273,7 @@ bool BalancerServer::onInitializePositionInternal(size_t received_bytes)
 
     auto packet = getReceiveBufferAs<Packet::InitializePositionInternal>();
 #ifdef _DEBUG
-    LOG_DEBUG << "user token " << packet->user_token << std::endl;
+    LOG_DEBUG << "user token " << packet->user_token;
 #endif
     if (!balance_tree->registerNewUser(*packet))
     {
@@ -254,8 +293,8 @@ bool BalancerServer::onInitializePositionInternal(size_t received_bytes)
 bool BalancerServer::onGetNodeInfo(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onGetNodeInfo" << std::endl;
-    LOG_DEBUG << "node_server_end_point " << remote_end_point << std::endl;
+    LOG_DEBUG << "onGetNodeInfo";
+    LOG_DEBUG << "node_server_end_point " << remote_end_point;
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::GetNodeInfo>();
@@ -295,7 +334,7 @@ bool BalancerServer::onGetNodeInfo(size_t received_bytes)
 bool BalancerServer::onMonitoringBalancerServerInfo(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onMonitoringBalancerServerInfo" << std::endl;
+    LOG_DEBUG << "onMonitoringBalancerServerInfo";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalancerServerInfo>();
@@ -309,7 +348,7 @@ bool BalancerServer::onMonitoringBalancerServerInfo(size_t received_bytes)
 bool BalancerServer::onMonitoringBalanceTreeInfo(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onMonitoringBalanceTreeInfo" << std::endl;
+    LOG_DEBUG << "onMonitoringBalanceTreeInfo";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeInfo>();
@@ -330,7 +369,7 @@ bool BalancerServer::onMonitoringBalanceTreeInfo(size_t received_bytes)
 bool BalancerServer::onMonitoringBalanceTreeNeighborInfo(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onMonitoringBalanceTreeNeighborInfo" << std::endl;
+    LOG_DEBUG << "onMonitoringBalanceTreeNeighborInfo";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeNeighborInfo>();
@@ -351,7 +390,7 @@ bool BalancerServer::onMonitoringBalanceTreeNeighborInfo(size_t received_bytes)
 bool BalancerServer::onMonitoringBalanceTreeStaticSplit(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onMonitoringBalanceTreeStaticSplit" << std::endl;
+    LOG_DEBUG << "onMonitoringBalanceTreeStaticSplit";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeStaticSplit>();
@@ -381,7 +420,7 @@ bool BalancerServer::onMonitoringBalanceTreeStaticSplit(size_t received_bytes)
 bool BalancerServer::onMonitoringBalanceTreeStaticMerge(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onMonitoringBalanceTreeStaticMerge" << std::endl;
+    LOG_DEBUG << "onMonitoringBalanceTreeStaticMerge";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::MonitoringBalanceTreeStaticMerge>();

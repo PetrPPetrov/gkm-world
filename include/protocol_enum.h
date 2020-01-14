@@ -88,6 +88,7 @@ namespace Packet
 
     enum class ESeverityType : std::uint8_t
     {
+        DebugMessage,
         InfoMessage,
         WarningMessage,
         ErrorMessage,

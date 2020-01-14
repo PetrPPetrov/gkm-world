@@ -26,10 +26,10 @@ protected:
     boost::asio::ip::udp::socket socket;
 
 private:
-    char receive_buffer[Packet::MAX_SIZE];
+    char receive_buffer[Packet::MAX_SIZE] = { 0 };
     std::uint32_t cur_packet_number = 0;
     Packet::Pool<PACKET_POOL_SIZE> packet_pool;
-    std::vector<std::function<bool(size_t)> > handlers;
+    std::vector<std::function<bool(size_t)>> handlers;
 
     struct GuaranteedDeliveryInfo : public std::enable_shared_from_this<GuaranteedDeliveryInfo>
     {

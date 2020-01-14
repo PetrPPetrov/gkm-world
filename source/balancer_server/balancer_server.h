@@ -60,7 +60,7 @@ class BalancerServer : public Transport
 
 public:
     BalancerServer();
-    void start();
+    bool start();
 
     BalanceTree* createNewBalanceNode(const SquareCell& bounding_box, BalanceTree* parent);
     void destroyBalanceNode(BalanceTree* node);
@@ -70,6 +70,8 @@ public:
     void onWakeupTimeout(NodeServerInfo::Ptr node_server_info, const boost::system::error_code& error);
 
 private:
+    void dumpParameters();
+    void startImpl();
     bool onInitializePositionInternal(size_t received_bytes);
     bool onGetNodeInfo(size_t received_bytes);
     bool onMonitoringBalancerServerInfo(size_t received_bytes);

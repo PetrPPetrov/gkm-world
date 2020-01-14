@@ -60,11 +60,11 @@ bool BalanceTree::isAnyNodeServerRunning() const
 void BalanceTree::dump() const
 {
     const std::string indent(level, ' ');
-    std::cout << indent << "node_server_token: " << token << std::endl;
-    std::cout << indent << "node_server_end_point: " << node_server_end_point << std::endl;
-    std::cout << indent << "leaf_node: " << leaf_node << std::endl;
-    std::cout << indent << "level: " << level << std::endl;
-    std::cout << indent << "user_count: " << user_count << std::endl;
+    std::cout << indent << "node_server_token: " << token;
+    std::cout << indent << "node_server_end_point: " << node_server_end_point;
+    std::cout << indent << "leaf_node: " << leaf_node;
+    std::cout << indent << "level: " << level;
+    std::cout << indent << "user_count: " << user_count;
 }
 
 bool BalanceTree::registerNewUser(const Packet::InitializePositionInternal& packet)
@@ -81,7 +81,7 @@ bool BalanceTree::registerNewUser(const Packet::InitializePositionInternal& pack
         create_new_user_request->user_location = packet.user_location;
         create_new_user_request->user_token = packet.user_token;
 #ifdef _DEBUG
-        LOG_DEBUG << "sending request to " << node_server_end_point.address().to_string() << ":" << node_server_end_point.port() << std::endl;
+        LOG_DEBUG << "sending request to " << node_server_end_point.address().to_string() << ":" << node_server_end_point.port();
 #endif
         balancer_server.standardSendTo(create_new_user_request, node_server_end_point);
         user_count++;
@@ -163,7 +163,7 @@ void BalanceTree::startNodeServer()
         node_server_port_number = node_info.port_number;
 
 #ifdef _DEBUG
-        LOG_DEBUG << "starting node_server " << node_info.ip_address << ":" << node_info.port_number << " " << token << std::endl;
+        LOG_DEBUG << "starting node_server " << node_info.ip_address << ":" << node_info.port_number << " " << token;
 #endif
 
         balancer_server.startNode(node_info, this);
