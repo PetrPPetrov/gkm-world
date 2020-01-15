@@ -17,6 +17,8 @@
 BalancerServer::BalancerServer() :
     signals(io_service, SIGINT, SIGTERM)
 {
+    setServerType(Packet::EServerType::BalancerServer);
+
     std::int32_t global_bounding_box_start_x = 0;
     std::int32_t global_bounding_box_start_y = 0;
     std::int32_t global_bounding_box_size = MAXIMAL_NODE_SIZE;

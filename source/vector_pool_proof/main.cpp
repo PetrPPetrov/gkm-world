@@ -7,9 +7,10 @@
 #include <map>
 #include <unordered_map>
 #include "pool.h"
+#include "log.h"
 #include "fast_index_map.h"
 
-extern std::ofstream* g_log_file = nullptr;
+extern Log::Logger* g_logger = nullptr;
 
 struct A
 {

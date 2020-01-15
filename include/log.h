@@ -24,9 +24,15 @@ extern Log::Logger* g_logger;
 
 namespace Log
 {
+    struct Message
+    {
+        Packet::ESeverityType severity = Packet::ESeverityType::InfoMessage;
+        std::string text;
+    };
+
     struct Logger
     {
-        std::list<std::string> messages;
+        std::list<Message> messages;
 
         Logger(Packet::ESeverityType minimum_level_, const std::string& log_file_name_, bool log_to_screen_, bool log_to_file_)
             : log_file(log_file_name_, std::ios::app)
@@ -39,10 +45,10 @@ namespace Log
 
         struct Dumper
         {
-            Dumper(Logger& logger_, bool ignore_) : logger(logger_), ignore(ignore_)
+            Dumper(Logger& logger_, Packet::ESeverityType severity_, bool ignore_) : logger(logger_), severity(severity_), ignore(ignore_)
             {
             }
-            Dumper(Dumper&& other_dumper) : logger(other_dumper.logger), ignore(other_dumper.ignore), content(std::move(other_dumper.content))
+            Dumper(Dumper&& other_dumper) noexcept : logger(other_dumper.logger), ignore(other_dumper.ignore), content(std::move(other_dumper.content))
             {
             }
             ~Dumper()
@@ -50,19 +56,20 @@ namespace Log
                 if (!ignore)
                 {
                     std::string message = content.str();
+                    const std::string severity_prefix = "[" + getText(severity) + "] ";
                     if (logger.log_to_screen)
                     {
-                        std::cout << message << std::endl;
+                        std::cout << severity_prefix << message << std::endl;
                     }
                     if (logger.log_to_file)
                     {
-                        logger.log_file << message << std::endl;
+                        logger.log_file << severity_prefix << message << std::endl;
                     }
                     if (logger.messages.size() >= MAX_LOG_MESSAGE_COUNT)
                     {
                         logger.messages.pop_front();
                     }
-                    logger.messages.push_back(message);
+                    logger.messages.push_back({severity, message});
                 }
             }
             std::ostream& getLog()
@@ -71,13 +78,14 @@ namespace Log
             }
         private:
             Logger& logger;
+            Packet::ESeverityType severity = Packet::ESeverityType::InfoMessage;
             bool ignore = false;
             std::stringstream content;
         };
 
         Dumper getDumper(Packet::ESeverityType message_severity)
         {
-            return Dumper(*this, message_severity < minimum_level);
+            return Dumper(*this, message_severity, message_severity < minimum_level);
         }
 
     private:
@@ -91,23 +99,22 @@ namespace Log
     #define LINE_SEPARATOR "********************************"
     #define ENDL_SEPARATOR "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
 
-    #define REPORT_LOG_TYPE(out, severity_str) out << "[" << severity_str << "] "
     #define REPORT_TIME "[" << boost::posix_time::second_clock::local_time() << "] "
     #define REPORT_FILE_LINE "[" << __FILE__ << ":" << __LINE__ << "] "
 
     #define REAL_LOG(severity_type) g_logger->getDumper(severity_type).getLog()
 
     #if defined(_DEBUG)
-    #define LOG_DEBUG REPORT_LOG_TYPE(REAL_LOG(Packet::ESeverityType::DebugMessage), "DEBUG") << REPORT_TIME << REPORT_FILE_LINE
+    #define LOG_DEBUG REAL_LOG(Packet::ESeverityType::DebugMessage) << REPORT_TIME << REPORT_FILE_LINE
     #else
     static boost::iostreams::stream<boost::iostreams::null_sink> g_null_out(boost::iostreams::null_sink{});
     #define LOG_DEBUG g_null_out
     #endif
 
-    #define LOG_INFO REPORT_LOG_TYPE(REAL_LOG(Packet::ESeverityType::InfoMessage), "INFO") << REPORT_TIME << REPORT_FILE_LINE
-    #define LOG_WARNING REPORT_LOG_TYPE(REAL_LOG(Packet::ESeverityType::WarningMessage), "WARNING") << REPORT_TIME << REPORT_FILE_LINE
-    #define LOG_ERROR REPORT_LOG_TYPE(REAL_LOG(Packet::ESeverityType::ErrorMessage), "ERROR") << REPORT_TIME << REPORT_FILE_LINE
-    #define LOG_FATAL REPORT_LOG_TYPE(REAL_LOG(Packet::ESeverityType::FatalMessage), "FATAL") << REPORT_TIME << REPORT_FILE_LINE
+    #define LOG_INFO REAL_LOG(Packet::ESeverityType::InfoMessage) << REPORT_TIME << REPORT_FILE_LINE
+    #define LOG_WARNING REAL_LOG(Packet::ESeverityType::WarningMessage) << REPORT_TIME << REPORT_FILE_LINE
+    #define LOG_ERROR REAL_LOG(Packet::ESeverityType::ErrorMessage) << REPORT_TIME << REPORT_FILE_LINE
+    #define LOG_FATAL REAL_LOG(Packet::ESeverityType::FatalMessage) << REPORT_TIME << REPORT_FILE_LINE
 
     inline void onQuitImpl()
     {

@@ -30,6 +30,8 @@ private:
     std::uint32_t cur_packet_number = 0;
     Packet::Pool<PACKET_POOL_SIZE> packet_pool;
     std::vector<std::function<bool(size_t)>> handlers;
+    Packet::EServerType server_type = Packet::EServerType::BalancerServer;
+    std::uint32_t server_token = 0;
 
     struct GuaranteedDeliveryInfo : public std::enable_shared_from_this<GuaranteedDeliveryInfo>
     {
@@ -148,6 +150,16 @@ public:
     void guaranteedSend(const PacketType* packet, std::function<void()> error_handler)
     {
         guaranteedSendTo<PacketType>(packet, remote_end_point, error_handler);
+    }
+
+    void setServerType(Packet::EServerType server_type_)
+    {
+        server_type = server_type_;
+    }
+
+    void setServerToken(std::uint32_t server_token_)
+    {
+        server_token = server_token_;
     }
 
 private:
@@ -303,5 +315,45 @@ private:
                 info->error_handler();
             }
         }
+    }
+
+    bool onMonitoringMessageCount(size_t received_bytes)
+    {
+#ifdef _DEBUG
+        LOG_DEBUG << "onMonitoringMessageCount";
+#endif
+
+        const auto packet = getReceiveBufferAs<Packet::MonitoringMessageCount>();
+        auto answer = createPacket<Packet::MonitoringMessageCountAnswer>(packet->packet_number);
+        answer->message_count = static_cast<std::uint32_t>(g_logger->messages.size());
+        standardSend(answer);
+        return true;
+    }
+
+    bool onMonitoringPopMessage(size_t received_bytes)
+    {
+#ifdef _DEBUG
+        LOG_DEBUG << "onMonitoringPopMessage";
+#endif
+
+        const auto packet = getReceiveBufferAs<Packet::MonitoringPopMessage>();
+        auto answer = createPacket<Packet::MonitoringPopMessageAnswer>(packet->packet_number);
+        answer->server_type = server_type;
+        answer->token = server_token;
+
+        if (g_logger->messages.size() > 0)
+        {
+            Log::Message message = g_logger->messages.front();
+            answer->success = true;
+            answer->severity_type = message.severity;
+            answer->setMessage(message.text);
+            g_logger->messages.pop_front();
+        }
+        else
+        {
+            answer->success = false;
+        }
+        standardSend(answer);
+        return true;
     }
 };

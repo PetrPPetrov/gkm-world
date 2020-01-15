@@ -41,9 +41,11 @@ class NodeServer : public Transport
 
 public:
     NodeServer(std::uint16_t port_number, LogicThread& logic_thread);
-    void start();
+    bool start();
 
 private:
+    void dumpParameters();
+    void startImpl();
     bool onLogoutInternal(size_t received_bytes);
     bool onInitializePositionInternal(size_t received_bytes);
     bool onUserActionInternal(size_t received_bytes);

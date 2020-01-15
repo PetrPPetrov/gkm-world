@@ -14,6 +14,8 @@
 ProxyServer::ProxyServer() :
     signals(io_service, SIGINT, SIGTERM)
 {
+    setServerType(Packet::EServerType::ProxyServer);
+
     std::ifstream config_file("proxy_server.cfg");
     ConfigurationReader config_reader;
     config_reader.addParameter("proxy_server_port_number", port_number);
@@ -21,12 +23,6 @@ ProxyServer::ProxyServer() :
     config_reader.addParameter("balancer_server_port_number", balancer_server_port_number);
     config_reader.addParameter("registered_users_file_name", registered_users_file_name);
     config_reader.read(config_file);
-
-#ifdef _DEBUG
-    LOG_DEBUG << "proxy_server_port_number " << port_number << std::endl;
-    LOG_DEBUG << "balancer_server_ip " << balancer_server_ip << std::endl;
-    LOG_DEBUG << "balancer_server_port_number " << balancer_server_port_number << std::endl;
-#endif
 
     socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port_number));
     balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
@@ -39,18 +35,35 @@ ProxyServer::~ProxyServer()
     saveRegisteredUsers(registered_users_file_name);
 }
 
-void ProxyServer::start()
+extern Log::Logger* g_logger = nullptr;
+
+bool ProxyServer::start()
 {
-    doReceive();
-    signals.async_wait(boost::bind(&ProxyServer::onQuit, this, _1, _2));
-    setReceiveHandler(Packet::EType::Login, boost::bind(&ProxyServer::onLogin, this, _1));
-    setReceiveHandler(Packet::EType::Logout, boost::bind(&ProxyServer::onLogout, this, _1));
-    setReceiveHandler(Packet::EType::LogoutInternalAnswer, boost::bind(&ProxyServer::onLogoutInternalAnswer, this, _1));
-    setReceiveHandler(Packet::EType::InitializePosition, boost::bind(&ProxyServer::onInitializePosition, this, _1));
-    setReceiveHandler(Packet::EType::InitializePositionInternalAnswer, boost::bind(&ProxyServer::onInitializePositionInternalAnswer, this, _1));
-    setReceiveHandler(Packet::EType::UserAction, boost::bind(&ProxyServer::onUserAction, this, _1));
-    setReceiveHandler(Packet::EType::UserActionInternalAnswer, boost::bind(&ProxyServer::onUserActionInternalAnswer, this, _1));
-    io_service.run();
+    Log::Holder log_holder;
+    g_logger = new Log::Logger(Packet::ESeverityType::DebugMessage, "proxy_server.log", false, true);
+    LOG_INFO << "Proxy Server is starting...";
+
+    try
+    {
+        dumpParameters();
+        startImpl();
+    }
+    catch (boost::system::system_error & error)
+    {
+        LOG_FATAL << "boost::system::system_error: " << error.what();
+        return false;
+    }
+    catch (const std::exception & exception)
+    {
+        LOG_FATAL << "std::exception: " << exception.what();
+        return false;
+    }
+    catch (...)
+    {
+        LOG_FATAL << "Unknown error";
+        return false;
+    }
+    return true;
 }
 
 std::uint32_t ProxyServer::allocateId()
@@ -78,15 +91,36 @@ void ProxyServer::debugMonitor() const
         UserOnlineInfo* user_info = id_to_user_info.find(i);
         if (user_info)
         {
-            std::cout << LINE_SEPARATOR << std::endl;
-            std::cout << "user_token: " << i << std::endl;
-            std::cout << "client_end_point: " << user_info->user_end_point << std::endl;
-            std::cout << "node_server_end_point: " << user_info->node_server_end_point << std::endl;
+            std::cout << LINE_SEPARATOR;
+            std::cout << "user_token: " << i;
+            std::cout << "client_end_point: " << user_info->user_end_point;
+            std::cout << "node_server_end_point: " << user_info->node_server_end_point;
         }
     }
-    std::cout << LINE_SEPARATOR << std::endl;
-    std::cout << ENDL_SEPARATOR << std::endl;
+    std::cout << LINE_SEPARATOR;
+    std::cout << ENDL_SEPARATOR;
 #endif
+}
+
+void ProxyServer::dumpParameters()
+{
+    LOG_INFO << "proxy_server_port_number " << port_number;
+    LOG_INFO << "balancer_server_ip " << balancer_server_ip;
+    LOG_INFO << "balancer_server_port_number " << balancer_server_port_number;
+}
+
+void ProxyServer::startImpl()
+{
+    doReceive();
+    signals.async_wait(boost::bind(&ProxyServer::onQuit, this, _1, _2));
+    setReceiveHandler(Packet::EType::Login, boost::bind(&ProxyServer::onLogin, this, _1));
+    setReceiveHandler(Packet::EType::Logout, boost::bind(&ProxyServer::onLogout, this, _1));
+    setReceiveHandler(Packet::EType::LogoutInternalAnswer, boost::bind(&ProxyServer::onLogoutInternalAnswer, this, _1));
+    setReceiveHandler(Packet::EType::InitializePosition, boost::bind(&ProxyServer::onInitializePosition, this, _1));
+    setReceiveHandler(Packet::EType::InitializePositionInternalAnswer, boost::bind(&ProxyServer::onInitializePositionInternalAnswer, this, _1));
+    setReceiveHandler(Packet::EType::UserAction, boost::bind(&ProxyServer::onUserAction, this, _1));
+    setReceiveHandler(Packet::EType::UserActionInternalAnswer, boost::bind(&ProxyServer::onUserActionInternalAnswer, this, _1));
+    io_service.run();
 }
 
 void ProxyServer::onQuit(const boost::system::error_code& error, int sig_number)
@@ -97,7 +131,7 @@ void ProxyServer::onQuit(const boost::system::error_code& error, int sig_number)
     }
     else
     {
-        LOG_ERROR << "users were not saved in the file" << std::endl;
+        LOG_ERROR << "users were not saved in the file";
     }
     Log::onQuit(error, sig_number);
 }
@@ -105,7 +139,7 @@ void ProxyServer::onQuit(const boost::system::error_code& error, int sig_number)
 bool ProxyServer::onLogin(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onLogin" << std::endl;
+    LOG_DEBUG << "onLogin";
 #endif
 
     auto packet = getReceiveBufferAs<Packet::Login>();
@@ -115,10 +149,10 @@ bool ProxyServer::onLogin(size_t received_bytes)
     std::string full_name = packet->getFullName();
 
 #ifdef _DEBUG
-    LOG_DEBUG << "end_point: " << remote_end_point << std::endl;
-    LOG_DEBUG << "password: " << login << std::endl;
-    LOG_DEBUG << "login: " << password << std::endl;
-    LOG_DEBUG << "full_name: " << full_name << std::endl;
+    LOG_DEBUG << "end_point: " << remote_end_point;
+    LOG_DEBUG << "password: " << login;
+    LOG_DEBUG << "login: " << password;
+    LOG_DEBUG << "full_name: " << full_name;
 #endif
 
     auto fit_login_it = login_to_user_info.find(login);
@@ -126,13 +160,13 @@ bool ProxyServer::onLogin(size_t received_bytes)
     if (fit_login_it != login_to_user_info.end())
     {
 #ifdef _DEBUG
-        LOG_DEBUG << "existing user" << std::endl;
+        LOG_DEBUG << "existing user";
 #endif
         cur_user = fit_login_it->second;
         if (password != cur_user->password)
         {
 #ifdef _DEBUG
-            LOG_DEBUG << "authorization failure" << std::endl;
+            LOG_DEBUG << "authorization failure";
 #endif
             auto answer = createPacket<Packet::LoginAnswer>(packet->packet_number);
             answer->success = false;
@@ -142,14 +176,14 @@ bool ProxyServer::onLogin(size_t received_bytes)
         else
         {
 #ifdef _DEBUG
-            LOG_DEBUG << "authorization OK" << std::endl;
+            LOG_DEBUG << "authorization OK";
 #endif
         }
     }
     else
     {
 #ifdef _DEBUG
-        LOG_DEBUG << "new user" << std::endl;
+        LOG_DEBUG << "new user";
 #endif
         UserInfo::ptr new_user = std::make_shared<UserInfo>();
         new_user->login = login;
@@ -162,12 +196,12 @@ bool ProxyServer::onLogin(size_t received_bytes)
     if (!cur_user->online)
     {
 #ifdef _DEBUG
-        LOG_DEBUG << "user is logging" << std::endl;
+        LOG_DEBUG << "user is logging";
 #endif
         std::uint32_t id = allocateId();
 
 #ifdef _DEBUG
-        LOG_DEBUG << "generated new id " << id << std::endl;
+        LOG_DEBUG << "generated new id " << id;
 #endif
         cur_user->user_token = id;
         cur_user->online = true;
@@ -177,7 +211,7 @@ bool ProxyServer::onLogin(size_t received_bytes)
     else
     {
 #ifdef _DEBUG
-        LOG_DEBUG << "user is already online" << std::endl;
+        LOG_DEBUG << "user is already online";
 #endif
     }
 
@@ -196,13 +230,13 @@ bool ProxyServer::onLogin(size_t received_bytes)
 bool ProxyServer::onLogout(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onLogout" << std::endl;
+    LOG_DEBUG << "onLogout";
 #endif
 
     auto packet = getReceiveBufferAs<Packet::Logout>();
 
 #ifdef _DEBUG
-    LOG_DEBUG << "end point: " << remote_end_point << std::endl;
+    LOG_DEBUG << "end point: " << remote_end_point;
 #endif
 
     std::uint32_t user_id = packet->user_token;
@@ -210,13 +244,13 @@ bool ProxyServer::onLogout(size_t received_bytes)
 
     if (!user_online_info)
     {
-        LOG_ERROR << "user does not exist" << std::endl;
+        LOG_ERROR << "user does not exist";
         return true;
     }
 
     if (user_online_info->user_end_point != remote_end_point)
     {
-        LOG_ERROR << "user sent incorrect id " << user_id << " ip: " << user_online_info->user_end_point << " and it should be ip: " << remote_end_point << std::endl;
+        LOG_ERROR << "user sent incorrect id " << user_id << " ip: " << user_online_info->user_end_point << " and it should be ip: " << remote_end_point;
         return true;
     }
 
@@ -230,7 +264,7 @@ bool ProxyServer::onLogout(size_t received_bytes)
 bool ProxyServer::onLogoutInternalAnswer(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onLogoutInternalAnswer" << std::endl;
+    LOG_DEBUG << "onLogoutInternalAnswer";
 #endif
 
     auto packet = getReceiveBufferAs<Packet::LogoutInternalAnswer>();
@@ -240,7 +274,7 @@ bool ProxyServer::onLogoutInternalAnswer(size_t received_bytes)
 
     if (!user_online_info)
     {
-        LOG_ERROR << "user does not exist" << std::endl;
+        LOG_ERROR << "user does not exist";
         return true;
     }
 
@@ -266,7 +300,7 @@ bool ProxyServer::onLogoutInternalAnswer(size_t received_bytes)
 bool ProxyServer::onInitializePosition(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onInitializePosition" << std::endl;
+    LOG_DEBUG << "onInitializePosition";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::InitializePosition>();
@@ -276,13 +310,13 @@ bool ProxyServer::onInitializePosition(size_t received_bytes)
 
     if (!user_online_info)
     {
-        LOG_ERROR << "user does not exist" << std::endl;
+        LOG_ERROR << "user does not exist";
         return true;
     }
 
     if (user_online_info->user_end_point != remote_end_point)
     {
-        LOG_ERROR << "user sent incorrect id " << user_id << " ip: " << user_online_info->user_end_point << " and it should be ip: " << remote_end_point << std::endl;
+        LOG_ERROR << "user sent incorrect id " << user_id << " ip: " << user_online_info->user_end_point << " and it should be ip: " << remote_end_point;
         return true;
     }
 
@@ -310,12 +344,12 @@ bool ProxyServer::onInitializePosition(size_t received_bytes)
 bool ProxyServer::onInitializePositionInternalAnswer(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onInitializePositionInternalAnswer" << std::endl;
+    LOG_DEBUG << "onInitializePositionInternalAnswer";
 #endif
 
     if (!validateInternalServer(remote_end_point))
     {
-        LOG_WARNING << "internal server token validation error" << std::endl;
+        LOG_WARNING << "internal server token validation error";
         return true;
     }
 
@@ -327,20 +361,20 @@ bool ProxyServer::onInitializePositionInternalAnswer(size_t received_bytes)
     if (!user_online_info)
     {
 #ifdef _DEBUG
-        LOG_ERROR << "user does not exist" << std::endl;
+        LOG_ERROR << "user does not exist";
 #endif
         return true;
     }
 
     if (!user_online_info->user_info->online)
     {
-        LOG_ERROR << "user is not online or is already in game" << std::endl;
+        LOG_ERROR << "user is not online or is already in game";
         return true;
     }
 
     if (user_online_info->in_game)
     {
-        LOG_ERROR << "user is already in game" << std::endl;
+        LOG_ERROR << "user is already in game";
         return true;
     }
 
@@ -368,7 +402,7 @@ bool ProxyServer::onInitializePositionInternalAnswer(size_t received_bytes)
 bool ProxyServer::onUserAction(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onUserAction" << std::endl;
+    LOG_DEBUG << "onUserAction";
 #endif
 
 #ifdef DEBUG_MONITOR
@@ -382,19 +416,19 @@ bool ProxyServer::onUserAction(size_t received_bytes)
 
     if (!user_online_info)
     {
-        LOG_ERROR << "user does not exist" << std::endl;
+        LOG_ERROR << "user does not exist";
         return true;
     }
 
     if (user_online_info->user_end_point != remote_end_point)
     {
-        LOG_ERROR << "user sent incorrect id " << user_id << " ip: " << user_online_info->user_end_point << " and it should be ip: " << remote_end_point << std::endl;
+        LOG_ERROR << "user sent incorrect id " << user_id << " ip: " << user_online_info->user_end_point << " and it should be ip: " << remote_end_point;
         return true;
     }
 
     if (!user_online_info->in_game)
     {
-        LOG_ERROR << "user is not in game" << std::endl;
+        LOG_ERROR << "user is not in game";
         return true;
     }
 
@@ -409,12 +443,12 @@ bool ProxyServer::onUserAction(size_t received_bytes)
 bool ProxyServer::onUserActionInternalAnswer(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onUserActionInternalAnswer" << std::endl;
+    LOG_DEBUG << "onUserActionInternalAnswer";
 #endif
 
     if (!validateInternalServer(remote_end_point))
     {
-        LOG_WARNING << "fake internal server detected" << std::endl;
+        LOG_WARNING << "fake internal server detected";
         return true;
     }
 
@@ -425,13 +459,13 @@ bool ProxyServer::onUserActionInternalAnswer(size_t received_bytes)
 
     if (!user_online_info)
     {
-        LOG_ERROR << "user does not exist" << std::endl;
+        LOG_ERROR << "user does not exist";
         return true;
     }
 
     if (!user_online_info->in_game)
     {
-        LOG_ERROR << "user is not in game" << std::endl;
+        LOG_ERROR << "user is not in game";
         return true;
     }
 
@@ -460,7 +494,7 @@ bool ProxyServer::validateInternalServer(const boost::asio::ip::udp::endpoint& e
 void ProxyServer::loadRegisteredUsers(const std::string& file_name)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "loading users from " << file_name << "..." << std::endl;
+    LOG_DEBUG << "loading users from " << file_name << "...";
 #endif
     std::ifstream registered_users(file_name);
     while (!registered_users.bad() && !registered_users.eof())
@@ -474,14 +508,14 @@ void ProxyServer::loadRegisteredUsers(const std::string& file_name)
         login_to_user_info.insert_or_assign(new_user->login, new_user);
     }
 #ifdef _DEBUG
-    LOG_DEBUG << "users are loaded!" << std::endl;
+    LOG_DEBUG << "users are loaded!";
 #endif
 }
 
 void ProxyServer::saveRegisteredUsers(const std::string& file_name) const
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "saving users to " << file_name << "..." << std::endl;
+    LOG_DEBUG << "saving users to " << file_name << "...";
 #endif
     std::ofstream registered_users(file_name);
     for (auto cur_user : login_to_user_info)
@@ -489,6 +523,6 @@ void ProxyServer::saveRegisteredUsers(const std::string& file_name) const
         registered_users << *cur_user.second.get();
     }
 #ifdef _DEBUG
-    LOG_DEBUG << "users are saved!" << std::endl;
+    LOG_DEBUG << "users are saved!";
 #endif
 }

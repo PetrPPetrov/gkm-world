@@ -94,4 +94,23 @@ namespace Packet
         ErrorMessage,
         FatalMessage
     };
+
+    inline std::string getText(ESeverityType severity)
+    {
+        switch (severity)
+        {
+        case ESeverityType::DebugMessage:
+            return "DEBUG";
+        case ESeverityType::InfoMessage:
+            return "INFO";
+        case ESeverityType::WarningMessage:
+            return "WARNING";
+        case ESeverityType::ErrorMessage:
+            return "ERROR";
+        case ESeverityType::FatalMessage:
+            return "FATAL";
+        default:
+            return "UNKNOWN_SEVERITY_TYPE";
+        }
+    }
 }

@@ -25,6 +25,8 @@
 NodeServer::NodeServer(std::uint16_t port_number_, LogicThread& logic_thread_) :
     port_number(port_number_), logic_thread(logic_thread_), signals(io_service, SIGINT, SIGTERM)
 {
+    setServerType(Packet::EServerType::NodeServer);
+
     socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port_number));
     std::ifstream config_file("node_server.cfg");
     ConfigurationReader config_reader;
@@ -32,27 +34,58 @@ NodeServer::NodeServer(std::uint16_t port_number_, LogicThread& logic_thread_) :
     config_reader.addParameter("balancer_server_port_number", balancer_server_port_number);
     config_reader.read(config_file);
 
-#ifdef _DEBUG
-    LOG_DEBUG << "balancer_server_ip " << balancer_server_ip << std::endl;
-    LOG_DEBUG << "balancer_server_port_number " << balancer_server_port_number << std::endl;
-#endif
-
     balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
 
     node_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(), port_number);
     node_server_token = 0;
 
     node_server_path = findNodeServerPath();
-    LOG_INFO << "node_server_path " << node_server_path << std::endl;
-
-#ifdef _DEBUG
-    LOG_DEBUG << "node_server_ip " << node_server_end_point.address() << std::endl;
-    LOG_DEBUG << "node_server_port_number " << node_server_end_point.port() << std::endl;
-    LOG_DEBUG << "node_server_token " << node_server_token << std::endl;
-#endif
 }
 
-void NodeServer::start()
+extern Log::Logger* g_logger = nullptr;
+
+bool NodeServer::start()
+{
+    Log::Holder log_holder;
+    g_logger = new Log::Logger(Packet::ESeverityType::DebugMessage, "node_server" + std::to_string(port_number) + ".log", false, true);
+    LOG_INFO << "Node Server is starting...";
+
+    try
+    {
+        dumpParameters();
+        startImpl();
+    }
+    catch (boost::system::system_error & error)
+    {
+        LOG_FATAL << "boost::system::system_error: " << error.what();
+        return false;
+    }
+    catch (const std::exception & exception)
+    {
+        LOG_FATAL << "std::exception: " << exception.what();
+        return false;
+    }
+    catch (...)
+    {
+        LOG_FATAL << "Unknown error";
+        return false;
+    }
+    return true;
+}
+
+void NodeServer::dumpParameters()
+{
+    LOG_INFO << "balancer_server_ip " << balancer_server_ip;
+    LOG_INFO << "balancer_server_port_number " << balancer_server_port_number;
+
+    LOG_INFO << "node_server_ip " << node_server_end_point.address();
+    LOG_INFO << "node_server_port_number " << node_server_end_point.port();
+    LOG_INFO << "node_server_token " << node_server_token;
+
+    LOG_INFO << "node_server_path " << node_server_path;
+}
+
+void NodeServer::startImpl()
 {
     doReceive();
     getNodeInfo();
@@ -67,7 +100,7 @@ void NodeServer::start()
 bool NodeServer::onLogoutInternal(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onLogoutInternal" << std::endl;
+    LOG_DEBUG << "onLogoutInternal";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::LogoutInternal>();
@@ -95,7 +128,7 @@ bool NodeServer::onLogoutInternal(size_t received_bytes)
 bool NodeServer::onInitializePositionInternal(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onInitializePositionInternal" << std::endl;
+    LOG_DEBUG << "onInitializePositionInternal";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::InitializePositionInternal>();
@@ -114,7 +147,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
             logic_thread.addNewUser(new_user);
 
 #ifdef _DEBUG
-            LOG_DEBUG << "initialized position of user " << new_user->user_location.user_token << std::endl;
+            LOG_DEBUG << "initialized position of user " << new_user->user_location.user_token;
 #endif
             auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->packet_number);
             answer->user_token = new_user->user_location.user_token;
@@ -131,7 +164,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
         else
         {
 #ifdef _DEBUG
-            LOG_DEBUG << "can not initialize position of user " << packet->user_token << " because position is out of bounding box" << std::endl;
+            LOG_DEBUG << "can not initialize position of user " << packet->user_token << " because position is out of bounding box";
 #endif
             auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->packet_number);
             answer->user_token = packet->user_token;
@@ -148,7 +181,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
     else
     {
 #ifdef _DEBUG
-        LOG_DEBUG << "can not initialize position of user " << packet->user_token << " because user already has a position, however, return success" << std::endl;
+        LOG_DEBUG << "can not initialize position of user " << packet->user_token << " because user already has a position, however, return success";
 #endif
         // However return success for guaranteed delivery service
         auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->packet_number);
@@ -170,7 +203,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
 bool NodeServer::onUserActionInternal(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onUserActionInternal" << std::endl;
+    LOG_DEBUG << "onUserActionInternal";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::UserActionInternal>();
@@ -198,20 +231,20 @@ bool NodeServer::onUserActionInternal(size_t received_bytes)
         return true;
     }
 
-    LOG_WARNING << "user with token " << packet->user_token << " not found" << std::endl;
+    LOG_WARNING << "user with token " << packet->user_token << " not found";
     return true;
 }
 
 bool NodeServer::onGetNodeInfoAnswer(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onGetNodeInfoAnswer" << std::endl;
+    LOG_DEBUG << "onGetNodeInfoAnswer";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::GetNodeInfoAnswer>();
     if (!packet->success)
     {
-        LOG_FATAL << "error receiving node_server information" << std::endl;
+        LOG_FATAL << "error receiving node_server information";
         throw std::runtime_error("error receiving node_server information");
     }
 
@@ -227,16 +260,16 @@ bool NodeServer::onGetNodeInfoAnswer(size_t received_bytes)
             ip_address_t(packet->neighbor_addresses[i]), packet->neighbor_ports[i]);
         neighbor_tokens[i] = packet->neighbor_tokens[i];
 #ifdef _DEBUG
-        LOG_DEBUG << "neighbor_end_points[ " << i << "] " << neighbor_end_points[i] << std::endl;
-        LOG_DEBUG << "neighbor_tokens[ " << i << "] " << neighbor_tokens[i] << std::endl;
+        LOG_DEBUG << "neighbor_end_points[ " << i << "] " << neighbor_end_points[i];
+        LOG_DEBUG << "neighbor_tokens[ " << i << "] " << neighbor_tokens[i];
 #endif
     }
     parent_end_point = boost::asio::ip::udp::endpoint(
         ip_address_t(packet->parent_address), packet->parent_port);
     parent_token = packet->parent_token;
 #ifdef _DEBUG
-    LOG_DEBUG << "parent_end_point " << parent_end_point << std::endl;
-    LOG_DEBUG << "parent_token " << parent_token << std::endl;
+    LOG_DEBUG << "parent_end_point " << parent_end_point;
+    LOG_DEBUG << "parent_token " << parent_token;
 #endif
 
     return true;
@@ -245,7 +278,7 @@ bool NodeServer::onGetNodeInfoAnswer(size_t received_bytes)
 bool NodeServer::onSpawnNodeServer(size_t received_bytes)
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "onSpawnNodeServer" << std::endl;
+    LOG_DEBUG << "onSpawnNodeServer";
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::SpawnNodeServer>();
@@ -258,7 +291,7 @@ bool NodeServer::onSpawnNodeServer(size_t received_bytes)
 void NodeServer::getNodeInfo()
 {
 #ifdef _DEBUG
-    LOG_DEBUG << "getNodeInfo" << std::endl;
+    LOG_DEBUG << "getNodeInfo";
 #endif
     auto request = createPacket<Packet::GetNodeInfo>();
     standardSendTo(request, balancer_server_end_point);

@@ -27,7 +27,7 @@ void LogicThread::run(const boost::system::error_code& error)
 {
     if (error)
     {
-        LOG_ERROR << "error" << std::endl;
+        LOG_ERROR << "error";
         return;
     }
 
@@ -49,15 +49,15 @@ void LogicThread::run(const boost::system::error_code& error)
     cur_user_location = user_location_chain;
     while (cur_user_location)
     {
-        std::cout << LINE_SEPARATOR << std::endl;
-        std::cout << "user_token: " << cur_user_location->user_location.user_token << std::endl;
-        std::cout << "x_pos: " << std::fixed << std::setw(10) << std::setprecision(3) << cur_user_location->user_location.x_pos << std::endl;
-        std::cout << "y_pos: " << cur_user_location->user_location.y_pos << std::endl;
-        std::cout << "direction: " << cur_user_location->user_location.direction << std::endl;
+        std::cout << LINE_SEPARATOR;
+        std::cout << "user_token: " << cur_user_location->user_location.user_token;
+        std::cout << "x_pos: " << std::fixed << std::setw(10) << std::setprecision(3) << cur_user_location->user_location.x_pos;
+        std::cout << "y_pos: " << cur_user_location->user_location.y_pos;
+        std::cout << "direction: " << cur_user_location->user_location.direction;
         cur_user_location = cur_user_location->next;
     }
-    std::cout << LINE_SEPARATOR << std::endl;
-    std::cout << ENDL_SEPARATOR << std::endl;
+    std::cout << LINE_SEPARATOR;
+    std::cout << ENDL_SEPARATOR;
 #endif
 }
 

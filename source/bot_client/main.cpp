@@ -24,7 +24,7 @@ UDPConnection* g_connection = nullptr;
 KeyboardState g_keyboard_state;
 PlayerLocation g_player_location;
 bool g_is_running = true;
-extern std::ofstream* g_log_file = nullptr;
+extern Log::Logger* g_logger = nullptr;
 
 void printCurrentPlayerState(double target_x_pos, double target_y_pos)
 {
@@ -118,12 +118,12 @@ void program(int argc, char* argv[])
 
     if (control_point_x_positions.empty())
     {
-        LOG_FATAL << "control_point_x_positions array is empty" << std::endl;
+        LOG_FATAL << "control_point_x_positions array is empty";
         throw std::runtime_error("control_point_x_positions array is empty");
     }
     if (control_point_y_positions.empty())
     {
-        LOG_FATAL << "control_point_y_positions array is empty" << std::endl;
+        LOG_FATAL << "control_point_y_positions array is empty";
         throw std::runtime_error("control_point_y_positions array is empty");
     }
 
@@ -167,12 +167,12 @@ void program(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-    std::cout << "Gkm-World Bot Client Copyright (c) 2018 by GkmSoft" << std::endl;
+    std::cout << "Gkm-World Bot Client Copyright (c) 2018 by Petr Petrovich Petrov" << std::endl;
 
-    LogFileHolder log_file_holder;
+    Log::Holder log_holder;
     std::string log_file_name("bot_client_" + std::to_string(GetCurrentProcessId()) + ".log");
-    g_log_file = new std::ofstream(log_file_name, std::ios::app);
-    LOG_INFO << "Bot Client is starting..." << std::endl;
+    g_logger = new Log::Logger(Packet::ESeverityType::DebugMessage, log_file_name, false, true);
+    LOG_INFO << "Bot Client is starting...";
 
     try
     {
@@ -180,17 +180,17 @@ int main(int argc, char* argv[])
     }
     catch (boost::system::system_error& error)
     {
-        LOG_FATAL << "boost::system::system_error: " << error.what() << std::endl;
+        LOG_FATAL << "boost::system::system_error: " << error.what();
         return EXIT_FAILURE;
     }
     catch (const std::exception& exception)
     {
-        LOG_FATAL << "std::exception: " << exception.what() << std::endl;
+        LOG_FATAL << "std::exception: " << exception.what();
         return EXIT_FAILURE;
     }
     catch (...)
     {
-        LOG_FATAL << "Unknown error" << std::endl;
+        LOG_FATAL << "Unknown error";
         return EXIT_FAILURE;
     }
 

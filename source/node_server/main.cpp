@@ -2,15 +2,12 @@
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #include <boost/asio/impl/src.hpp>
-#include "log.h"
 #include "node_server.h"
 #include "logic_thread.h"
 
-extern std::ofstream* g_log_file = nullptr;
-
 int main(int argc, char** argv)
 {
-    std::cout << "Gkm-World Node Server Copyright (c) 2018 by GkmSoft" << std::endl;
+    std::cout << "Gkm-World Node Server Copyright (c) 2018 by Petr Petrovich Petrov" << std::endl;
 
     std::uint16_t port_number = 17014;
     if (argc >= 2)
@@ -22,31 +19,28 @@ int main(int argc, char** argv)
         std::cout << "using default port number 17014, usage is node_server port_number" << std::endl;
     }
 
-    LogFileHolder log_file_holder;
-    g_log_file = new std::ofstream("node_server" + std::to_string(port_number) + ".log", std::ios::app);
-    LOG_INFO << "Node Server is starting..." << std::endl;
-
+    bool result = false;
     try
     {
-        LogicThread logic_thread;
-        logic_thread.start();
-        NodeServer node_server(port_number, logic_thread);
-        node_server.start();
+        std::unique_ptr<LogicThread> logic_thread = std::make_unique<LogicThread>();
+        logic_thread->start();
+        std::unique_ptr<NodeServer> node_server = std::make_unique<NodeServer>(port_number, *logic_thread);
+        result = node_server->start();
     }
     catch (boost::system::system_error& error)
     {
-        LOG_FATAL << "boost::system::system_error: " << error.what() << std::endl;
+        std::cerr << "boost::system::system_error: " << error.what() << std::endl;
         return EXIT_FAILURE;
     }
     catch (const std::exception& exception)
     {
-        LOG_FATAL << "std::exception: " << exception.what() << std::endl;
+        std::cerr << "std::exception: " << exception.what() << std::endl;
         return EXIT_FAILURE;
     }
     catch (...)
     {
-        LOG_FATAL << "Unknown error" << std::endl;
+        std::cerr << "Unknown error" << std::endl;
         return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
+    return result ? EXIT_SUCCESS : EXIT_FAILURE;
 }

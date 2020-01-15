@@ -4,8 +4,6 @@
 #include <iostream>
 #include <memory>
 #include <boost/asio/impl/src.hpp>
-#include "protocol.h"
-#include "log.h"
 #include "balancer_server.h"
 
 int main(int argc, char** argv)

@@ -553,6 +553,7 @@ namespace Packet
 
     struct MonitoringPopMessageAnswer : public Base
     {
+        bool success = false;
         ESeverityType severity_type = ESeverityType::InfoMessage;
         EServerType server_type = EServerType::NodeServer;
         std::uint32_t token = 0;

@@ -32,13 +32,16 @@ class ProxyServer : public Transport
 public:
     ProxyServer();
     ~ProxyServer();
-    void start();
+    bool start();
 
 private:
     std::uint32_t allocateId();
     void deallocateId(std::uint32_t id);
 
     void debugMonitor() const;
+
+    void dumpParameters();
+    void startImpl();
 
     void onQuit(const boost::system::error_code& error, int sig_number);
     bool onLogin(size_t received_bytes);
