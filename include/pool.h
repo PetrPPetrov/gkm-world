@@ -51,7 +51,7 @@ namespace Memory
             }
             else
             {
-                LOG_WARNING << "not enough buffer, allocation by malloc" << std::endl;
+                LOG_WARNING << "not enough buffer, allocation by malloc";
                 ElementType* result = reinterpret_cast<ElementType*>(malloc(ELEMENT_SIZE));
                 return result;
             }

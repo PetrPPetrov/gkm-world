@@ -7,6 +7,7 @@
 #include <QUdpSocket>
 #include <QHostInfo>
 #include <QThread>
+#include <QTimer>
 #include "protocol.h"
 
 class MainMonitorWindow;
@@ -37,6 +38,10 @@ private slots:
     void onThreadStart();
     void onResolve(QHostInfo);
     void onReadyRead();
+    void onGetServerMessageTimer();
+    void onMonitoringMessageCountAnswer(QByteArray data);
+    void onMonitoringPopMessage();
+    void onMonitoringPopMessageAnswer(QByteArray data);
 
 private:
     MainMonitorWindow* main_window = nullptr;
@@ -45,4 +50,6 @@ private:
     QString balancer_server_host_name;
     QHostAddress balancer_server_host_address;
     std::uint16_t balancer_server_port_number;
+    QTimer* get_server_message_timer = nullptr;
+    std::uint32_t message_count = 0;
 };

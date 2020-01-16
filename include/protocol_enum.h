@@ -86,6 +86,25 @@ namespace Packet
         Monitor
     };
 
+    inline std::string getText(EServerType server_type)
+    {
+        switch (server_type)
+        {
+        case EServerType::ClientApplication:
+            return "[Client]";
+        case EServerType::ProxyServer:
+            return "[Proxy]";
+        case EServerType::NodeServer:
+            return "[Node]";
+        case EServerType::BalancerServer:
+            return "[Balancer]";
+        case EServerType::Monitor:
+            return "[Monitor]";
+        default:
+            return "[Unknown]";
+        }
+    }
+
     enum class ESeverityType : std::uint8_t
     {
         DebugMessage,

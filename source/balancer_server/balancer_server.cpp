@@ -258,6 +258,8 @@ void BalancerServer::startImpl()
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeNeighborInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeNeighborInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticSplit, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticSplit, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticMerge, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticMerge, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringMessageCount, boost::bind(&Transport::onMonitoringMessageCount, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringPopMessage, boost::bind(&Transport::onMonitoringPopMessage, this, _1));
     io_service.run();
 }
 

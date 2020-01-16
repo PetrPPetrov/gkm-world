@@ -22,6 +22,7 @@ MainMonitorWindow::MainMonitorWindow()
     main_monitor_window.setupUi(this);
 
     connect(this, SIGNAL(message(QString)), this, SLOT(onMessage(QString)));
+    connect(this, SIGNAL(serverMessage(QString)), this, SLOT(onServerMessage(QString)));
     connect(this, SIGNAL(connectionFatal(QString)), this, SLOT(onConnectionFatal(QString)));
     connect(this, SIGNAL(monitoringBalancerServerInfoAnswer(QByteArray)),
             this, SLOT(onMonitoringBalancerServerInfoAnswer(QByteArray)));
@@ -92,6 +93,16 @@ MainMonitorWindow::MainMonitorWindow()
     addDockWidget(Qt::RightDockWidgetArea, log_dock);
     view_menu->addAction(log_dock->toggleViewAction());
 
+    QDockWidget* server_log_dock = new QDockWidget(tr("Server Log"), this);
+    server_log_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    server_log = new QPlainTextEdit(server_log_dock);
+    server_log->setReadOnly(true);
+    server_log->ensureCursorVisible();
+    server_log->setCenterOnScroll(true);
+    server_log_dock->setWidget(server_log);
+    addDockWidget(Qt::BottomDockWidgetArea, server_log_dock);
+    view_menu->addAction(server_log_dock->toggleViewAction());
+
     show_leaf_nodes_act = new QAction(tr("Show Leaf Nodes"), this);
     show_leaf_nodes_act->setStatusTip(tr("Show Leaf Nodes"));
     show_leaf_nodes_act->setCheckable(true);
@@ -117,6 +128,16 @@ MainMonitorWindow::MainMonitorWindow()
     clear_log_act->setStatusTip(tr("Clear the log"));
     connect(clear_log_act, &QAction::triggered, this, &MainMonitorWindow::onClearLog);
     view_menu->addAction(clear_log_act);
+
+    QAction* clear_server_log_act = new QAction(tr("Clear Server Log"), this);
+    clear_server_log_act->setStatusTip(tr("Clear the server log"));
+    connect(clear_server_log_act, &QAction::triggered, this, &MainMonitorWindow::onClearServerLog);
+    view_menu->addAction(clear_server_log_act);
+
+    QAction* refresh_node_tree_act = new QAction(tr("Refresh Node Tree"), this);
+    refresh_node_tree_act->setStatusTip(tr("Refresh Node Tree"));
+    connect(refresh_node_tree_act, &QAction::triggered, this, &MainMonitorWindow::onRefreshNodeTree);
+    view_menu->addAction(refresh_node_tree_act);
 
     QMenu* action_menu = menuBar()->addMenu(tr("&Action"));
 
@@ -270,6 +291,20 @@ void MainMonitorWindow::onClearLog()
     log->clear();
 }
 
+void MainMonitorWindow::onClearServerLog()
+{
+    server_log->clear();
+}
+
+void MainMonitorWindow::onRefreshNodeTree()
+{
+    if (server_info && server_info->tree_root_token)
+    {
+        server_info->wait_token = server_info->tree_root_token;
+        connection->getBalanceTreeInfo(server_info->tree_root_token);
+    }
+}
+
 void MainMonitorWindow::onStaticSplit()
 {
     if (server_info)
@@ -407,6 +442,12 @@ void MainMonitorWindow::onNodeTreeExpanded(const QModelIndex& index)
 void MainMonitorWindow::onMessage(const QString& message)
 {
     log->appendPlainText(message);
+}
+
+void MainMonitorWindow::onServerMessage(const QString& message)
+{
+    server_log->appendPlainText(message);
+    update();
 }
 
 void MainMonitorWindow::onConnectionFatal(const QString& message)

@@ -120,7 +120,7 @@ namespace Log
     {
         if (g_logger)
         {
-            LOG_INFO << "Server is shutting down..." << std::endl;
+            LOG_INFO << "Server is shutting down...";
             delete g_logger;
             g_logger = nullptr;
         }

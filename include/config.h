@@ -83,15 +83,9 @@ public:
             }
             else
             {
-#ifdef _DEBUG
-                LOG_DEBUG << "unexpected keyword '" << keyword << "' in configuration" << std::endl;
-#endif
                 // Bypass value for the current unkown keyword
                 std::string dummy_value;
                 stream >> dummy_value;
-#ifdef _DEBUG
-                LOG_DEBUG << "value is '" << dummy_value << "'" << std::endl;
-#endif
             }
         }
     }

@@ -22,6 +22,10 @@ void MonitorUDPConnection::onClose()
 {
     main_window->message(tr("disconnected"));
     main_window->message(tr("================"));
+    if (get_server_message_timer)
+    {
+        get_server_message_timer->stop();
+    }
     connection_thread.exit(0);
 }
 
@@ -70,6 +74,8 @@ void MonitorUDPConnection::onThreadStart()
     QHostInfo::lookupHost(balancer_server_host_name, this, SLOT(onResolve(QHostInfo)));
     socket = new QUdpSocket(this);
     connect(socket, &QUdpSocket::readyRead, this, &MonitorUDPConnection::onReadyRead);
+    get_server_message_timer = new QTimer(this);
+    connect(get_server_message_timer, &QTimer::timeout, this, &MonitorUDPConnection::onGetServerMessageTimer);
 }
 
 void MonitorUDPConnection::onResolve(QHostInfo host_info)
@@ -95,6 +101,7 @@ void MonitorUDPConnection::onResolve(QHostInfo host_info)
         main_window->message(tr("resoved IP address - %1").arg(balancer_server_host_address.toString()));
     }
     onGetBalancerServerInfo();
+    get_server_message_timer->start(1000);
 }
 
 void MonitorUDPConnection::onReadyRead()
@@ -129,6 +136,12 @@ void MonitorUDPConnection::onReadyRead()
             case Packet::EType::MonitoringBalanceTreeStaticMergeAnswer:
                 main_window->monitoringBalanceTreeStaticMergeAnswer(buffer);
                 break;
+            case Packet::EType::MonitoringMessageCountAnswer:
+                onMonitoringMessageCountAnswer(buffer);
+                break;
+            case Packet::EType::MonitoringPopMessageAnswer:
+                onMonitoringPopMessageAnswer(buffer);
+                break;
             default:
                 break;
             }
@@ -136,6 +149,51 @@ void MonitorUDPConnection::onReadyRead()
         else
         {
             main_window->message(tr("invalid data size: %1").arg(buffer.size()));
+        }
+    }
+}
+
+void MonitorUDPConnection::onGetServerMessageTimer()
+{
+    Packet::MonitoringMessageCount request;
+    socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
+}
+
+void MonitorUDPConnection::onMonitoringMessageCountAnswer(QByteArray data)
+{
+    const Packet::MonitoringMessageCountAnswer* answer = reinterpret_cast<const Packet::MonitoringMessageCountAnswer*>(data.data());
+    if (data.size() >= Packet::getSize(answer))
+    {
+        message_count = answer->message_count;
+        if (message_count > 0)
+        {
+            onMonitoringPopMessage();
+        }
+    }
+}
+
+void MonitorUDPConnection::onMonitoringPopMessage()
+{
+    Packet::MonitoringPopMessage request;
+    socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
+}
+
+void MonitorUDPConnection::onMonitoringPopMessageAnswer(QByteArray data)
+{
+    const Packet::MonitoringPopMessageAnswer* answer = reinterpret_cast<const Packet::MonitoringPopMessageAnswer*>(data.data());
+    if (data.size() >= Packet::getSize(answer))
+    {
+        if (answer->success)
+        {
+            if (message_count > 0)
+            {
+                --message_count;
+            }
+            g_main_window->serverMessage((getText(answer->server_type) + " " + getText(answer->severity_type) + " " + answer->getMessage()).c_str());
+            if (message_count > 0)
+            {
+                onMonitoringPopMessage();
+            }
         }
     }
 }
