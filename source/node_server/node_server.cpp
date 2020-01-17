@@ -35,6 +35,7 @@ NodeServer::NodeServer(std::uint16_t port_number_, LogicThread& logic_thread_) :
     config_reader.read(config_file);
 
     balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
+    setBalancerServerEndPoint(balancer_server_end_point);
 
     node_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(), port_number);
     node_server_token = 0;
@@ -47,7 +48,7 @@ extern Log::Logger* g_logger = nullptr;
 bool NodeServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(Packet::ESeverityType::DebugMessage, "node_server" + std::to_string(port_number) + ".log", false, true);
+    g_logger = new Log::Logger(Packet::EServerType::NodeServer, Packet::ESeverityType::DebugMessage, "node_server" + std::to_string(port_number) + ".log", false, true);
     LOG_INFO << "Node Server is starting...";
 
     try
@@ -94,6 +95,10 @@ void NodeServer::startImpl()
     setReceiveHandler(Packet::EType::InitializePositionInternal, boost::bind(&NodeServer::onInitializePositionInternal, this, _1));
     setReceiveHandler(Packet::EType::UserActionInternal, boost::bind(&NodeServer::onUserActionInternal, this, _1));
     setReceiveHandler(Packet::EType::GetNodeInfoAnswer, boost::bind(&NodeServer::onGetNodeInfoAnswer, this, _1));
+#ifdef NETWORK_LOG
+    setReceiveHandler(Packet::EType::MonitoringMessageCount, boost::bind(&Transport::onMonitoringMessageCount, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringPopMessage, boost::bind(&Transport::onMonitoringPopMessage, this, _1));
+#endif
     io_service.run();
 }
 

@@ -26,6 +26,8 @@ namespace Log
 {
     struct Message
     {
+        Packet::EServerType server_type = Packet::EServerType::BalancerServer;
+        std::uint32_t server_token = 0;
         Packet::ESeverityType severity = Packet::ESeverityType::InfoMessage;
         std::string text;
     };
@@ -34,9 +36,10 @@ namespace Log
     {
         std::list<Message> messages;
 
-        Logger(Packet::ESeverityType minimum_level_, const std::string& log_file_name_, bool log_to_screen_, bool log_to_file_)
+        Logger(Packet::EServerType server_type_, Packet::ESeverityType minimum_level_, const std::string& log_file_name_, bool log_to_screen_, bool log_to_file_)
             : log_file(log_file_name_, std::ios::app)
         {
+            server_type = server_type_;
             minimum_level = minimum_level_;
             log_file_name = log_file_name_;
             log_to_screen = log_to_screen_;
@@ -65,11 +68,9 @@ namespace Log
                     {
                         logger.log_file << severity_prefix << message << std::endl;
                     }
-                    if (logger.messages.size() >= MAX_LOG_MESSAGE_COUNT)
-                    {
-                        logger.messages.pop_front();
-                    }
-                    logger.messages.push_back({severity, message});
+#ifdef NETWORK_LOG
+                    logger.add({logger.server_type, logger.server_token, severity, message});
+#endif
                 }
             }
             std::ostream& getLog()
@@ -88,11 +89,22 @@ namespace Log
             return Dumper(*this, message_severity, message_severity < minimum_level);
         }
 
-    private:
+        void add(const Log::Message& message)
+        {
+            if (messages.size() >= MAX_LOG_MESSAGE_COUNT)
+            {
+                messages.pop_front();
+            }
+            messages.push_back(message);
+        }
+
         Packet::ESeverityType minimum_level;
-        std::string log_file_name;
+        std::uint32_t server_token = 0;
         bool log_to_screen;
         bool log_to_file;
+    private:
+        Packet::EServerType server_type = Packet::EServerType::BalancerServer;
+        std::string log_file_name;
         std::ofstream log_file;
     };
 

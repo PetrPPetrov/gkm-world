@@ -92,7 +92,7 @@ extern Log::Logger* g_logger = nullptr;
 bool BalancerServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(Packet::ESeverityType::DebugMessage, "balancer_server.log", false, true);
+    g_logger = new Log::Logger(Packet::EServerType::BalancerServer, Packet::ESeverityType::DebugMessage, "balancer_server.log", false, true);
     LOG_INFO << "Balancer Server is starting...";
 
     try
@@ -258,8 +258,11 @@ void BalancerServer::startImpl()
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeNeighborInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeNeighborInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticSplit, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticSplit, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticMerge, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticMerge, this, _1));
+#ifdef NETWORK_LOG
+    setReceiveHandler(Packet::EType::MonitoringSendMessage, boost::bind(&Transport::onMonitoringSendMessage, this, _1));
     setReceiveHandler(Packet::EType::MonitoringMessageCount, boost::bind(&Transport::onMonitoringMessageCount, this, _1));
     setReceiveHandler(Packet::EType::MonitoringPopMessage, boost::bind(&Transport::onMonitoringPopMessage, this, _1));
+#endif
     io_service.run();
 }
 

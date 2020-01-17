@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 
     Log::Holder log_holder;
     std::string log_file_name("bot_client_" + std::to_string(GetCurrentProcessId()) + ".log");
-    g_logger = new Log::Logger(Packet::ESeverityType::DebugMessage, log_file_name, false, true);
+    g_logger = new Log::Logger(Packet::EServerType::ClientApplication, Packet::ESeverityType::DebugMessage, log_file_name, false, true);
     LOG_INFO << "Bot Client is starting...";
 
     try

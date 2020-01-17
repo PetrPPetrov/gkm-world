@@ -32,6 +32,8 @@ private:
     std::vector<std::function<bool(size_t)>> handlers;
     Packet::EServerType server_type = Packet::EServerType::BalancerServer;
     std::uint32_t server_token = 0;
+    bool balancer_server_end_point_was_set = false;
+    boost::asio::ip::udp::endpoint balancer_server_end_point;
 
     struct GuaranteedDeliveryInfo : public std::enable_shared_from_this<GuaranteedDeliveryInfo>
     {
@@ -105,8 +107,10 @@ public:
     template<class PacketType>
     void standardSendTo(const PacketType* packet, boost::asio::ip::udp::endpoint& end_point)
     {
-#ifdef LOG_EXTRA
+#ifndef NETWORK_LOG
+#ifdef _DEBUG
         LOG_DEBUG << "standardSendTo " << end_point << " #" << packet->packet_number;
+#endif
 #endif
         void* packet_buffer = static_cast<void*>(const_cast<PacketType*>(packet));
         socket.async_send_to(
@@ -124,8 +128,10 @@ public:
     template<class PacketType, size_t AttemptCount = 10, size_t WaitMs = 1000>
     void guaranteedSendTo(const PacketType* packet, boost::asio::ip::udp::endpoint& end_point, std::function<void()> error_handler)
     {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
         LOG_DEBUG << "guaranteedSendTo " << end_point << " #" << packet->packet_number;
+#endif
 #endif
         assert(Packet::isGuaranteedDeliveryType(packet->type));
         guaranteed_delivery_enabled = true;
@@ -135,7 +141,7 @@ public:
             boost::asio::buffer(packet, packet_size),
             end_point,
             boost::bind(&Transport::onGuaranteedSend, this, packet_buffer, _1, _2));
-        GuaranteedDeliveryInfo::ptr info = std::make_shared<GuaranteedDeliveryInfo>(io_service, boost::posix_time::milliseconds(WaitMs));
+        GuaranteedDeliveryInfo::Ptr info = std::make_shared<GuaranteedDeliveryInfo>(io_service, boost::posix_time::milliseconds(WaitMs));
         info->packet_number = packet->packet_number;
         info->attempt_count = AttemptCount;
         info->packet_buffer = packet_buffer;
@@ -157,15 +163,38 @@ public:
         server_type = server_type_;
     }
 
-    void setServerToken(std::uint32_t server_token_)
+    void setServerToken(std::uint32_t token)
     {
-        server_token = server_token_;
+        server_token = token;
+    }
+
+    void setBalancerServerEndPoint(const boost::asio::ip::udp::endpoint& balancer_server_end_point_)
+    {
+        balancer_server_end_point = balancer_server_end_point_;
+        balancer_server_end_point_was_set = true;
+    }
+
+    bool onMonitoringSendMessage(size_t received_bytes)
+    {
+#ifndef NETWORK_LOG
+#ifdef _DEBUG
+      LOG_DEBUG << "onMonitoringSendMessage";
+#endif
+#endif
+
+        const auto packet = getReceiveBufferAs<Packet::MonitoringSendMessage>();
+        g_logger->add({packet->server_type, packet->token, packet->severity_type, packet->getMessage()});
+        auto answer = createPacket<Packet::MonitoringSendMessageAnswer>(packet->packet_number);
+        standardSend(answer);
+        return true;
     }
 
     bool onMonitoringMessageCount(size_t received_bytes)
     {
-#ifdef LOG_EXTRA
+#ifndef NETWORK_LOG
+#ifdef _DEBUG
         LOG_DEBUG << "onMonitoringMessageCount";
+#endif
 #endif
 
         const auto packet = getReceiveBufferAs<Packet::MonitoringMessageCount>();
@@ -177,19 +206,21 @@ public:
 
     bool onMonitoringPopMessage(size_t received_bytes)
     {
-#ifdef LOG_EXTRA
+#ifndef NETWORK_LOG
+#ifdef _DEBUG
         LOG_DEBUG << "onMonitoringPopMessage";
+#endif
 #endif
 
         const auto packet = getReceiveBufferAs<Packet::MonitoringPopMessage>();
         auto answer = createPacket<Packet::MonitoringPopMessageAnswer>(packet->packet_number);
-        answer->server_type = server_type;
-        answer->token = server_token;
 
         if (g_logger->messages.size() > 0)
         {
             Log::Message message = g_logger->messages.front();
             answer->success = true;
+            answer->server_type = message.server_type;
+            answer->token = message.server_token;
             answer->severity_type = message.severity;
             answer->setMessage(message.text);
             g_logger->messages.pop_front();
@@ -202,13 +233,30 @@ public:
         return true;
     }
 
+    void sendLogMessage()
+    {
+        if (g_logger->messages.size() > 0)
+        {
+            Log::Message message = g_logger->messages.front();
+            g_logger->messages.pop_front();
+            auto request = createPacket<Packet::MonitoringSendMessage>();
+            request->server_type = message.server_type;
+            request->token = message.server_token;
+            request->severity_type = message.severity;
+            request->setMessage(message.text);
+            guaranteedSendTo(request, balancer_server_end_point, boost::bind(&Transport::onSendLogMessageErrorHandler, this));
+        }
+    }
+
 private:
     void onReceive(const boost::system::error_code& error, size_t received_bytes)
     {
         if (error == boost::asio::error::connection_reset)
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             LOG_DEBUG << "error && error != boost::asio::error::connection_reset, size = " << received_bytes;
+#endif
 #endif
             doReceive();
             return;
@@ -216,30 +264,38 @@ private:
 
         if (error && error != boost::asio::error::message_size)
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             LOG_DEBUG << "error && error != boost::asio::error::message_size, size = " << received_bytes;
+#endif
 #endif
             return;
         }
 
         if (received_bytes < sizeof(Packet::Base))
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             LOG_DEBUG << "received_bytes < sizeof(Packet::Base)";
+#endif
 #endif
             return;
         }
 
-#ifdef LOG_EXTRA
+#ifndef NETWORK_LOG
+#ifdef _DEBUG
         LOG_DEBUG << "received_bytes " << received_bytes;
+#endif
 #endif
 
         auto basic_packet = reinterpret_cast<const Packet::Base*>(receive_buffer);
         std::uint8_t type_code = static_cast<std::uint8_t>(basic_packet->type);
         if (type_code < Packet::TYPE_FIRST || type_code >= Packet::TYPE_LAST)
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             LOG_DEBUG << "unknown packet type, packet type = " << static_cast<unsigned>(type_code);
+#endif
 #endif
             return;
         }
@@ -247,8 +303,10 @@ private:
         const size_t minimum_size = Packet::getSize(basic_packet->type);
         if (received_bytes < minimum_size)
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             LOG_DEBUG << "received_bytes < " << minimum_size;
+#endif
 #endif
             return;
         }
@@ -266,8 +324,10 @@ private:
         }
         else
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             LOG_DEBUG << "unknown packet type, packet type = " << static_cast<unsigned>(type_code);
+#endif
 #endif
         }
 
@@ -282,8 +342,10 @@ private:
         guaranteed_delivery_map_t::iterator fit = guaranteed_delivery_map.find(packet_number);
         if (fit != guaranteed_delivery_map.end())
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             LOG_DEBUG << "found guaranteed request #" << packet_number;
+#endif
 #endif
             fit->second->delivered_ok = true;
             fit->second->timer.cancel();
@@ -292,26 +354,32 @@ private:
         }
         else
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             LOG_WARNING << "guaranteed request is not found #" << packet_number;
+#endif
 #endif
         }
     }
 
     void onSend(void* packet_buffer, const boost::system::error_code& error, size_t transferred_bytes)
     {
-#ifdef LOG_EXTRA
+#ifndef NETWORK_LOG
+#ifdef _DEBUG
         Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(packet_buffer);
         LOG_DEBUG << "onSend #" << basic_packet->packet_number;
+#endif
 #endif
         packet_pool.deallocate(packet_buffer);
     }
 
     void onGuaranteedSend(void* packet_buffer, const boost::system::error_code& error, size_t transferred_bytes)
     {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
         Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(packet_buffer);
         LOG_DEBUG << "onGuaranteedSend #" << basic_packet->packet_number;
+#endif
 #endif
     }
 
@@ -319,9 +387,11 @@ private:
     {
         if (info->delivered_ok)
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(info->packet_buffer);
             LOG_INFO << "guaranteed delivered OK #" << info->packet_number;
+#endif
 #endif
             info->timer.cancel();
             guaranteed_delivery_map.erase(info->packet_number);
@@ -329,9 +399,11 @@ private:
         }
         if (info->attempt_count)
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(info->packet_buffer);
             LOG_WARNING << "guaranteed failed to delivery, new attempt #" << basic_packet->packet_number;
+#endif
 #endif
             info->attempt_count--;
             socket.async_send_to(
@@ -343,9 +415,11 @@ private:
         }
         else
         {
+#ifndef NETWORK_LOG
 #ifdef _DEBUG
             Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(info->packet_buffer);
             LOG_ERROR << "guaranteeed failed to devilery #" << basic_packet->packet_number;
+#endif
 #endif
             info->timer.cancel();
             packet_pool.deallocate(info->packet_buffer);
@@ -355,5 +429,10 @@ private:
                 info->error_handler();
             }
         }
+    }
+
+    void onSendLogMessageErrorHandler()
+    {
+        // Silently ignore
     }
 };

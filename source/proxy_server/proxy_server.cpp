@@ -26,8 +26,7 @@ ProxyServer::ProxyServer() :
 
     socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port_number));
     balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
-
-    loadRegisteredUsers(registered_users_file_name);
+    setBalancerServerEndPoint(balancer_server_end_point);
 }
 
 ProxyServer::~ProxyServer()
@@ -40,7 +39,7 @@ extern Log::Logger* g_logger = nullptr;
 bool ProxyServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(Packet::ESeverityType::DebugMessage, "proxy_server.log", false, true);
+    g_logger = new Log::Logger(Packet::EServerType::ProxyServer, Packet::ESeverityType::DebugMessage, "proxy_server.log", false, true);
     LOG_INFO << "Proxy Server is starting...";
 
     try
@@ -111,6 +110,7 @@ void ProxyServer::dumpParameters()
 
 void ProxyServer::startImpl()
 {
+    loadRegisteredUsers(registered_users_file_name);
     doReceive();
     signals.async_wait(boost::bind(&ProxyServer::onQuit, this, _1, _2));
     setReceiveHandler(Packet::EType::Login, boost::bind(&ProxyServer::onLogin, this, _1));

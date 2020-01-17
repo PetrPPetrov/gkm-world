@@ -7,7 +7,7 @@
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
 #define DEBUG_MONITOR
-//#define LOG_EXTRA
+#define NETWORK_LOG
 
 const double CELL_SIZE = 25.0;
 const std::int32_t NOTIFICATION_BAND_HALF_WIDTH = 1;

@@ -189,7 +189,14 @@ void MonitorUDPConnection::onMonitoringPopMessageAnswer(QByteArray data)
             {
                 --message_count;
             }
-            g_main_window->serverMessage((getText(answer->server_type) + " " + getText(answer->severity_type) + " " + answer->getMessage()).c_str());
+            std::string message_text = getText(answer->server_type) + " ";
+            if (answer->server_type == Packet::EServerType::NodeServer)
+            {
+                message_text += std::string("[Token=") + std::to_string(answer->token) + "] ";
+            }
+            message_text += std::string("[") + getText(answer->severity_type) + "] ";
+            message_text += answer->getMessage();
+            g_main_window->serverMessage(message_text.c_str());
             if (message_count > 0)
             {
                 onMonitoringPopMessage();
