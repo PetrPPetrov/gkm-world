@@ -41,8 +41,7 @@ class BalancerServer : public Transport
 {
     std::uint16_t port_number = 17013;
     boost::asio::signal_set signals;
-    bool proxy_server_end_point_initialized = false;
-    boost::asio::ip::udp::endpoint proxy_server_end_point;
+    boost::asio::ip::udp::endpoint balancer_server_end_point;
     boost::filesystem::path node_server_path;
 
     SquareCell global_bounding_box;
@@ -57,6 +56,10 @@ class BalancerServer : public Transport
     typedef std::map<ip_address_t::bytes_type, NodeServerInfo::Ptr> available_node_servers_t;
     available_node_servers_t available_node_servers;
     std::list<NodeInfo> available_nodes;
+
+    Packet::ESeverityType minimum_level = Packet::ESeverityType::DebugMessage;
+    bool log_to_screen = false;
+    bool log_to_file = true;
 
 public:
     BalancerServer();

@@ -32,6 +32,9 @@ BalancerServer::BalancerServer() :
     config_reader.addParameter("global_bounding_box_start_x", global_bounding_box_start_x);
     config_reader.addParameter("global_bounding_box_start_y", global_bounding_box_start_y);
     config_reader.addParameter("global_bounding_box_size", global_bounding_box_size);
+    config_reader.addParameter("log_min_severity", minimum_level);
+    config_reader.addParameter("log_to_screen", log_to_screen);
+    config_reader.addParameter("log_to_file", log_to_file);
     config_reader.addParameter("node_server_mac_address", node_server_mac_address);
     config_reader.addParameter("node_server_ip_address", node_server_ip_address);
     config_reader.addParameter("node_server_max_process_count", node_server_max_process_count);
@@ -54,7 +57,8 @@ BalancerServer::BalancerServer() :
         available_node_servers.insert(available_node_servers_t::value_type(new_node_server_info->ip_address.to_bytes(), new_node_server_info));
     }
 
-    socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(ip_address_t(), port_number));
+    balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(), port_number);
+    socket = boost::asio::ip::udp::socket(io_service, balancer_server_end_point);
 
     global_bounding_box.start.x = global_bounding_box_start_x;
     global_bounding_box.start.y = global_bounding_box_start_y;
@@ -92,7 +96,7 @@ extern Log::Logger* g_logger = nullptr;
 bool BalancerServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(Packet::EServerType::BalancerServer, Packet::ESeverityType::DebugMessage, "balancer_server.log", false, true);
+    g_logger = new Log::Logger(minimum_level, "balancer_server.log", log_to_screen, log_to_file);
     LOG_INFO << "Balancer Server is starting...";
 
     try
@@ -232,10 +236,16 @@ void BalancerServer::onWakeupTimeout(NodeServerInfo::Ptr node_server_info, const
 
 void BalancerServer::dumpParameters()
 {
-    LOG_INFO << "balancer_server_port_number " << port_number;
+    LOG_INFO << "balancer_server_ip " << balancer_server_end_point.address();
+    LOG_INFO << "balancer_server_port_number " << balancer_server_end_point.port();
+
     LOG_INFO << "global_bounding_box_start_x " << global_bounding_box.start.x;
     LOG_INFO << "global_bounding_box_start_y " << global_bounding_box.start.y;
     LOG_INFO << "global_bounding_box_size " << global_bounding_box.size;
+
+    LOG_INFO << "log_min_severity " << getText(minimum_level);
+    LOG_INFO << "log_to_screen " << log_to_screen;
+    LOG_INFO << "log_to_file " << log_to_file;
 
     for (auto node_server_info : available_node_servers)
     {
@@ -259,7 +269,6 @@ void BalancerServer::startImpl()
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticSplit, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticSplit, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticMerge, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticMerge, this, _1));
 #ifdef NETWORK_LOG
-    setReceiveHandler(Packet::EType::MonitoringSendMessage, boost::bind(&Transport::onMonitoringSendMessage, this, _1));
     setReceiveHandler(Packet::EType::MonitoringMessageCount, boost::bind(&Transport::onMonitoringMessageCount, this, _1));
     setReceiveHandler(Packet::EType::MonitoringPopMessage, boost::bind(&Transport::onMonitoringPopMessage, this, _1));
 #endif
@@ -271,12 +280,6 @@ bool BalancerServer::onInitializePositionInternal(size_t received_bytes)
 #ifdef _DEBUG
     LOG_DEBUG << "onInitializePositionInternal";
 #endif
-
-    if (!proxy_server_end_point_initialized)
-    {
-        proxy_server_end_point = remote_end_point;
-        proxy_server_end_point_initialized = true;
-    }
 
     auto packet = getReceiveBufferAs<Packet::InitializePositionInternal>();
 #ifdef _DEBUG

@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <string>
+#include <iostream>
+
 namespace Packet
 {
     enum class EType : std::uint8_t
@@ -50,8 +53,6 @@ namespace Packet
         MonitoringBalanceTreeStaticSplitAnswer,
         MonitoringBalanceTreeStaticMerge,
         MonitoringBalanceTreeStaticMergeAnswer,
-        MonitoringSendMessage,
-        MonitoringSendMessageAnswer,
         MonitoringMessageCount,
         MonitoringMessageCountAnswer,
         MonitoringPopMessage,
@@ -131,5 +132,37 @@ namespace Packet
         default:
             return "UNKNOWN_SEVERITY_TYPE";
         }
+    }
+
+    inline ESeverityType getSeverity(const std::string& string_representation)
+    {
+        if (string_representation == "INFO")
+        {
+            return ESeverityType::InfoMessage;
+        }
+        else if (string_representation == "WARNING")
+        {
+            return ESeverityType::WarningMessage;
+        }
+        else if (string_representation == "ERROR")
+        {
+            return ESeverityType::ErrorMessage;
+        }
+        else if (string_representation == "FATAL")
+        {
+            return ESeverityType::FatalMessage;
+        }
+        else
+        {
+            return ESeverityType::DebugMessage;
+        }
+    }
+
+    inline std::istream& operator>>(std::istream& input_stream, ESeverityType& severity)
+    {
+        std::string string_representation;
+        input_stream >> string_representation;
+        severity = getSeverity(string_representation);
+        return input_stream;
     }
 }

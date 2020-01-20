@@ -39,6 +39,10 @@ class NodeServer : public Transport
     LogicThread& logic_thread;
     boost::filesystem::path node_server_path;
 
+    Packet::ESeverityType minimum_level = Packet::ESeverityType::DebugMessage;
+    bool log_to_screen = false;
+    bool log_to_file = true;
+
 public:
     NodeServer(std::uint16_t port_number, LogicThread& logic_thread);
     bool start();

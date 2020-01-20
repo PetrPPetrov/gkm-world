@@ -21,6 +21,7 @@ class ProxyServer : public Transport
     std::string balancer_server_ip = "127.0.0.1";
     std::uint16_t balancer_server_port_number = 17013;
     boost::asio::ip::udp::endpoint balancer_server_end_point;
+    boost::asio::ip::udp::endpoint proxy_server_end_point;
 
     typedef std::map<std::string, UserInfo::ptr> login_to_user_info_t;
     login_to_user_info_t login_to_user_info;
@@ -28,6 +29,10 @@ class ProxyServer : public Transport
     typedef Memory::FastIndexMap<UserOnlineInfo> id_to_user_info_t;
     id_to_user_info_t id_to_user_info;
     std::uint32_t online_user_count = 0;
+
+    Packet::ESeverityType minimum_level = Packet::ESeverityType::DebugMessage;
+    bool log_to_screen = false;
+    bool log_to_file = true;
 
 public:
     ProxyServer();

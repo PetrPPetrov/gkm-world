@@ -32,8 +32,6 @@ private:
     std::vector<std::function<bool(size_t)>> handlers;
     Packet::EServerType server_type = Packet::EServerType::BalancerServer;
     std::uint32_t server_token = 0;
-    bool balancer_server_end_point_was_set = false;
-    boost::asio::ip::udp::endpoint balancer_server_end_point;
 
     struct GuaranteedDeliveryInfo : public std::enable_shared_from_this<GuaranteedDeliveryInfo>
     {
@@ -168,27 +166,6 @@ public:
         server_token = token;
     }
 
-    void setBalancerServerEndPoint(const boost::asio::ip::udp::endpoint& balancer_server_end_point_)
-    {
-        balancer_server_end_point = balancer_server_end_point_;
-        balancer_server_end_point_was_set = true;
-    }
-
-    bool onMonitoringSendMessage(size_t received_bytes)
-    {
-#ifndef NETWORK_LOG
-#ifdef _DEBUG
-      LOG_DEBUG << "onMonitoringSendMessage";
-#endif
-#endif
-
-        const auto packet = getReceiveBufferAs<Packet::MonitoringSendMessage>();
-        g_logger->add({packet->server_type, packet->token, packet->severity_type, packet->getMessage()});
-        auto answer = createPacket<Packet::MonitoringSendMessageAnswer>(packet->packet_number);
-        standardSend(answer);
-        return true;
-    }
-
     bool onMonitoringMessageCount(size_t received_bytes)
     {
 #ifndef NETWORK_LOG
@@ -219,8 +196,8 @@ public:
         {
             Log::Message message = g_logger->messages.front();
             answer->success = true;
-            answer->server_type = message.server_type;
-            answer->token = message.server_token;
+            answer->server_type = server_type;
+            answer->token = server_token;
             answer->severity_type = message.severity;
             answer->setMessage(message.text);
             g_logger->messages.pop_front();
@@ -231,21 +208,6 @@ public:
         }
         standardSend(answer);
         return true;
-    }
-
-    void sendLogMessage()
-    {
-        if (g_logger->messages.size() > 0)
-        {
-            Log::Message message = g_logger->messages.front();
-            g_logger->messages.pop_front();
-            auto request = createPacket<Packet::MonitoringSendMessage>();
-            request->server_type = message.server_type;
-            request->token = message.server_token;
-            request->severity_type = message.severity;
-            request->setMessage(message.text);
-            guaranteedSendTo(request, balancer_server_end_point, boost::bind(&Transport::onSendLogMessageErrorHandler, this));
-        }
     }
 
 private:
@@ -429,10 +391,5 @@ private:
                 info->error_handler();
             }
         }
-    }
-
-    void onSendLogMessageErrorHandler()
-    {
-        // Silently ignore
     }
 };

@@ -21,12 +21,15 @@ ProxyServer::ProxyServer() :
     config_reader.addParameter("proxy_server_port_number", port_number);
     config_reader.addParameter("balancer_server_ip", balancer_server_ip);
     config_reader.addParameter("balancer_server_port_number", balancer_server_port_number);
+    config_reader.addParameter("log_min_severity", minimum_level);
+    config_reader.addParameter("log_to_screen", log_to_screen);
+    config_reader.addParameter("log_to_file", log_to_file);
     config_reader.addParameter("registered_users_file_name", registered_users_file_name);
     config_reader.read(config_file);
 
-    socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port_number));
     balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
-    setBalancerServerEndPoint(balancer_server_end_point);
+    proxy_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(), port_number);
+    socket = boost::asio::ip::udp::socket(io_service, proxy_server_end_point);
 }
 
 ProxyServer::~ProxyServer()
@@ -39,7 +42,7 @@ extern Log::Logger* g_logger = nullptr;
 bool ProxyServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(Packet::EServerType::ProxyServer, Packet::ESeverityType::DebugMessage, "proxy_server.log", false, true);
+    g_logger = new Log::Logger(minimum_level, "proxy_server.log", log_to_screen, log_to_file);
     LOG_INFO << "Proxy Server is starting...";
 
     try
@@ -103,9 +106,17 @@ void ProxyServer::debugMonitor() const
 
 void ProxyServer::dumpParameters()
 {
-    LOG_INFO << "proxy_server_port_number " << port_number;
     LOG_INFO << "balancer_server_ip " << balancer_server_ip;
     LOG_INFO << "balancer_server_port_number " << balancer_server_port_number;
+
+    LOG_INFO << "proxy_server_ip " << proxy_server_end_point.address();
+    LOG_INFO << "proxy_server_port_number " << proxy_server_end_point.port();
+
+    LOG_INFO << "log_min_severity " << getText(minimum_level);
+    LOG_INFO << "log_to_screen " << log_to_screen;
+    LOG_INFO << "log_to_file " << log_to_file;
+
+    LOG_INFO << "registered_users_file_name " << registered_users_file_name;
 }
 
 void ProxyServer::startImpl()
@@ -120,6 +131,10 @@ void ProxyServer::startImpl()
     setReceiveHandler(Packet::EType::InitializePositionInternalAnswer, boost::bind(&ProxyServer::onInitializePositionInternalAnswer, this, _1));
     setReceiveHandler(Packet::EType::UserAction, boost::bind(&ProxyServer::onUserAction, this, _1));
     setReceiveHandler(Packet::EType::UserActionInternalAnswer, boost::bind(&ProxyServer::onUserActionInternalAnswer, this, _1));
+#ifdef NETWORK_LOG
+    setReceiveHandler(Packet::EType::MonitoringMessageCount, boost::bind(&Transport::onMonitoringMessageCount, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringPopMessage, boost::bind(&Transport::onMonitoringPopMessage, this, _1));
+#endif
     io_service.run();
 }
 

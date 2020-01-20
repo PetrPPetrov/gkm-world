@@ -32,13 +32,16 @@ NodeServer::NodeServer(std::uint16_t port_number_, LogicThread& logic_thread_) :
     ConfigurationReader config_reader;
     config_reader.addParameter("balancer_server_ip", balancer_server_ip);
     config_reader.addParameter("balancer_server_port_number", balancer_server_port_number);
+    config_reader.addParameter("log_min_severity", minimum_level);
+    config_reader.addParameter("log_to_screen", log_to_screen);
+    config_reader.addParameter("log_to_file", log_to_file);
     config_reader.read(config_file);
 
     balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
-    setBalancerServerEndPoint(balancer_server_end_point);
 
     node_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(), port_number);
     node_server_token = 0;
+    socket = boost::asio::ip::udp::socket(io_service, node_server_end_point);
 
     node_server_path = findNodeServerPath();
 }
@@ -48,7 +51,7 @@ extern Log::Logger* g_logger = nullptr;
 bool NodeServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(Packet::EServerType::NodeServer, Packet::ESeverityType::DebugMessage, "node_server" + std::to_string(port_number) + ".log", false, true);
+    g_logger = new Log::Logger(minimum_level, "node_server" + std::to_string(port_number) + ".log", log_to_screen, log_to_file);
     LOG_INFO << "Node Server is starting...";
 
     try
@@ -82,6 +85,10 @@ void NodeServer::dumpParameters()
     LOG_INFO << "node_server_ip " << node_server_end_point.address();
     LOG_INFO << "node_server_port_number " << node_server_end_point.port();
     LOG_INFO << "node_server_token " << node_server_token;
+
+    LOG_INFO << "log_min_severity " << getText(minimum_level);
+    LOG_INFO << "log_to_screen " << log_to_screen;
+    LOG_INFO << "log_to_file " << log_to_file;
 
     LOG_INFO << "node_server_path " << node_server_path;
 }

@@ -487,41 +487,6 @@ namespace Packet
         }
     };
 
-    struct MonitoringSendMessage : public Base
-    {
-        ESeverityType severity_type = ESeverityType::InfoMessage;
-        EServerType server_type = EServerType::NodeServer;
-        std::uint32_t token = 0;
-        char message[256] = { 0 };
-
-        MonitoringSendMessage()
-        {
-            type = EType::MonitoringSendMessage;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-        std::string getMessage() const
-        {
-            char temp_message[sizeof(message) / sizeof(message[0])];
-            memcpy(temp_message, message, std::size(message));
-            temp_message[std::size(temp_message) - 1] = 0;
-            return temp_message;
-        }
-        void setMessage(const std::string& message_)
-        {
-            memset(message, 0, std::size(message));
-            memcpy(message, message_.c_str(), std::min(message_.size(), std::size(message)));
-        }
-    };
-
-    struct MonitoringSendMessageAnswer : public Base
-    {
-        MonitoringSendMessageAnswer()
-        {
-            type = EType::MonitoringSendMessageAnswer;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-
     struct MonitoringMessageCount : public Base
     {
         MonitoringMessageCount()
