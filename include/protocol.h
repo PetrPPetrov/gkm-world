@@ -250,47 +250,6 @@ namespace Packet
         }
     };
 
-    struct UserMove : public Base
-    {
-        std::uint32_t user_token = 0;
-        PlayerLocation user_location;
-        KeyboardState keyboard_state;
-
-        UserMove()
-        {
-            type = EType::UserMove;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-
-    struct AddNodeServerToProxy : public Base
-    {
-        std::uint32_t user_token = 0;
-        ip_address_t::bytes_type node_server_address;
-        std::uint16_t node_server_port;
-        std::uint32_t node_server_token;
-
-        AddNodeServerToProxy()
-        {
-            type = EType::AddNodeServerToProxy;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-
-    struct RemoveNodeServerFromProxy : public Base
-    {
-        std::uint32_t user_token = 0;
-        ip_address_t::bytes_type node_server_address;
-        std::uint16_t node_server_port;
-        std::uint32_t node_server_token;
-
-        RemoveNodeServerFromProxy()
-        {
-            type = EType::RemoveNodeServerFromProxy;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-
     struct GetNodeInfo : public Base
     {
         GetNodeInfo()
@@ -304,12 +263,12 @@ namespace Packet
     {
         bool success = false;
         SquareCell bounding_box;
-        std::array<ip_address_t::bytes_type, 12> neighbor_addresses;
-        std::array<std::uint16_t, 12> neighbor_ports;
-        std::array<std::uint32_t, 12> neighbor_tokens;
-        ip_address_t::bytes_type parent_address;
-        unsigned short parent_port;
-        std::uint32_t parent_token;
+        std::array<ip_address_t::bytes_type, 12> neighbor_addresses = { 0 };
+        std::array<std::uint16_t, 12> neighbor_ports = { 0 };
+        std::array<std::uint32_t, 12> neighbor_tokens = { 0 };
+        ip_address_t::bytes_type parent_address = { 0 };
+        unsigned short parent_port = 0;
+        std::uint32_t parent_token = 0;
 
         GetNodeInfoAnswer()
         {
@@ -318,9 +277,31 @@ namespace Packet
         }
     };
 
+    struct RegisterProxy : public Base
+    {
+        std::uint32_t proxy_index = 0;
+
+        RegisterProxy()
+        {
+            type = EType::RegisterProxy;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct RegisterProxyAnswer : public Base
+    {
+        std::uint32_t proxy_index = 0;
+
+        RegisterProxyAnswer()
+        {
+            type = EType::RegisterProxyAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
     struct SpawnNodeServer : public Base
     {
-        std::uint16_t node_server_port;
+        std::uint16_t node_server_port = 0;
 
         SpawnNodeServer()
         {
@@ -334,29 +315,6 @@ namespace Packet
         SpawnNodeServerAnswer()
         {
             type = EType::SpawnNodeServerAnswer;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-
-    struct SplitNode : public Base
-    {
-        SquareCell bounding_box;
-        std::array<ip_address_t::bytes_type, 12> neighbor_addresses;
-        std::array<std::uint16_t, 12> neighbor_ports;
-        std::array<std::uint32_t, 12> neighbor_tokens;
-
-        SplitNode()
-        {
-            type = EType::SplitNode;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-    
-    struct SplitNodeAnswer : public Base
-    {
-        SplitNodeAnswer()
-        {
-            type = EType::SplitNodeAnswer;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
         }
     };
@@ -487,6 +445,51 @@ namespace Packet
         }
     };
 
+    struct MonitoringGetProxyCount : public Base
+    {
+        MonitoringGetProxyCount()
+        {
+            type = EType::MonitoringGetProxyCount;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringGetProxyCountAnswer : public Base
+    {
+        std::uint32_t proxy_count = 0;
+
+        MonitoringGetProxyCountAnswer()
+        {
+            type = EType::MonitoringGetProxyCountAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringGetProxyInfo : public Base
+    {
+        std::uint32_t proxy_index = 0;
+
+        MonitoringGetProxyInfo()
+        {
+            type = EType::MonitoringGetProxyInfo;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct MonitoringGetProxyInfoAnswer : public Base
+    {
+        bool success = false;
+        std::uint32_t proxy_index = 0;
+        ip_address_t::bytes_type proxy_server_address = { 0 };
+        std::uint16_t proxy_server_port_number = 0;
+
+        MonitoringGetProxyInfoAnswer()
+        {
+            type = EType::MonitoringGetProxyInfoAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
     struct MonitoringMessageCount : public Base
     {
         MonitoringMessageCount()
@@ -550,8 +553,8 @@ namespace Packet
         std::array<std::uint8_t, 6> synchronization_chain = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
         union
         {
-            std::array<Network::MacAddress, 16> mac_addresses;
-            std::uint32_t packet_number = 0;
+            std::array<Network::MacAddress, 16> mac_addresses = { 0 };
+            std::uint32_t packet_number;
         };
 
         WakeOnLan()
@@ -585,14 +588,14 @@ namespace Packet
             return sizeof(InitializePosition);
         case EType::InitializePositionAnswer:
             return sizeof(InitializePositionAnswer);
-        case EType::UserAction:
-            return sizeof(UserAction);
-        case EType::UserActionAnswer:
-            return sizeof(UserActionAnswer);
         case EType::InitializePositionInternal:
             return sizeof(InitializePositionInternal);
         case EType::InitializePositionInternalAnswer:
             return sizeof(InitializePositionInternalAnswer);
+        case EType::UserAction:
+            return sizeof(UserAction);
+        case EType::UserActionAnswer:
+            return sizeof(UserActionAnswer);
         case EType::UserActionInternal:
             return sizeof(UserActionInternal);
         case EType::UserActionInternalAnswer:
@@ -601,10 +604,14 @@ namespace Packet
             return sizeof(GetNodeInfo);
         case EType::GetNodeInfoAnswer:
             return sizeof(GetNodeInfoAnswer);
-        case EType::SplitNode:
-            return sizeof(SplitNode);
-        case EType::SplitNodeAnswer:
-            return sizeof(SplitNodeAnswer);
+        case EType::RegisterProxy:
+            return sizeof(RegisterProxy);
+        case EType::RegisterProxyAnswer:
+            return sizeof(RegisterProxyAnswer);
+        case EType::SpawnNodeServer:
+            return sizeof(SpawnNodeServer);
+        case EType::SpawnNodeServerAnswer:
+            return sizeof(SpawnNodeServerAnswer);
         case EType::MonitoringBalancerServerInfo:
             return sizeof(MonitoringBalancerServerInfo);
         case EType::MonitoringBalancerServerInfoAnswer:
@@ -617,6 +624,30 @@ namespace Packet
             return sizeof(MonitoringBalanceTreeNeighborInfo);
         case EType::MonitoringBalanceTreeNeighborInfoAnswer:
             return sizeof(MonitoringBalanceTreeNeighborInfoAnswer);
+        case EType::MonitoringBalanceTreeStaticSplit:
+            return sizeof(MonitoringBalanceTreeStaticSplit);
+        case EType::MonitoringBalanceTreeStaticSplitAnswer:
+            return sizeof(MonitoringBalanceTreeStaticSplitAnswer);
+        case EType::MonitoringBalanceTreeStaticMerge:
+            return sizeof(MonitoringBalanceTreeStaticMerge);
+        case EType::MonitoringBalanceTreeStaticMergeAnswer:
+            return sizeof(MonitoringBalanceTreeStaticMergeAnswer);
+        case EType::MonitoringGetProxyCount:
+            return sizeof(MonitoringGetProxyCount);
+        case EType::MonitoringGetProxyCountAnswer:
+            return sizeof(MonitoringGetProxyCountAnswer);
+        case EType::MonitoringGetProxyInfo:
+            return sizeof(MonitoringGetProxyInfo);
+        case EType::MonitoringGetProxyInfoAnswer:
+            return sizeof(MonitoringGetProxyInfoAnswer);
+        case EType::MonitoringMessageCount:
+            return sizeof(MonitoringMessageCount);
+        case EType::MonitoringMessageCountAnswer:
+            return sizeof(MonitoringMessageCountAnswer);
+        case EType::MonitoringPopMessage:
+            return sizeof(MonitoringPopMessage);
+        case EType::MonitoringPopMessageAnswer:
+            return sizeof(MonitoringPopMessageAnswer);
         default:
             return 0;
         }

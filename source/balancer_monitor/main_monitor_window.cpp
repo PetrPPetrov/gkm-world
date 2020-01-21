@@ -22,7 +22,7 @@ MainMonitorWindow::MainMonitorWindow()
     main_monitor_window.setupUi(this);
 
     connect(this, SIGNAL(message(QString)), this, SLOT(onMessage(QString)));
-    connect(this, SIGNAL(serverMessage(QString)), this, SLOT(onServerMessage(QString)));
+    connect(this, SIGNAL(balancerServerMessage(QString)), this, SLOT(onBalancerServerMessage(QString)));
     connect(this, SIGNAL(connectionFatal(QString)), this, SLOT(onConnectionFatal(QString)));
     connect(this, SIGNAL(monitoringBalancerServerInfoAnswer(QByteArray)),
             this, SLOT(onMonitoringBalancerServerInfoAnswer(QByteArray)));
@@ -93,15 +93,15 @@ MainMonitorWindow::MainMonitorWindow()
     addDockWidget(Qt::RightDockWidgetArea, log_dock);
     view_menu->addAction(log_dock->toggleViewAction());
 
-    QDockWidget* server_log_dock = new QDockWidget(tr("Server Log"), this);
-    server_log_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
-    server_log = new QPlainTextEdit(server_log_dock);
-    server_log->setReadOnly(true);
-    server_log->ensureCursorVisible();
-    server_log->setCenterOnScroll(true);
-    server_log_dock->setWidget(server_log);
-    addDockWidget(Qt::BottomDockWidgetArea, server_log_dock);
-    view_menu->addAction(server_log_dock->toggleViewAction());
+    QDockWidget* balancer_server_log_dock = new QDockWidget(tr("Balancer Server Log"), this);
+    balancer_server_log_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    balancer_server_log = new QPlainTextEdit(balancer_server_log_dock);
+    balancer_server_log->setReadOnly(true);
+    balancer_server_log->ensureCursorVisible();
+    balancer_server_log->setCenterOnScroll(true);
+    balancer_server_log_dock->setWidget(balancer_server_log);
+    addDockWidget(Qt::BottomDockWidgetArea, balancer_server_log_dock);
+    view_menu->addAction(balancer_server_log_dock->toggleViewAction());
 
     show_leaf_nodes_act = new QAction(tr("Show Leaf Nodes"), this);
     show_leaf_nodes_act->setStatusTip(tr("Show Leaf Nodes"));
@@ -129,10 +129,10 @@ MainMonitorWindow::MainMonitorWindow()
     connect(clear_log_act, &QAction::triggered, this, &MainMonitorWindow::onClearLog);
     view_menu->addAction(clear_log_act);
 
-    QAction* clear_server_log_act = new QAction(tr("Clear Server Log"), this);
-    clear_server_log_act->setStatusTip(tr("Clear the server log"));
-    connect(clear_server_log_act, &QAction::triggered, this, &MainMonitorWindow::onClearServerLog);
-    view_menu->addAction(clear_server_log_act);
+    QAction* clear_balancer_server_log_act = new QAction(tr("Clear Balancer Server Log"), this);
+    clear_balancer_server_log_act->setStatusTip(tr("Clear the balancer server log"));
+    connect(clear_balancer_server_log_act, &QAction::triggered, this, &MainMonitorWindow::onClearBalancerServerLog);
+    view_menu->addAction(clear_balancer_server_log_act);
 
     QAction* refresh_node_tree_act = new QAction(tr("Refresh Node Tree"), this);
     refresh_node_tree_act->setStatusTip(tr("Refresh Node Tree"));
@@ -291,9 +291,9 @@ void MainMonitorWindow::onClearLog()
     log->clear();
 }
 
-void MainMonitorWindow::onClearServerLog()
+void MainMonitorWindow::onClearBalancerServerLog()
 {
-    server_log->clear();
+    balancer_server_log->clear();
 }
 
 void MainMonitorWindow::onRefreshNodeTree()
@@ -444,9 +444,9 @@ void MainMonitorWindow::onMessage(const QString& message)
     log->appendPlainText(message);
 }
 
-void MainMonitorWindow::onServerMessage(const QString& message)
+void MainMonitorWindow::onBalancerServerMessage(const QString& message)
 {
-    server_log->appendPlainText(message);
+    balancer_server_log->appendPlainText(message);
     update();
 }
 

@@ -44,7 +44,7 @@ private:
     void onShowSelectedNode(bool checked);
     void onShowNeighbor(bool checked);
     void onClearLog();
-    void onClearServerLog();
+    void onClearBalancerServerLog();
     void onRefreshNodeTree();
     void onStaticSplit();
     void onStaticMerge();
@@ -54,7 +54,7 @@ private:
 
 signals:
     void message(const QString& message);
-    void serverMessage(const QString& message);
+    void balancerServerMessage(const QString& message);
     void connectionFatal(const QString& message);
     void monitoringBalancerServerInfoAnswer(QByteArray data);
     void monitoringBalanceTreeInfoAnswer(QByteArray data);
@@ -64,7 +64,7 @@ signals:
 
 private slots:
     void onMessage(const QString& message);
-    void onServerMessage(const QString& message);
+    void onBalancerServerMessage(const QString& message);
     void onConnectionFatal(const QString& message);
     void onMonitoringBalancerServerInfoAnswer(QByteArray data);
     void onMonitoringBalanceTreeInfoAnswer(QByteArray data);
@@ -81,7 +81,7 @@ private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
     QPlainTextEdit* log = nullptr;
-    QPlainTextEdit* server_log = nullptr;
+    QPlainTextEdit* balancer_server_log = nullptr;
     QTreeView* node_tree_view = nullptr;
     QTableView* property_view = nullptr;
     QAction* connect_act = nullptr;

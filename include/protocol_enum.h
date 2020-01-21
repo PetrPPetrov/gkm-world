@@ -10,53 +10,46 @@ namespace Packet
 {
     enum class EType : std::uint8_t
     {
-        // Client->Proxy protocol
-        Login,
-        LoginAnswer,
-        Logout,
-        LogoutAnswer,
-        InitializePosition,
-        InitializePositionAnswer,
-        UserAction,
-        UserActionAnswer,
-        // Proxy->Balancer->Node protocol
-        InitializePositionInternal,
-        InitializePositionInternalAnswer,
-        // Proxy->Node protocol
-        LogoutInternal,
-        LogoutInternalAnswer,
-        // Proxy->Node protocol
-        UserActionInternal,
-        UserActionInternalAnswer,
-        // Node->Node protocol
-        UserMove, // Not used
-        // Node->Proxy protocol
-        AddNodeServerToProxy, // Not used
-        RemoveNodeServerFromProxy, // Not used
-        // Node->Balancer protocol
-        GetNodeInfo,
-        GetNodeInfoAnswer,
-        // Balancer->Node protocol
-        SpawnNodeServer, // Not used
-        SpawnNodeServerAnswer, // Not used
-        SplitNode, // Not used
-        SplitNodeAnswer, // Not used
+        Login,                                        // Client->Proxy
+        LoginAnswer,                                  // Proxy->Client
+        Logout,                                       // Client->Proxy
+        LogoutAnswer,                                 // Proxy->Client
+        LogoutInternal,                               // Proxy->Node
+        LogoutInternalAnswer,                         // Node->Proxy
+        InitializePosition,                           // Client->Proxy
+        InitializePositionAnswer,                     // Proxy->Client
+        InitializePositionInternal,                   // Proxy->Balancer, Balancer->Node
+        InitializePositionInternalAnswer,             // Node->Proxy
+        UserAction,                                   // Client->Proxy
+        UserActionAnswer,                             // Proxy->Client
+        UserActionInternal,                           // Proxy->Node
+        UserActionInternalAnswer,                     // Node->Proxy
+        GetNodeInfo,                                  // Node->Balancer
+        GetNodeInfoAnswer,                            // Balancer->Node
+        RegisterProxy,                                // Proxy->Balancer
+        RegisterProxyAnswer,                          // Balancer->Proxy
+        SpawnNodeServer,                              // Balancer->Node, not used
+        SpawnNodeServerAnswer,                        // Node->Balancer, not used
         // Markers
         MonitoringApi = 200,
-        MonitoringBalancerServerInfo = MonitoringApi,
-        MonitoringBalancerServerInfoAnswer,
-        MonitoringBalanceTreeInfo,
-        MonitoringBalanceTreeInfoAnswer,
-        MonitoringBalanceTreeNeighborInfo,
-        MonitoringBalanceTreeNeighborInfoAnswer,
-        MonitoringBalanceTreeStaticSplit,
-        MonitoringBalanceTreeStaticSplitAnswer,
-        MonitoringBalanceTreeStaticMerge,
-        MonitoringBalanceTreeStaticMergeAnswer,
-        MonitoringMessageCount,
-        MonitoringMessageCountAnswer,
-        MonitoringPopMessage,
-        MonitoringPopMessageAnswer,
+        MonitoringBalancerServerInfo = MonitoringApi, // Monitor->Balancer
+        MonitoringBalancerServerInfoAnswer,           // Balancer->Monitor
+        MonitoringBalanceTreeInfo,                    // Monitor->Balancer
+        MonitoringBalanceTreeInfoAnswer,              // Balancer->Monitor
+        MonitoringBalanceTreeNeighborInfo,            // Monitor->Balancer
+        MonitoringBalanceTreeNeighborInfoAnswer,      // Balancer->Monitor
+        MonitoringBalanceTreeStaticSplit,             // Monitor->Balancer
+        MonitoringBalanceTreeStaticSplitAnswer,       // Balancer->Monitor
+        MonitoringBalanceTreeStaticMerge,             // Monitor->Balancer
+        MonitoringBalanceTreeStaticMergeAnswer,       // Balancer->Monitor
+        MonitoringGetProxyCount,                      // Monitor->Balancer
+        MonitoringGetProxyCountAnswer,                // Balancer->Monitor
+        MonitoringGetProxyInfo,                       // Monitor->Balancer
+        MonitoringGetProxyInfoAnswer,                 // Balancer->Monitor
+        MonitoringMessageCount,                       // Monitor->Balancer, Monitor->Proxy, Monitor->Node
+        MonitoringMessageCountAnswer,                 // Balancer->Monitor, Proxy->Monitor, Node->Monitor
+        MonitoringPopMessage,                         // Monitor->Balancer, Monitor->Proxy, Monitor->Node
+        MonitoringPopMessageAnswer,                   // Balancer->Monitor, Proxy->Monitor, Node->Monitor
         Last,
         First = Login
     };

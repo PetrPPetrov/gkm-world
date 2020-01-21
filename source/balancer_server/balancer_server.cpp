@@ -263,11 +263,14 @@ void BalancerServer::startImpl()
     signals.async_wait(Log::onQuit);
     setReceiveHandler(Packet::EType::InitializePositionInternal, boost::bind(&BalancerServer::onInitializePositionInternal, this, _1));
     setReceiveHandler(Packet::EType::GetNodeInfo, boost::bind(&BalancerServer::onGetNodeInfo, this, _1));
+    setReceiveHandler(Packet::EType::RegisterProxy, boost::bind(&BalancerServer::onRegisterProxy, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalancerServerInfo, boost::bind(&BalancerServer::onMonitoringBalancerServerInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeNeighborInfo, boost::bind(&BalancerServer::onMonitoringBalanceTreeNeighborInfo, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticSplit, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticSplit, this, _1));
     setReceiveHandler(Packet::EType::MonitoringBalanceTreeStaticMerge, boost::bind(&BalancerServer::onMonitoringBalanceTreeStaticMerge, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringGetProxyCount, boost::bind(&BalancerServer::onMonitoringGetProxyCount, this, _1));
+    setReceiveHandler(Packet::EType::MonitoringGetProxyInfo, boost::bind(&BalancerServer::onMonitoringGetProxyInfo, this, _1));
 #ifdef NETWORK_LOG
     setReceiveHandler(Packet::EType::MonitoringMessageCount, boost::bind(&Transport::onMonitoringMessageCount, this, _1));
     setReceiveHandler(Packet::EType::MonitoringPopMessage, boost::bind(&Transport::onMonitoringPopMessage, this, _1));
@@ -335,6 +338,32 @@ bool BalancerServer::onGetNodeInfo(size_t received_bytes)
     else
     {
         answer->success = false;
+    }
+
+    standardSend(answer);
+    return true;
+}
+
+bool BalancerServer::onRegisterProxy(size_t received_bytes)
+{
+#ifdef _DEBUG
+    LOG_DEBUG << "onRegisterProxy";
+#endif
+
+    const auto packet = getReceiveBufferAs<Packet::RegisterProxy>();
+    auto answer = createPacket<Packet::RegisterProxyAnswer>(packet->packet_number);
+
+    auto find_it = id_to_proxy.find(packet->proxy_index);
+    if (find_it == id_to_proxy.end())
+    {
+        std::uint32_t new_proxy_index = static_cast<std::uint32_t>(id_to_proxy.size() + 1);
+        answer->proxy_index = new_proxy_index;
+        id_to_proxy.emplace(new_proxy_index, remote_end_point);
+    }
+    else
+    {
+        id_to_proxy[packet->proxy_index] = remote_end_point;
+        answer->proxy_index = packet->proxy_index;
     }
 
     standardSend(answer);
@@ -452,6 +481,42 @@ bool BalancerServer::onMonitoringBalanceTreeStaticMerge(size_t received_bytes)
             answer->success = false;
         }
     }
+    standardSend(answer);
+    return true;
+}
+
+bool BalancerServer::onMonitoringGetProxyCount(size_t received_bytes)
+{
+#ifdef _DEBUG
+    LOG_DEBUG << "onMonitoringGetProxyCount";
+#endif
+
+    const auto packet = getReceiveBufferAs<Packet::MonitoringGetProxyCount>();
+    auto answer = createPacket<Packet::MonitoringGetProxyCountAnswer>(packet->packet_number);
+    answer->proxy_count = static_cast<std::uint32_t>(id_to_proxy.size());
+    standardSend(answer);
+    return true;
+}
+
+bool BalancerServer::onMonitoringGetProxyInfo(size_t received_bytes)
+{
+#ifdef _DEBUG
+    LOG_DEBUG << "onMonitoringGetProxyInfo";
+#endif
+
+    const auto packet = getReceiveBufferAs<Packet::MonitoringGetProxyInfo>();
+    auto answer = createPacket<Packet::MonitoringGetProxyInfoAnswer>(packet->packet_number);
+    answer->success = false;
+    answer->proxy_index = packet->proxy_index;
+
+    auto find_it = id_to_proxy.find(packet->proxy_index);
+    if (find_it != id_to_proxy.end())
+    {
+        answer->proxy_server_address = find_it->second.address().to_v().to_bytes();
+        answer->proxy_server_port_number = find_it->second.port();
+        answer->success = true;
+    }
+
     standardSend(answer);
     return true;
 }

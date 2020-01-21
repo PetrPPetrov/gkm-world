@@ -135,6 +135,8 @@ void ProxyServer::startImpl()
     setReceiveHandler(Packet::EType::MonitoringMessageCount, boost::bind(&Transport::onMonitoringMessageCount, this, _1));
     setReceiveHandler(Packet::EType::MonitoringPopMessage, boost::bind(&Transport::onMonitoringPopMessage, this, _1));
 #endif
+    auto register_proxy = createPacket<Packet::RegisterProxy>();
+    guaranteedSendTo(register_proxy, balancer_server_end_point, boost::bind(&Transport::logError, this, _1, _2));
     io_service.run();
 }
 

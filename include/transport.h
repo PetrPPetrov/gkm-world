@@ -45,7 +45,7 @@ private:
         boost::asio::ip::udp::endpoint end_point;
         void* packet_buffer = nullptr;
         std::size_t packet_buffer_size = 0;
-        std::function<void()> error_handler;
+        std::function<void(void*, std::size_t)> error_handler;
         bool delivered_ok = false;
 
         GuaranteedDeliveryInfo(boost::asio::io_service& io_service, const boost::posix_time::milliseconds delay_) :
@@ -124,7 +124,7 @@ public:
     }
 
     template<class PacketType, size_t AttemptCount = 10, size_t WaitMs = 1000>
-    void guaranteedSendTo(const PacketType* packet, boost::asio::ip::udp::endpoint& end_point, std::function<void()> error_handler)
+    void guaranteedSendTo(const PacketType* packet, boost::asio::ip::udp::endpoint& end_point, std::function<void(void*, std::size_t)> error_handler)
     {
 #ifndef NETWORK_LOG
 #ifdef _DEBUG
@@ -151,7 +151,7 @@ public:
     }
 
     template<class PacketType>
-    void guaranteedSend(const PacketType* packet, std::function<void()> error_handler)
+    void guaranteedSend(const PacketType* packet, std::function<void(void*, std::size_t)> error_handler)
     {
         guaranteedSendTo<PacketType>(packet, remote_end_point, error_handler);
     }
@@ -208,6 +208,19 @@ public:
         }
         standardSend(answer);
         return true;
+    }
+
+    void logError(void* packet_buffer, std::size_t packet_buffer_size)
+    {
+        if (packet_buffer_size >= sizeof(Packet::Base))
+        {
+            auto base_packet = reinterpret_cast<const Packet::Base*>(packet_buffer);
+            LOG_ERROR << "can not delivery packet; type " << static_cast<std::uint8_t>(base_packet->type) << " length " << base_packet->packet_number;
+        }
+    }
+
+    void silentlyIgnore(void* /*packet_buffer*/, std::size_t /*packet_buffer_size*/)
+    {
     }
 
 private:
@@ -384,12 +397,12 @@ private:
 #endif
 #endif
             info->timer.cancel();
-            packet_pool.deallocate(info->packet_buffer);
-            guaranteed_delivery_map.erase(info->packet_number);
             if (info->error_handler)
             {
-                info->error_handler();
+                info->error_handler(info->packet_buffer, info->packet_buffer_size);
             }
+            packet_pool.deallocate(info->packet_buffer);
+            guaranteed_delivery_map.erase(info->packet_number);
         }
     }
 };

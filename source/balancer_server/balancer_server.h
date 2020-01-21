@@ -4,7 +4,9 @@
 #pragma once
 
 #include <list>
+#include <set>
 #include <map>
+#include <unordered_map>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
@@ -57,6 +59,9 @@ class BalancerServer : public Transport
     available_node_servers_t available_node_servers;
     std::list<NodeInfo> available_nodes;
 
+    typedef std::unordered_map<std::uint32_t, boost::asio::ip::udp::endpoint> id_to_proxy_t;
+    id_to_proxy_t id_to_proxy;
+
     Packet::ESeverityType minimum_level = Packet::ESeverityType::DebugMessage;
     bool log_to_screen = false;
     bool log_to_file = true;
@@ -77,10 +82,13 @@ private:
     void startImpl();
     bool onInitializePositionInternal(size_t received_bytes);
     bool onGetNodeInfo(size_t received_bytes);
+    bool onRegisterProxy(size_t received_bytes);
     bool onMonitoringBalancerServerInfo(size_t received_bytes);
     bool onMonitoringBalanceTreeInfo(size_t received_bytes);
     bool onMonitoringBalanceTreeNeighborInfo(size_t received_bytes);
     bool onMonitoringBalanceTreeStaticSplit(size_t received_bytes);
     bool onMonitoringBalanceTreeStaticMerge(size_t received_bytes);
+    bool onMonitoringGetProxyCount(size_t received_bytes);
+    bool onMonitoringGetProxyInfo(size_t received_bytes);
     void initAvailableNodes();
 };
