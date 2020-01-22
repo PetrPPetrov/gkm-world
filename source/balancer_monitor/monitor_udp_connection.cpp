@@ -14,8 +14,20 @@ MonitorUDPConnection::MonitorUDPConnection(const QString& host_name, std::uint16
     connect(this, SIGNAL(getBalanceTreeNeighborInfo(unsigned, int, int)), this, SLOT(onGetBalanceTreeNeighborInfo(unsigned, int, int)));
     connect(this, SIGNAL(staticSplit(unsigned)), this, SLOT(onStaticSplit(unsigned)));
     connect(this, SIGNAL(staticMerge(unsigned)), this, SLOT(onStaticMerge(unsigned)));
+    connect(this, SIGNAL(getProxyInfo(unsigned)), this, SLOT(onGetProxyInfo(unsigned)));
+
     connect(&connection_thread, SIGNAL(started()), this, SLOT(onThreadStart()));
     connection_thread.start();
+}
+
+QString MonitorUDPConnection::getBalancerIpAddress()
+{
+    return balancer_server_host_address.toString();
+}
+
+unsigned MonitorUDPConnection::getBalancerPortNumber()
+{
+    return balancer_server_port_number;
 }
 
 void MonitorUDPConnection::onClose()
@@ -31,8 +43,10 @@ void MonitorUDPConnection::onClose()
 
 void MonitorUDPConnection::onGetBalancerServerInfo()
 {
-    Packet::MonitoringBalancerServerInfo request;
-    socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
+    Packet::MonitoringBalancerServerInfo request1;
+    socket->writeDatagram(reinterpret_cast<const char*>(&request1), sizeof(request1), balancer_server_host_address, balancer_server_port_number);
+    Packet::MonitoringGetProxyCount request2;
+    socket->writeDatagram(reinterpret_cast<const char*>(&request2), sizeof(request2), balancer_server_host_address, balancer_server_port_number);
 }
 
 void MonitorUDPConnection::onGetBalanceTreeInfo(unsigned tree_node_token)
@@ -62,6 +76,13 @@ void MonitorUDPConnection::onStaticMerge(unsigned tree_node_token)
 {
     Packet::MonitoringBalanceTreeStaticMerge request;
     request.tree_node_token = tree_node_token;
+    socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
+}
+
+void MonitorUDPConnection::onGetProxyInfo(unsigned proxy_index)
+{
+    Packet::MonitoringGetProxyInfo request;
+    request.proxy_index = proxy_index;
     socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
 }
 
@@ -135,6 +156,12 @@ void MonitorUDPConnection::onReadyRead()
                 break;
             case Packet::EType::MonitoringBalanceTreeStaticMergeAnswer:
                 main_window->monitoringBalanceTreeStaticMergeAnswer(buffer);
+                break;
+            case Packet::EType::MonitoringGetProxyCountAnswer:
+                main_window->monitoringGetProxyCountAnswer(buffer);
+                break;
+            case Packet::EType::MonitoringGetProxyInfoAnswer:
+                main_window->monitoringGetProxyInfoAnswer(buffer);
                 break;
             case Packet::EType::MonitoringMessageCountAnswer:
                 onMonitoringMessageCountAnswer(buffer);

@@ -3,7 +3,7 @@
 
 #include <QString>
 #include <QPixmap>
-#include "node_tree.h"
+#include "server_tree.h"
 
 TreeItem::~TreeItem()
 {
@@ -69,20 +69,20 @@ TreeItem* TreeItem::parentItem()
     return parent_item;
 }
 
-NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info)
-    : TreeItem(QString("Balancer Server")), node(nullptr)
+BalancerItem::BalancerItem(const ServerInfo::Ptr& server_info)
+    : TreeItem(QString("Balancer Server"))
 {
     if (server_info->tree_root_token)
     {
         BalancerTreeInfo* root_node = server_info->token_to_tree_node.find(server_info->tree_root_token);
         if (root_node)
         {
-            children.push_back(std::make_shared<NodeTreeItem>(server_info, root_node, this));
+            children.push_back(std::make_shared<NodeItem>(server_info, root_node, this));
         }
     }
 }
 
-NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info, BalancerTreeInfo* node_, NodeTreeItem* parent)
+NodeItem::NodeItem(const ServerInfo::Ptr& server_info, BalancerTreeInfo* node_, TreeItem* parent)
     : TreeItem(QString(node_->leaf_node ? "Node Server %1" : "Group Node %1").arg(node_->token), parent), node(node_)
 {
     for (auto child_token : node->children)
@@ -92,18 +92,45 @@ NodeTreeItem::NodeTreeItem(const BalancerServerInfo::Ptr& server_info, BalancerT
             BalancerTreeInfo* child_node = server_info->token_to_tree_node.find(child_token);
             if (child_node)
             {
-                children.push_back(std::make_shared<NodeTreeItem>(server_info, child_node, this));
+                children.push_back(std::make_shared<NodeItem>(server_info, child_node, this));
             }
         }
     }
 }
 
-BalancerTreeInfo* NodeTreeItem::getNode() const
+BalancerTreeInfo* NodeItem::getNode() const
 {
     return node;
 }
 
-std::vector<TreeItem::Ptr> getPropertyList(BalancerTreeInfo* node)
+ProxyItem::ProxyItem(std::uint32_t proxy_index_)
+    : TreeItem(QString("Proxy Server %1").arg(proxy_index_))
+{
+    proxy_index = proxy_index_;
+}
+
+std::uint32_t ProxyItem::getProxyIndex() const
+{
+    return proxy_index;
+}
+
+std::vector<TreeItem::Ptr> buildServerHierarchy(const ServerInfo::Ptr& server_info)
+{
+    std::vector<TreeItem::Ptr> result;
+    if (server_info->tree_root_token)
+    {
+        BalancerItem::Ptr balancer_server = std::make_shared<BalancerItem>(server_info);
+        result.push_back(balancer_server);
+    }
+    for (auto proxy_server_info : server_info->id_to_proxy)
+    {
+        ProxyItem::Ptr proxy_server = std::make_shared<ProxyItem>(proxy_server_info.first);
+        result.push_back(proxy_server);
+    }
+    return result;
+}
+
+std::vector<TreeItem::Ptr> buildNodePropertyList(BalancerTreeInfo* node)
 {
     std::vector<TreeItem::Ptr> result;
     if (node->leaf_node)
@@ -141,7 +168,7 @@ std::vector<TreeItem::Ptr> getPropertyList(BalancerTreeInfo* node)
     return result;
 }
 
-std::vector<TreeItem::Ptr> getPropertyList(const BalancerServerInfo::Ptr& server_info)
+std::vector<TreeItem::Ptr> buildBalancerPropertyList(const ServerInfo::Ptr& server_info, MonitorUDPConnection* connection)
 {
     std::vector<TreeItem::Ptr> result;
     result.push_back(std::make_shared<TreeItem>(QString("type"), QString("balancer server")));
@@ -149,11 +176,32 @@ std::vector<TreeItem::Ptr> getPropertyList(const BalancerServerInfo::Ptr& server
     result.push_back(std::make_shared<TreeItem>(QString("bbox.start.y"), QString("%1").arg(server_info->bounding_box.start.y)));
     result.push_back(std::make_shared<TreeItem>(QString("bbox.start.size"), QString("%1").arg(server_info->bounding_box.size)));
     result.push_back(std::make_shared<TreeItem>(QString("root node token"), QString("%1").arg(server_info->tree_root_token)));
+    result.push_back(std::make_shared<TreeItem>(QString("ip_address"), QString("%1").arg(connection->getBalancerIpAddress())));
+    result.push_back(std::make_shared<TreeItem>(QString("port_number"), QString("%1").arg(connection->getBalancerPortNumber())));
     return result;
 }
 
-TreeModel::TreeModel(const TreeItem::Ptr& root_item_, QObject* parent)
-    : QAbstractItemModel(parent), root_item(root_item_)
+std::vector<TreeItem::Ptr> buildProxyPropertyList(const ServerInfo::Ptr& server_info, std::uint32_t proxy_index)
+{
+    auto find_it = server_info->id_to_proxy.find(proxy_index);
+    if (find_it != server_info->id_to_proxy.end())
+    {
+        std::vector<TreeItem::Ptr> result;
+        result.push_back(std::make_shared<TreeItem>(QString("type"), QString("proxy server")));
+        result.push_back(std::make_shared<TreeItem>(QString("proxy.index"), QString("%1").arg(proxy_index)));
+        result.push_back(std::make_shared<TreeItem>(QString("ip_address"), QString("%1").arg(find_it->second.ip_address.c_str())));
+        result.push_back(std::make_shared<TreeItem>(QString("port_number"), QString("%1").arg(find_it->second.port_number)));
+        return result;
+    }
+    std::vector<TreeItem::Ptr> result;
+    result.push_back(std::make_shared<TreeItem>(QString("type"), QString("proxy server")));
+    result.push_back(std::make_shared<TreeItem>(QString("proxy.index"), QString("%1").arg(proxy_index)));
+    result.push_back(std::make_shared<TreeItem>(QString("status"), QString("not found")));
+    return result;
+}
+
+TreeModel::TreeModel(const std::vector<TreeItem::Ptr>& items_, QObject* parent)
+    : QAbstractItemModel(parent), items(items_)
 {
 }
 
@@ -166,7 +214,7 @@ QVariant TreeModel::data(const QModelIndex& index, int role) const
 
     if (role == Qt::DecorationRole)
     {
-        NodeTreeItem* node_item = dynamic_cast<NodeTreeItem*>(item);
+        NodeItem* node_item = dynamic_cast<NodeItem*>(item);
         if (node_item)
         {
             BalancerTreeInfo* tree_info = node_item->getNode();
@@ -205,12 +253,26 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex& index) cons
     {
         return QModelIndex();
     }
-    TreeItem* item = root_item.get();
+    TreeItem* item = nullptr;
     if (index.isValid())
     {
         item = static_cast<TreeItem*>(index.internalPointer())->child(row);
     }
-    return createIndex(row, column, item);
+    else
+    {
+        if (row >= 0 && row < items.size())
+        {
+            item = items[row].get();
+        }
+    }
+    if (item)
+    {
+        return createIndex(row, column, item);
+    }
+    else
+    {
+        return QModelIndex();
+    }
 }
 
 QModelIndex TreeModel::parent(const QModelIndex& index) const
@@ -219,10 +281,14 @@ QModelIndex TreeModel::parent(const QModelIndex& index) const
         return QModelIndex();
 
     TreeItem* current_item = static_cast<TreeItem*>(index.internalPointer());
-    if (current_item == root_item.get())
-        return QModelIndex(); // Return invalid index for the root node
-
-    return createIndex(current_item->row(), 0, current_item->parentItem());
+    if (current_item->parentItem())
+    {
+        return createIndex(current_item->row(), 0, current_item->parentItem());
+    }
+    else
+    {
+        return QModelIndex(); // Return invalid index for the root nodes
+    }
 }
 
 int TreeModel::rowCount(const QModelIndex& index) const
@@ -233,7 +299,7 @@ int TreeModel::rowCount(const QModelIndex& index) const
     }
     else
     {
-        return 1; // We have only 1 root node, it is "root_item" field
+        return static_cast<int>(items.size());
     }
 }
 
@@ -245,7 +311,14 @@ int TreeModel::columnCount(const QModelIndex& index) const
     }
     else
     {
-        return root_item->columnCount();
+        if (items.size() > 0)
+        {
+            return items[0]->columnCount();
+        }
+        else
+        {
+            return 0;
+        }
     }
 }
 

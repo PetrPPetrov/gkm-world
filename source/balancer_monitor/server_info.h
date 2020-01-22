@@ -35,15 +35,25 @@ struct BalancerTreeInfo
     std::uint8_t current_child_index_to_send = 0;
 };
 
-struct BalancerServerInfo
+struct ServerInfo
 {
-    typedef std::shared_ptr<BalancerServerInfo> Ptr;
+    typedef std::shared_ptr<ServerInfo> Ptr;
 
+    // Balancer Server section
     SquareCell bounding_box;
     std::uint32_t tree_root_token;
     Memory::FastIndexMap<BalancerTreeInfo> token_to_tree_node;
     BalancerTreeInfo* selected_node = nullptr;
 
+    // Proxy Server section
+    struct Address
+    {
+        std::string ip_address;
+        std::uint16_t port_number = 0;
+    };
+    std::unordered_map<std::uint32_t, Address> id_to_proxy;
+
+    // Temporary fields for receiving packets
     std::uint32_t wait_token = 0;
     std::list<std::uint32_t> parent_stack;
 
@@ -53,11 +63,12 @@ struct BalancerServerInfo
         int x, y;
     };
     std::list<NeighborRequest> neighbor_requests;
+    std::list<std::uint32_t> proxy_info_requests;
 };
 
-struct BalancerTreeExpandStatus
+struct ServerTreeExpandStatus
 {
-    typedef std::shared_ptr<BalancerTreeExpandStatus> Ptr;
+    typedef std::shared_ptr<ServerTreeExpandStatus> Ptr;
 
     std::unordered_map<std::uint32_t, bool> tree_expand_status;
     bool is_selected_token_valid = false;
@@ -90,7 +101,7 @@ static inline QColor getColor(std::uint32_t token)
     return QColor(red, green, blue);
 }
 
-static inline bool isAnyNodeServerRunning(const BalancerServerInfo::Ptr& server_info, std::uint32_t tree_node_token)
+static inline bool isAnyNodeServerRunning(const ServerInfo::Ptr& server_info, std::uint32_t tree_node_token)
 {
     if (server_info)
     {

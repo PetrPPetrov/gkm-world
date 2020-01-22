@@ -19,6 +19,9 @@ class MonitorUDPConnection : public QObject
 public:
     MonitorUDPConnection(const QString& host_name, std::uint16_t port_number, MainMonitorWindow* main_window);
 
+    QString getBalancerIpAddress();
+    unsigned getBalancerPortNumber();
+
 signals:
     void close();
     void getBalancerServerInfo();
@@ -26,6 +29,7 @@ signals:
     void getBalanceTreeNeighborInfo(unsigned tree_node_token, int x, int y);
     void staticSplit(unsigned tree_node_token);
     void staticMerge(unsigned tree_node_token);
+    void getProxyInfo(unsigned proxy_index);
 
 private slots:
     void onClose();
@@ -34,6 +38,7 @@ private slots:
     void onGetBalanceTreeNeighborInfo(unsigned tree_node_token, int x, int y);
     void onStaticSplit(unsigned tree_node_token);
     void onStaticMerge(unsigned tree_node_token);
+    void onGetProxyInfo(unsigned proxy_index);
 
     void onThreadStart();
     void onResolve(QHostInfo);

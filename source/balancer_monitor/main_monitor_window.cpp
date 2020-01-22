@@ -34,6 +34,10 @@ MainMonitorWindow::MainMonitorWindow()
         this, SLOT(onMonitoringBalanceTreeStaticSplitAnswer(QByteArray)));
     connect(this, SIGNAL(monitoringBalanceTreeStaticMergeAnswer(QByteArray)),
         this, SLOT(onMonitoringBalanceTreeStaticMergeAnswer(QByteArray)));
+    connect(this, SIGNAL(monitoringGetProxyCountAnswer(QByteArray)),
+        this, SLOT(onMonitoringGetProxyCountAnswer(QByteArray)));
+    connect(this, SIGNAL(monitoringGetProxyInfoAnswer(QByteArray)),
+        this, SLOT(onMonitoringGetProxyInfoAnswer(QByteArray)));
 
     statusBar()->showMessage(tr("Gkm-World Position: Unknown"));
 
@@ -61,17 +65,17 @@ MainMonitorWindow::MainMonitorWindow()
 
     QMenu* view_menu = menuBar()->addMenu(tr("&View"));
 
-    QDockWidget* tree_node_dock = new QDockWidget(tr("Node Tree"), this);
-    tree_node_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
-    node_tree_view = new QTreeView(tree_node_dock);
-    node_tree_view->setIndentation(10);
-    node_tree_view->setHeaderHidden(true);
-    node_tree_view->setUniformRowHeights(true);
-    tree_node_dock->setWidget(node_tree_view);
-    addDockWidget(Qt::RightDockWidgetArea, tree_node_dock);
-    view_menu->addAction(tree_node_dock->toggleViewAction());
-    connect(node_tree_view, &QTreeView::collapsed, this, &MainMonitorWindow::onNodeTreeCollapsed);
-    connect(node_tree_view, &QTreeView::expanded, this, &MainMonitorWindow::onNodeTreeExpanded);
+    QDockWidget* server_tree_dock = new QDockWidget(tr("Server Tree"), this);
+    server_tree_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
+    server_tree_view = new QTreeView(server_tree_dock);
+    server_tree_view->setIndentation(10);
+    server_tree_view->setHeaderHidden(true);
+    server_tree_view->setUniformRowHeights(true);
+    server_tree_dock->setWidget(server_tree_view);
+    addDockWidget(Qt::LeftDockWidgetArea, server_tree_dock);
+    view_menu->addAction(server_tree_dock->toggleViewAction());
+    connect(server_tree_view, &QTreeView::collapsed, this, &MainMonitorWindow::onServerTreeCollapsed);
+    connect(server_tree_view, &QTreeView::expanded, this, &MainMonitorWindow::onServerTreeExpanded);
 
     QDockWidget* property_dock = new QDockWidget(tr("Properties"), this);
     property_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
@@ -90,7 +94,7 @@ MainMonitorWindow::MainMonitorWindow()
     log->ensureCursorVisible();
     log->setCenterOnScroll(true);
     log_dock->setWidget(log);
-    addDockWidget(Qt::RightDockWidgetArea, log_dock);
+    addDockWidget(Qt::BottomDockWidgetArea, log_dock);
     view_menu->addAction(log_dock->toggleViewAction());
 
     QDockWidget* balancer_server_log_dock = new QDockWidget(tr("Balancer Server Log"), this);
@@ -102,6 +106,7 @@ MainMonitorWindow::MainMonitorWindow()
     balancer_server_log_dock->setWidget(balancer_server_log);
     addDockWidget(Qt::BottomDockWidgetArea, balancer_server_log_dock);
     view_menu->addAction(balancer_server_log_dock->toggleViewAction());
+    tabifyDockWidget(log_dock, balancer_server_log_dock);
 
     show_leaf_nodes_act = new QAction(tr("Show Leaf Nodes"), this);
     show_leaf_nodes_act->setStatusTip(tr("Show Leaf Nodes"));
@@ -134,10 +139,10 @@ MainMonitorWindow::MainMonitorWindow()
     connect(clear_balancer_server_log_act, &QAction::triggered, this, &MainMonitorWindow::onClearBalancerServerLog);
     view_menu->addAction(clear_balancer_server_log_act);
 
-    QAction* refresh_node_tree_act = new QAction(tr("Refresh Node Tree"), this);
-    refresh_node_tree_act->setStatusTip(tr("Refresh Node Tree"));
-    connect(refresh_node_tree_act, &QAction::triggered, this, &MainMonitorWindow::onRefreshNodeTree);
-    view_menu->addAction(refresh_node_tree_act);
+    QAction* refresh_server_tree_act = new QAction(tr("Refresh Server Tree"), this);
+    refresh_server_tree_act->setStatusTip(tr("Refresh Server Tree"));
+    connect(refresh_server_tree_act, &QAction::triggered, this, &MainMonitorWindow::onRefreshServerTree);
+    view_menu->addAction(refresh_server_tree_act);
 
     QMenu* action_menu = menuBar()->addMenu(tr("&Action"));
 
@@ -153,9 +158,9 @@ MainMonitorWindow::MainMonitorWindow()
     connect(static_merge_act, &QAction::triggered, this, &MainMonitorWindow::onStaticMerge);
     action_menu->addAction(static_merge_act);
 
-    node_tree_view->setContextMenuPolicy(Qt::ActionsContextMenu);
-    node_tree_view->addAction(static_split_act);
-    node_tree_view->addAction(static_merge_act);
+    server_tree_view->setContextMenuPolicy(Qt::ActionsContextMenu);
+    server_tree_view->addAction(static_split_act);
+    server_tree_view->addAction(static_merge_act);
 }
 
 QPlainTextEdit* MainMonitorWindow::getLog() const
@@ -194,7 +199,7 @@ void MainMonitorWindow::disconnectedState()
     static_merge_act->setEnabled(false);
 }
 
-BalancerServerInfo::Ptr MainMonitorWindow::getServerInfo() const
+ServerInfo::Ptr MainMonitorWindow::getServerInfo() const
 {
     return server_info;
 }
@@ -254,8 +259,8 @@ void MainMonitorWindow::onClose()
     connection->close();
     connection = nullptr;
     disconnectedState();
-    node_tree = nullptr;
-    node_tree_view->setModel(nullptr);
+    server_tree = nullptr;
+    server_tree_view->setModel(nullptr);
     property_tree = nullptr;
     property_view->setModel(nullptr);
     server_info = nullptr;
@@ -296,7 +301,7 @@ void MainMonitorWindow::onClearBalancerServerLog()
     balancer_server_log->clear();
 }
 
-void MainMonitorWindow::onRefreshNodeTree()
+void MainMonitorWindow::onRefreshServerTree()
 {
     if (server_info && server_info->tree_root_token)
     {
@@ -359,7 +364,7 @@ void MainMonitorWindow::onStaticMerge()
     }
 }
 
-void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
+void MainMonitorWindow::onServerTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
     bool is_selected = false;
     if (!selected.empty() && !selected.front().indexes().empty())
@@ -368,28 +373,43 @@ void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selecte
         TreeItem* current_item = static_cast<TreeItem*>(index.internalPointer());
         if (current_item)
         {
-            NodeTreeItem* current_node_tree = dynamic_cast<NodeTreeItem*>(current_item);
-            if (current_node_tree && current_node_tree->getNode())
+            BalancerItem* current_balancer = dynamic_cast<BalancerItem*>(current_item);
+            if (current_balancer)
             {
-                property_tree = std::make_shared<ListModel>(getPropertyList(current_node_tree->getNode()));
-                property_view->setModel(property_tree.get());
-                property_view->update();
-                server_info->selected_node = current_node_tree->getNode();
-                expand_status.selected_token = current_node_tree->getNode()->token;
-                is_selected = true;
-                expand_status.is_selected_token_valid = true;
-                static_split_act->setEnabled(current_node_tree->getNode()->leaf_node);
-                static_merge_act->setEnabled(!current_node_tree->getNode()->leaf_node);
-            }
-            else if (current_node_tree && !current_node_tree->getNode())
-            {
-                // Root node: it is Balancer Server, so, split and merge are unavailable
-                property_tree = std::make_shared<ListModel>(getPropertyList(server_info));
+                // It is Balancer Server, so, split and merge are unavailable
+                property_tree = std::make_shared<ListModel>(buildBalancerPropertyList(server_info, connection));
                 property_view->setModel(property_tree.get());
                 property_view->update();
                 server_info->selected_node = nullptr;
                 expand_status.selected_token = 0;
-                is_selected = false;
+                is_selected = true;
+                expand_status.is_selected_token_valid = false;
+                static_split_act->setEnabled(false);
+                static_merge_act->setEnabled(false);
+            }
+            NodeItem* current_node = dynamic_cast<NodeItem*>(current_item);
+            if (current_node && current_node->getNode())
+            {
+                property_tree = std::make_shared<ListModel>(buildNodePropertyList(current_node->getNode()));
+                property_view->setModel(property_tree.get());
+                property_view->update();
+                server_info->selected_node = current_node->getNode();
+                expand_status.selected_token = current_node->getNode()->token;
+                is_selected = true;
+                expand_status.is_selected_token_valid = true;
+                static_split_act->setEnabled(current_node->getNode()->leaf_node);
+                static_merge_act->setEnabled(!current_node->getNode()->leaf_node);
+            }
+            ProxyItem* current_proxy = dynamic_cast<ProxyItem*>(current_item);
+            if (current_proxy)
+            {
+                // It is Proxy Server, so, split and merge are unavailable
+                property_tree = std::make_shared<ListModel>(buildProxyPropertyList(server_info, current_proxy->getProxyIndex()));
+                property_view->setModel(property_tree.get());
+                property_view->update();
+                server_info->selected_node = nullptr;
+                expand_status.selected_token = 0;
+                is_selected = true;
                 expand_status.is_selected_token_valid = false;
                 static_split_act->setEnabled(false);
                 static_merge_act->setEnabled(false);
@@ -405,34 +425,36 @@ void MainMonitorWindow::onNodeTreeSelectionChanged(const QItemSelection& selecte
     update();
 }
 
-void MainMonitorWindow::onNodeTreeCollapsed(const QModelIndex& index)
+void MainMonitorWindow::onServerTreeCollapsed(const QModelIndex& index)
 {
     TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
     if (item)
     {
-        NodeTreeItem* node_tree = dynamic_cast<NodeTreeItem*>(item);
-        if (node_tree && node_tree->getNode())
+        NodeItem* node_item = dynamic_cast<NodeItem*>(item);
+        if (node_item && node_item->getNode())
         {
-            expand_status.tree_expand_status.erase(node_tree->getNode()->token);
+            expand_status.tree_expand_status.erase(node_item->getNode()->token);
         }
-        else if (node_tree && !node_tree->getNode())
+        BalancerItem* balancer_item = dynamic_cast<BalancerItem*>(item);
+        if (balancer_item)
         {
             expand_status.tree_expand_status.erase(0);
         }
     }
 }
 
-void MainMonitorWindow::onNodeTreeExpanded(const QModelIndex& index)
+void MainMonitorWindow::onServerTreeExpanded(const QModelIndex& index)
 {
     TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
     if (item)
     {
-        NodeTreeItem* node_tree = dynamic_cast<NodeTreeItem*>(item);
-        if (node_tree && node_tree->getNode())
+        NodeItem* node_item = dynamic_cast<NodeItem*>(item);
+        if (node_item && node_item->getNode())
         {
-            expand_status.tree_expand_status.emplace(node_tree->getNode()->token, true);
+            expand_status.tree_expand_status.emplace(node_item->getNode()->token, true);
         }
-        else if (node_tree && !node_tree->getNode())
+        BalancerItem* balancer_item = dynamic_cast<BalancerItem*>(item);
+        if (balancer_item)
         {
             expand_status.tree_expand_status.emplace(0, true);
         }
@@ -460,7 +482,7 @@ void MainMonitorWindow::onMonitoringBalancerServerInfoAnswer(QByteArray data)
 {
     if (!server_info)
     {
-        server_info = std::make_shared<BalancerServerInfo>();
+        server_info = std::make_shared<ServerInfo>();
     }
     const Packet::MonitoringBalancerServerInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringBalancerServerInfoAnswer*>(data.data());
     if (data.size() >= Packet::getSize(answer))
@@ -556,16 +578,11 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
                 if (server_info->parent_stack.empty())
                 {
                     // We received all balancer node tree
-                    node_tree = std::make_shared<TreeModel>(std::make_shared<NodeTreeItem>(server_info));
-                    node_tree_view->setModel(node_tree.get());
-                    restoreExpandStatus();
-                    // TODO: Move this line somewhere to do not connect it each time
-                    connect(node_tree_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainMonitorWindow::onNodeTreeSelectionChanged);
-                    update();
+                    buildServerTree();
 
                     if (!server_info->neighbor_requests.empty())
                     {
-                        BalancerServerInfo::NeighborRequest request = server_info->neighbor_requests.front();
+                        ServerInfo::NeighborRequest request = server_info->neighbor_requests.front();
                         connection->getBalanceTreeNeighborInfo(request.token, request.x, request.y);
                         server_info->neighbor_requests.pop_front();
                     }
@@ -611,7 +628,7 @@ void MainMonitorWindow::onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray dat
                     }
                     if (!server_info->neighbor_requests.empty())
                     {
-                        BalancerServerInfo::NeighborRequest request = server_info->neighbor_requests.front();
+                        ServerInfo::NeighborRequest request = server_info->neighbor_requests.front();
                         connection->getBalanceTreeNeighborInfo(request.token, request.x, request.y);
                         server_info->neighbor_requests.pop_front();
                     }
@@ -685,6 +702,63 @@ void MainMonitorWindow::onMonitoringBalanceTreeStaticMergeAnswer(QByteArray data
     }
 }
 
+void MainMonitorWindow::onMonitoringGetProxyCountAnswer(QByteArray data)
+{
+    const Packet::MonitoringGetProxyCountAnswer* answer = reinterpret_cast<const Packet::MonitoringGetProxyCountAnswer*>(data.data());
+    if (data.size() >= Packet::getSize(answer))
+    {
+        log->appendPlainText(tr("proxy count = %1").arg(answer->proxy_count));
+        server_info->id_to_proxy.clear();
+        server_info->proxy_info_requests.clear();
+        for (std::uint32_t index = 1; index <= answer->proxy_count; ++index)
+        {
+            server_info->proxy_info_requests.push_back(index);
+        }
+        if (server_info->proxy_info_requests.empty())
+        {
+            // We have received all information about proxy servers
+            buildServerTree();
+        }
+        else
+        {
+            std::uint32_t cur_proxy_index = server_info->proxy_info_requests.front();
+            server_info->proxy_info_requests.pop_front();
+            connection->getProxyInfo(cur_proxy_index);
+        }
+    }
+    else
+    {
+        log->appendPlainText(tr("invalid data size: %1").arg(data.size()));
+    }
+}
+
+void MainMonitorWindow::onMonitoringGetProxyInfoAnswer(QByteArray data)
+{
+    const Packet::MonitoringGetProxyInfoAnswer* answer = reinterpret_cast<const Packet::MonitoringGetProxyInfoAnswer*>(data.data());
+    if (data.size() >= Packet::getSize(answer))
+    {
+        log->appendPlainText(tr("proxy info, proxy index = %1").arg(answer->proxy_index));
+        ServerInfo::Address proxy_server_address;
+        proxy_server_address.ip_address = ip_address_t(answer->proxy_server_address).to_string();
+        proxy_server_address.port_number = answer->proxy_server_port_number;
+        server_info->id_to_proxy.emplace(answer->proxy_index, proxy_server_address);
+        if (server_info->proxy_info_requests.empty())
+        {
+            // We have received all information about proxy servers
+            buildServerTree();
+        }else
+        {
+            std::uint32_t cur_proxy_index = server_info->proxy_info_requests.front();
+            server_info->proxy_info_requests.pop_front();
+            connection->getProxyInfo(cur_proxy_index);
+        }
+    }
+    else
+    {
+        log->appendPlainText(tr("invalid data size: %1").arg(data.size()));
+    }
+}
+
 void MainMonitorWindow::generateNeighborRequests(std::uint32_t token)
 {
     if (isShowNeighbor())
@@ -692,7 +766,7 @@ void MainMonitorWindow::generateNeighborRequests(std::uint32_t token)
         BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(token);
         if (tree_info->leaf_node)
         {
-            BalancerServerInfo::NeighborRequest new_request;
+            ServerInfo::NeighborRequest new_request;
             new_request.token = token;
             for (int x = 0; x < tree_info->bounding_box.size + 2; ++x)
             {
@@ -720,7 +794,7 @@ void MainMonitorWindow::generateNeighborRequests(std::uint32_t token)
 
 void MainMonitorWindow::restoreExpandStatus()
 {
-    QAbstractItemModel* model = node_tree_view->model();
+    QAbstractItemModel* model = server_tree_view->model();
     if (model)
     {
         QModelIndex root_index = model->index(0, 0);
@@ -730,27 +804,28 @@ void MainMonitorWindow::restoreExpandStatus()
 
 void MainMonitorWindow::restoreExpandStatus(const QModelIndex& index)
 {
-    QAbstractItemModel* model = node_tree_view->model();
+    QAbstractItemModel* model = server_tree_view->model();
     if (model)
     {
         TreeItem* item = static_cast<TreeItem*>(index.internalPointer());
         if (item)
         {
-            NodeTreeItem* node_tree = dynamic_cast<NodeTreeItem*>(item);
-            if (node_tree)
+            std::uint32_t token = 0;
+            BalancerItem* balancer_item = dynamic_cast<BalancerItem*>(item);
+            NodeItem* node_item = dynamic_cast<NodeItem*>(item);
+            if (node_item || balancer_item)
             {
-                std::uint32_t token = 0;
-                if (node_tree->getNode())
+                if (node_item)
                 {
-                    token = node_tree->getNode()->token;
+                    token = node_item->getNode()->token;
                 }
                 if (expand_status.tree_expand_status.find(token) != expand_status.tree_expand_status.end())
                 {
-                    node_tree_view->expand(index);
+                    server_tree_view->expand(index);
                 }
                 if (expand_status.is_selected_token_valid && expand_status.selected_token == token)
                 {
-                    node_tree_view->selectionModel()->select(index, QItemSelectionModel::Select);
+                    server_tree_view->selectionModel()->select(index, QItemSelectionModel::Select);
                 }
                 for (int i = 0; i < model->rowCount(index); ++i)
                 {
@@ -760,4 +835,14 @@ void MainMonitorWindow::restoreExpandStatus(const QModelIndex& index)
             }
         }
     }
+}
+
+void MainMonitorWindow::buildServerTree()
+{
+    server_tree = std::make_shared<TreeModel>(buildServerHierarchy(server_info));
+    server_tree_view->setModel(server_tree.get());
+    restoreExpandStatus();
+    // TODO: Move this line somewhere to do not connect it each time
+    connect(server_tree_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainMonitorWindow::onServerTreeSelectionChanged);
+    update();
 }

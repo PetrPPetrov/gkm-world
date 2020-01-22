@@ -30,6 +30,8 @@ class ProxyServer : public Transport
     id_to_user_info_t id_to_user_info;
     std::uint32_t online_user_count = 0;
 
+    std::uint32_t proxy_index = 0;
+
     Packet::ESeverityType minimum_level = Packet::ESeverityType::DebugMessage;
     bool log_to_screen = false;
     bool log_to_file = true;
@@ -56,6 +58,7 @@ private:
     bool onInitializePositionInternalAnswer(size_t received_bytes);
     bool onUserAction(size_t received_bytes);
     bool onUserActionInternalAnswer(size_t received_bytes);
+    bool onRegisterProxyAnswer(size_t received_bytes);
 
     bool validateInternalServer(const boost::asio::ip::udp::endpoint& end_point) const;
     void loadRegisteredUsers(const std::string& file_name);

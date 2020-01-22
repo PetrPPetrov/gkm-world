@@ -131,6 +131,7 @@ void ProxyServer::startImpl()
     setReceiveHandler(Packet::EType::InitializePositionInternalAnswer, boost::bind(&ProxyServer::onInitializePositionInternalAnswer, this, _1));
     setReceiveHandler(Packet::EType::UserAction, boost::bind(&ProxyServer::onUserAction, this, _1));
     setReceiveHandler(Packet::EType::UserActionInternalAnswer, boost::bind(&ProxyServer::onUserActionInternalAnswer, this, _1));
+    setReceiveHandler(Packet::EType::RegisterProxyAnswer, boost::bind(&ProxyServer::onRegisterProxyAnswer, this, _1));
 #ifdef NETWORK_LOG
     setReceiveHandler(Packet::EType::MonitoringMessageCount, boost::bind(&Transport::onMonitoringMessageCount, this, _1));
     setReceiveHandler(Packet::EType::MonitoringPopMessage, boost::bind(&Transport::onMonitoringPopMessage, this, _1));
@@ -159,7 +160,7 @@ bool ProxyServer::onLogin(size_t received_bytes)
     LOG_DEBUG << "onLogin";
 #endif
 
-    auto packet = getReceiveBufferAs<Packet::Login>();
+    const auto packet = getReceiveBufferAs<Packet::Login>();
 
     std::string login = packet->getLogin();
     std::string password = packet->getPassword();
@@ -250,7 +251,7 @@ bool ProxyServer::onLogout(size_t received_bytes)
     LOG_DEBUG << "onLogout";
 #endif
 
-    auto packet = getReceiveBufferAs<Packet::Logout>();
+    const auto packet = getReceiveBufferAs<Packet::Logout>();
 
 #ifdef _DEBUG
     LOG_DEBUG << "end point: " << remote_end_point;
@@ -284,7 +285,13 @@ bool ProxyServer::onLogoutInternalAnswer(size_t received_bytes)
     LOG_DEBUG << "onLogoutInternalAnswer";
 #endif
 
-    auto packet = getReceiveBufferAs<Packet::LogoutInternalAnswer>();
+    if (!validateInternalServer(remote_end_point))
+    {
+        LOG_WARNING << "internal server token validation error";
+        return true;
+    }
+
+    const auto packet = getReceiveBufferAs<Packet::LogoutInternalAnswer>();
 
     std::uint32_t user_id = packet->user_token;
     UserOnlineInfo* user_online_info = id_to_user_info.find(user_id);
@@ -498,6 +505,23 @@ bool ProxyServer::onUserActionInternalAnswer(size_t received_bytes)
         answer->other_player[i] = packet->other_player[i];
     }
     standardSendTo(answer, user_online_info->user_end_point);
+    return true;
+}
+
+bool ProxyServer::onRegisterProxyAnswer(size_t received_bytes)
+{
+#ifdef _DEBUG
+    LOG_DEBUG << "onRegisterProxyAnswer";
+#endif
+
+    if (!validateInternalServer(remote_end_point))
+    {
+        LOG_WARNING << "fake internal server detected";
+        return true;
+    }
+
+    const auto packet = getReceiveBufferAs<Packet::RegisterProxyAnswer>();
+    proxy_index = packet->proxy_index;
     return true;
 }
 

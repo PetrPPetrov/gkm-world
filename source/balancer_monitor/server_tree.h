@@ -11,7 +11,8 @@
 #include <QItemSelectionModel>
 #include <QModelIndex>
 #include <QVariant>
-#include "balancer_server_info.h"
+#include "monitor_udp_connection.h"
+#include "server_info.h"
 
 class TreeItem
 {
@@ -36,13 +37,20 @@ protected:
     TreeItem* parent_item;
 };
 
-class NodeTreeItem : public TreeItem
+class BalancerItem : public TreeItem
 {
 public:
-    typedef std::shared_ptr<NodeTreeItem> Ptr;
+    typedef std::shared_ptr<BalancerItem> Ptr;
 
-    explicit NodeTreeItem(const BalancerServerInfo::Ptr& server_info);
-    explicit NodeTreeItem(const BalancerServerInfo::Ptr& server_info, BalancerTreeInfo* node, NodeTreeItem* parent);
+    explicit BalancerItem(const ServerInfo::Ptr& server_info);
+};
+
+class NodeItem : public TreeItem
+{
+public:
+    typedef std::shared_ptr<NodeItem> Ptr;
+
+    explicit NodeItem(const ServerInfo::Ptr& server_info, BalancerTreeInfo* node, TreeItem* parent);
 
     BalancerTreeInfo* getNode() const;
 
@@ -50,8 +58,23 @@ private:
     BalancerTreeInfo* node;
 };
 
-std::vector<TreeItem::Ptr> getPropertyList(BalancerTreeInfo* node);
-std::vector<TreeItem::Ptr> getPropertyList(const BalancerServerInfo::Ptr& server_info);
+class ProxyItem : public TreeItem
+{
+public:
+    typedef std::shared_ptr<ProxyItem> Ptr;
+
+    explicit ProxyItem(std::uint32_t proxy_index);
+
+    std::uint32_t getProxyIndex() const;
+
+private:
+    std::uint32_t proxy_index = 0;
+};
+
+std::vector<TreeItem::Ptr> buildServerHierarchy(const ServerInfo::Ptr& server_info);
+std::vector<TreeItem::Ptr> buildNodePropertyList(BalancerTreeInfo* node);
+std::vector<TreeItem::Ptr> buildBalancerPropertyList(const ServerInfo::Ptr& server_info, MonitorUDPConnection* connection);
+std::vector<TreeItem::Ptr> buildProxyPropertyList(const ServerInfo::Ptr& server_info, std::uint32_t proxy_index);
 
 class TreeModel : public QAbstractItemModel
 {
@@ -60,7 +83,7 @@ class TreeModel : public QAbstractItemModel
 public:
     typedef std::shared_ptr<TreeModel> Ptr;
 
-    explicit TreeModel(const TreeItem::Ptr& root_item, QObject* parent = nullptr);
+    explicit TreeModel(const std::vector<TreeItem::Ptr>& items, QObject* parent = nullptr);
 
     QVariant data(const QModelIndex& index, int role) const override;
     bool setData(const QModelIndex& index, const QVariant& value, int role) override;
@@ -71,7 +94,7 @@ public:
     int columnCount(const QModelIndex& index = QModelIndex()) const override;
 
 private:
-    TreeItem::Ptr root_item;
+    std::vector<TreeItem::Ptr> items;
 };
 
 class ListModel : public QAbstractItemModel

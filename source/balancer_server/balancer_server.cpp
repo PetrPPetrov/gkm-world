@@ -284,7 +284,7 @@ bool BalancerServer::onInitializePositionInternal(size_t received_bytes)
     LOG_DEBUG << "onInitializePositionInternal";
 #endif
 
-    auto packet = getReceiveBufferAs<Packet::InitializePositionInternal>();
+    const auto packet = getReceiveBufferAs<Packet::InitializePositionInternal>();
 #ifdef _DEBUG
     LOG_DEBUG << "user token " << packet->user_token;
 #endif

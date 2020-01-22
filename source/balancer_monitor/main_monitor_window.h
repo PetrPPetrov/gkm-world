@@ -16,8 +16,8 @@
 #include <QThread>
 #include "ui_main_monitor_window.h"
 #include "monitor_udp_connection.h"
-#include "balancer_server_info.h"
-#include "node_tree.h"
+#include "server_info.h"
+#include "server_tree.h"
 
 class MainMonitorWindow : public QMainWindow
 {
@@ -31,7 +31,7 @@ public:
     bool isShowNeighbor() const;
     void connectedState();
     void disconnectedState();
-    BalancerServerInfo::Ptr getServerInfo() const;
+    ServerInfo::Ptr getServerInfo() const;
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -45,12 +45,12 @@ private:
     void onShowNeighbor(bool checked);
     void onClearLog();
     void onClearBalancerServerLog();
-    void onRefreshNodeTree();
+    void onRefreshServerTree();
     void onStaticSplit();
     void onStaticMerge();
-    void onNodeTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
-    void onNodeTreeCollapsed(const QModelIndex& index);
-    void onNodeTreeExpanded(const QModelIndex& index);
+    void onServerTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+    void onServerTreeCollapsed(const QModelIndex& index);
+    void onServerTreeExpanded(const QModelIndex& index);
 
 signals:
     void message(const QString& message);
@@ -61,6 +61,8 @@ signals:
     void monitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
     void monitoringBalanceTreeStaticSplitAnswer(QByteArray data);
     void monitoringBalanceTreeStaticMergeAnswer(QByteArray data);
+    void monitoringGetProxyCountAnswer(QByteArray data);
+    void monitoringGetProxyInfoAnswer(QByteArray data);
 
 private slots:
     void onMessage(const QString& message);
@@ -71,18 +73,21 @@ private slots:
     void onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
     void onMonitoringBalanceTreeStaticSplitAnswer(QByteArray data);
     void onMonitoringBalanceTreeStaticMergeAnswer(QByteArray data);
+    void onMonitoringGetProxyCountAnswer(QByteArray data);
+    void onMonitoringGetProxyInfoAnswer(QByteArray data);
 
 private:
     void generateNeighborRequests(std::uint32_t token);
     void restoreExpandStatus();
     void restoreExpandStatus(const QModelIndex& index);
+    void buildServerTree();
 
 private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
     QPlainTextEdit* log = nullptr;
     QPlainTextEdit* balancer_server_log = nullptr;
-    QTreeView* node_tree_view = nullptr;
+    QTreeView* server_tree_view = nullptr;
     QTableView* property_view = nullptr;
     QAction* connect_act = nullptr;
     QAction* close_act = nullptr;
@@ -93,10 +98,10 @@ private:
     QAction* static_merge_act = nullptr;
     MonitorUDPConnection* connection = nullptr;
 
-    BalancerServerInfo::Ptr server_info;
-    TreeModel::Ptr node_tree = nullptr;
+    ServerInfo::Ptr server_info;
+    TreeModel::Ptr server_tree = nullptr;
     ListModel::Ptr property_tree = nullptr;
-    BalancerTreeExpandStatus expand_status;
+    ServerTreeExpandStatus expand_status;
 };
 
 extern MainMonitorWindow* g_main_window;
