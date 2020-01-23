@@ -526,6 +526,7 @@ namespace Packet
         EServerType server_type = EServerType::NodeServer;
         std::uint32_t token = 0;
         char message[256] = { 0 };
+        std::uint32_t message_count = 0;
 
         MonitoringPopMessageAnswer()
         {

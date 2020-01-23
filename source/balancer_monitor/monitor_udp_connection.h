@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <map>
 #include <QObject>
 #include <QUdpSocket>
 #include <QHostInfo>
@@ -30,6 +31,7 @@ signals:
     void staticSplit(unsigned tree_node_token);
     void staticMerge(unsigned tree_node_token);
     void getProxyInfo(unsigned proxy_index);
+    void addProxyLog(unsigned proxy_index, QString ip_adddress, unsigned port_number);
 
 private slots:
     void onClose();
@@ -39,14 +41,15 @@ private slots:
     void onStaticSplit(unsigned tree_node_token);
     void onStaticMerge(unsigned tree_node_token);
     void onGetProxyInfo(unsigned proxy_index);
+    void onAddProxyLog(unsigned proxy_index, QString ip_adddress, unsigned port_number);
 
     void onThreadStart();
     void onResolve(QHostInfo);
     void onReadyRead();
     void onGetServerMessageTimer();
-    void onMonitoringMessageCountAnswer(QByteArray data);
-    void onMonitoringPopMessage();
-    void onMonitoringPopMessageAnswer(QByteArray data);
+    void onMonitoringMessageCountAnswer(QByteArray data, QHostAddress ip_address, quint16 port_number);
+    void onMonitoringPopMessage(QHostAddress ip_address, quint16 port_number);
+    void onMonitoringPopMessageAnswer(QByteArray data, QHostAddress ip_address, quint16 port_number);
 
 private:
     MainMonitorWindow* main_window = nullptr;
@@ -56,5 +59,11 @@ private:
     QHostAddress balancer_server_host_address;
     std::uint16_t balancer_server_port_number;
     QTimer* get_server_message_timer = nullptr;
-    std::uint32_t message_count = 0;
+
+    struct ProxyLogInfo
+    {
+        QHostAddress proxy_ip_address;
+        std::uint16_t proxy_port_number = 0;
+    };
+    std::map<unsigned, ProxyLogInfo> proxy_log_infos;
 };

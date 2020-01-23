@@ -15,7 +15,7 @@ MonitorUDPConnection::MonitorUDPConnection(const QString& host_name, std::uint16
     connect(this, SIGNAL(staticSplit(unsigned)), this, SLOT(onStaticSplit(unsigned)));
     connect(this, SIGNAL(staticMerge(unsigned)), this, SLOT(onStaticMerge(unsigned)));
     connect(this, SIGNAL(getProxyInfo(unsigned)), this, SLOT(onGetProxyInfo(unsigned)));
-
+    connect(this, SIGNAL(addProxyLog(unsigned, QString, unsigned)), this, SLOT(onAddProxyLog(unsigned, QString, unsigned)));
     connect(&connection_thread, SIGNAL(started()), this, SLOT(onThreadStart()));
     connection_thread.start();
 }
@@ -84,6 +84,14 @@ void MonitorUDPConnection::onGetProxyInfo(unsigned proxy_index)
     Packet::MonitoringGetProxyInfo request;
     request.proxy_index = proxy_index;
     socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
+}
+
+void MonitorUDPConnection::onAddProxyLog(unsigned proxy_index, QString ip_adddress, unsigned port_number)
+{
+    ProxyLogInfo new_proxy_log_info;
+    new_proxy_log_info.proxy_port_number = static_cast<std::uint16_t>(port_number);
+    new_proxy_log_info.proxy_ip_address.setAddress(ip_adddress);
+    proxy_log_infos.emplace(proxy_index, new_proxy_log_info);
 }
 
 void MonitorUDPConnection::onThreadStart()
@@ -164,10 +172,10 @@ void MonitorUDPConnection::onReadyRead()
                 main_window->monitoringGetProxyInfoAnswer(buffer);
                 break;
             case Packet::EType::MonitoringMessageCountAnswer:
-                onMonitoringMessageCountAnswer(buffer);
+                onMonitoringMessageCountAnswer(buffer, sender, senderPort);
                 break;
             case Packet::EType::MonitoringPopMessageAnswer:
-                onMonitoringPopMessageAnswer(buffer);
+                onMonitoringPopMessageAnswer(buffer, sender, senderPort);
                 break;
             default:
                 break;
@@ -184,43 +192,38 @@ void MonitorUDPConnection::onGetServerMessageTimer()
 {
     Packet::MonitoringMessageCount request;
     socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
+    for (auto& proxy_log_info : proxy_log_infos)
+    {
+        Packet::MonitoringMessageCount request;
+        socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), proxy_log_info.second.proxy_ip_address, proxy_log_info.second.proxy_port_number);
+    }
 }
 
-void MonitorUDPConnection::onMonitoringMessageCountAnswer(QByteArray data)
+void MonitorUDPConnection::onMonitoringMessageCountAnswer(QByteArray data, QHostAddress ip_address, quint16 port_number)
 {
     const Packet::MonitoringMessageCountAnswer* answer = reinterpret_cast<const Packet::MonitoringMessageCountAnswer*>(data.data());
     if (data.size() >= Packet::getSize(answer))
     {
-        message_count = answer->message_count;
-        if (message_count > 0)
+        if (answer->message_count > 0)
         {
-            onMonitoringPopMessage();
+            onMonitoringPopMessage(ip_address, port_number);
         }
     }
 }
 
-void MonitorUDPConnection::onMonitoringPopMessage()
+void MonitorUDPConnection::onMonitoringPopMessage(QHostAddress ip_address, quint16 port_number)
 {
     Packet::MonitoringPopMessage request;
-    socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
+    socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), ip_address, port_number);
 }
 
-void MonitorUDPConnection::onMonitoringPopMessageAnswer(QByteArray data)
+void MonitorUDPConnection::onMonitoringPopMessageAnswer(QByteArray data, QHostAddress ip_address, quint16 port_number)
 {
     const Packet::MonitoringPopMessageAnswer* answer = reinterpret_cast<const Packet::MonitoringPopMessageAnswer*>(data.data());
     if (data.size() >= Packet::getSize(answer))
     {
         if (answer->success)
         {
-            if (message_count > 0)
-            {
-                --message_count;
-            }
-            //std::string message_text = getText(answer->server_type) + " ";
-            //if (answer->server_type == Packet::EServerType::NodeServer)
-            //{
-            //    message_text += std::string("[Token=") + std::to_string(answer->token) + "] ";
-            //}
             std::string message_text = std::string("[") + getText(answer->severity_type) + "] ";
             message_text += answer->getMessage();
             switch (answer->server_type)
@@ -228,12 +231,14 @@ void MonitorUDPConnection::onMonitoringPopMessageAnswer(QByteArray data)
             case Packet::EServerType::BalancerServer:
                 g_main_window->balancerServerMessage(message_text.c_str());
                 break;
+            case Packet::EServerType::ProxyServer:
+                g_main_window->proxyServerMessage(answer->token, message_text.c_str());
             default:
                 break;
             }
-            if (message_count > 0)
+            if (answer->message_count > 0)
             {
-                onMonitoringPopMessage();
+                onMonitoringPopMessage(ip_address, port_number);
             }
         }
     }

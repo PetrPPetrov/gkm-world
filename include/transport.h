@@ -201,6 +201,7 @@ public:
             answer->severity_type = message.severity;
             answer->setMessage(message.text);
             g_logger->messages.pop_front();
+            answer->message_count = static_cast<std::uint32_t>(g_logger->messages.size());
         }
         else
         {

@@ -48,14 +48,16 @@ private:
     void onRefreshServerTree();
     void onStaticSplit();
     void onStaticMerge();
+    void onShowServerLog();
     void onServerTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
     void onServerTreeCollapsed(const QModelIndex& index);
     void onServerTreeExpanded(const QModelIndex& index);
 
 signals:
-    void message(const QString& message);
-    void balancerServerMessage(const QString& message);
-    void connectionFatal(const QString& message);
+    void message(QString message);
+    void balancerServerMessage(QString message);
+    void proxyServerMessage(unsigned proxy_index, QString message);
+    void connectionFatal(QString message);
     void monitoringBalancerServerInfoAnswer(QByteArray data);
     void monitoringBalanceTreeInfoAnswer(QByteArray data);
     void monitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
@@ -65,9 +67,10 @@ signals:
     void monitoringGetProxyInfoAnswer(QByteArray data);
 
 private slots:
-    void onMessage(const QString& message);
-    void onBalancerServerMessage(const QString& message);
-    void onConnectionFatal(const QString& message);
+    void onMessage(QString message);
+    void onBalancerServerMessage(QString message);
+    void onProxyServerMessage(unsigned proxy_index, QString message);
+    void onConnectionFatal(QString message);
     void onMonitoringBalancerServerInfoAnswer(QByteArray data);
     void onMonitoringBalanceTreeInfoAnswer(QByteArray data);
     void onMonitoringBalanceTreeNeighborInfoAnswer(QByteArray data);
@@ -85,6 +88,7 @@ private:
 private:
     bool first_show = true;
     Ui::MainMonitorWindow main_monitor_window;
+    QDockWidget* log_dock = nullptr;
     QPlainTextEdit* log = nullptr;
     QPlainTextEdit* balancer_server_log = nullptr;
     QTreeView* server_tree_view = nullptr;
@@ -96,6 +100,7 @@ private:
     QAction* show_neighbor_act = nullptr;
     QAction* static_split_act = nullptr;
     QAction* static_merge_act = nullptr;
+    QAction* show_server_log = nullptr;
     MonitorUDPConnection* connection = nullptr;
 
     ServerInfo::Ptr server_info;

@@ -23,6 +23,7 @@ MainMonitorWindow::MainMonitorWindow()
 
     connect(this, SIGNAL(message(QString)), this, SLOT(onMessage(QString)));
     connect(this, SIGNAL(balancerServerMessage(QString)), this, SLOT(onBalancerServerMessage(QString)));
+    connect(this, SIGNAL(proxyServerMessage(unsigned, QString)), this, SLOT(onProxyServerMessage(unsigned, QString)));
     connect(this, SIGNAL(connectionFatal(QString)), this, SLOT(onConnectionFatal(QString)));
     connect(this, SIGNAL(monitoringBalancerServerInfoAnswer(QByteArray)),
             this, SLOT(onMonitoringBalancerServerInfoAnswer(QByteArray)));
@@ -87,7 +88,7 @@ MainMonitorWindow::MainMonitorWindow()
     addDockWidget(Qt::RightDockWidgetArea, property_dock);
     view_menu->addAction(property_dock->toggleViewAction());
 
-    QDockWidget* log_dock = new QDockWidget(tr("Log"), this);
+    log_dock = new QDockWidget(tr("Log"), this);
     log_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
     log = new QPlainTextEdit(log_dock);
     log->setReadOnly(true);
@@ -158,9 +159,16 @@ MainMonitorWindow::MainMonitorWindow()
     connect(static_merge_act, &QAction::triggered, this, &MainMonitorWindow::onStaticMerge);
     action_menu->addAction(static_merge_act);
 
+    show_server_log = new QAction(tr("Show Log"), this);
+    show_server_log->setStatusTip(tr("Show log of the selected server"));
+    show_server_log->setEnabled(false);
+    connect(show_server_log, &QAction::triggered, this, &MainMonitorWindow::onShowServerLog);
+    action_menu->addAction(show_server_log);
+
     server_tree_view->setContextMenuPolicy(Qt::ActionsContextMenu);
     server_tree_view->addAction(static_split_act);
     server_tree_view->addAction(static_merge_act);
+    server_tree_view->addAction(show_server_log);
 }
 
 QPlainTextEdit* MainMonitorWindow::getLog() const
@@ -364,9 +372,45 @@ void MainMonitorWindow::onStaticMerge()
     }
 }
 
+void MainMonitorWindow::onShowServerLog()
+{
+    if (server_info)
+    {
+        if (server_info->selected_node && server_info->selected_node->leaf_node && server_info->selected_node->node_server_port_number != 0)
+        {
+            return;
+        }
+        if (server_info->selected_proxy_index)
+        {
+            auto find_it = server_info->id_to_proxy.find(server_info->selected_proxy_index);
+            if (find_it != server_info->id_to_proxy.end())
+            {
+                if (find_it->second.log && find_it->second.log_dock)
+                {
+                    find_it->second.log_dock->show();
+                }else
+                {
+                    QDockWidget* server_log_dock = new QDockWidget(tr("Proxy Server %1 Log").arg(server_info->selected_proxy_index), this);
+                    server_log_dock->setAllowedAreas(Qt::AllDockWidgetAreas);
+                    QPlainTextEdit* server_log = new QPlainTextEdit(server_log_dock);
+                    server_log->setReadOnly(true);
+                    server_log->ensureCursorVisible();
+                    server_log->setCenterOnScroll(true);
+                    server_log_dock->setWidget(server_log);
+                    addDockWidget(Qt::BottomDockWidgetArea, server_log_dock);
+                    tabifyDockWidget(log_dock, server_log_dock);
+                    find_it->second.log = server_log;
+                    find_it->second.log_dock = server_log_dock;
+                    connection->addProxyLog(server_info->selected_proxy_index, find_it->second.ip_address.c_str(), find_it->second.port_number);
+                }
+            }
+        }
+    }
+}
+
 void MainMonitorWindow::onServerTreeSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    bool is_selected = false;
+    bool has_properties = false;
     if (!selected.empty() && !selected.front().indexes().empty())
     {
         QModelIndex index = selected.front().indexes().at(0);
@@ -377,46 +421,52 @@ void MainMonitorWindow::onServerTreeSelectionChanged(const QItemSelection& selec
             if (current_balancer)
             {
                 // It is Balancer Server, so, split and merge are unavailable
+                has_properties = true;
                 property_tree = std::make_shared<ListModel>(buildBalancerPropertyList(server_info, connection));
                 property_view->setModel(property_tree.get());
                 property_view->update();
+                server_info->selected_proxy_index = 0;
                 server_info->selected_node = nullptr;
                 expand_status.selected_token = 0;
-                is_selected = true;
                 expand_status.is_selected_token_valid = false;
                 static_split_act->setEnabled(false);
                 static_merge_act->setEnabled(false);
+                show_server_log->setEnabled(false);
             }
             NodeItem* current_node = dynamic_cast<NodeItem*>(current_item);
             if (current_node && current_node->getNode())
             {
+                has_properties = true;
                 property_tree = std::make_shared<ListModel>(buildNodePropertyList(current_node->getNode()));
                 property_view->setModel(property_tree.get());
                 property_view->update();
+                server_info->selected_proxy_index = 0;
                 server_info->selected_node = current_node->getNode();
                 expand_status.selected_token = current_node->getNode()->token;
-                is_selected = true;
                 expand_status.is_selected_token_valid = true;
                 static_split_act->setEnabled(current_node->getNode()->leaf_node);
                 static_merge_act->setEnabled(!current_node->getNode()->leaf_node);
+                show_server_log->setEnabled(current_node->getNode()->leaf_node && server_info->selected_node->node_server_port_number != 0);
             }
             ProxyItem* current_proxy = dynamic_cast<ProxyItem*>(current_item);
             if (current_proxy)
             {
                 // It is Proxy Server, so, split and merge are unavailable
+                has_properties = true;
                 property_tree = std::make_shared<ListModel>(buildProxyPropertyList(server_info, current_proxy->getProxyIndex()));
                 property_view->setModel(property_tree.get());
                 property_view->update();
+                server_info->selected_proxy_index = current_proxy->getProxyIndex();
                 server_info->selected_node = nullptr;
                 expand_status.selected_token = 0;
-                is_selected = true;
                 expand_status.is_selected_token_valid = false;
                 static_split_act->setEnabled(false);
                 static_merge_act->setEnabled(false);
+                show_server_log->setEnabled(true);
             }
         }
     }
-    if (!is_selected)
+    if (!has_properties)
     {
         property_tree = nullptr;
         property_view->setModel(nullptr);
@@ -461,18 +511,34 @@ void MainMonitorWindow::onServerTreeExpanded(const QModelIndex& index)
     }
 }
 
-void MainMonitorWindow::onMessage(const QString& message)
+void MainMonitorWindow::onMessage(QString message)
 {
     log->appendPlainText(message);
 }
 
-void MainMonitorWindow::onBalancerServerMessage(const QString& message)
+void MainMonitorWindow::onBalancerServerMessage(QString message)
 {
     balancer_server_log->appendPlainText(message);
     update();
 }
 
-void MainMonitorWindow::onConnectionFatal(const QString& message)
+void MainMonitorWindow::onProxyServerMessage(unsigned proxy_index, QString message)
+{
+    if (server_info)
+    {
+        auto find_it = server_info->id_to_proxy.find(proxy_index);
+        if (find_it != server_info->id_to_proxy.end())
+        {
+            if (find_it->second.log)
+            {
+                find_it->second.log->appendPlainText(message);
+            }
+            update();
+        }
+    }
+}
+
+void MainMonitorWindow::onConnectionFatal(QString message)
 {
     log->appendPlainText(message);
     onClose();
@@ -738,7 +804,7 @@ void MainMonitorWindow::onMonitoringGetProxyInfoAnswer(QByteArray data)
     if (data.size() >= Packet::getSize(answer))
     {
         log->appendPlainText(tr("proxy info, proxy index = %1").arg(answer->proxy_index));
-        ServerInfo::Address proxy_server_address;
+        ServerInfo::ProxyInfo proxy_server_address;
         proxy_server_address.ip_address = ip_address_t(answer->proxy_server_address).to_string();
         proxy_server_address.port_number = answer->proxy_server_port_number;
         server_info->id_to_proxy.emplace(answer->proxy_index, proxy_server_address);

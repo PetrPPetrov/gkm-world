@@ -522,6 +522,12 @@ bool ProxyServer::onRegisterProxyAnswer(size_t received_bytes)
 
     const auto packet = getReceiveBufferAs<Packet::RegisterProxyAnswer>();
     proxy_index = packet->proxy_index;
+    setServerToken(proxy_index);
+
+#ifdef _DEBUG
+    LOG_DEBUG << "proxy_index " << proxy_index;
+#endif
+
     return true;
 }
 

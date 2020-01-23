@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <QColor>
 #include <QCryptographicHash>
+#include <QDockWidget>
+#include <QPlainTextEdit>
 #include "global_types.h"
 #include "balance_tree/common.h"
 #include "fast_index_map.h"
@@ -44,14 +46,17 @@ struct ServerInfo
     std::uint32_t tree_root_token;
     Memory::FastIndexMap<BalancerTreeInfo> token_to_tree_node;
     BalancerTreeInfo* selected_node = nullptr;
+    std::uint32_t selected_proxy_index = 0;
 
     // Proxy Server section
-    struct Address
+    struct ProxyInfo
     {
         std::string ip_address;
         std::uint16_t port_number = 0;
+        QPlainTextEdit* log = nullptr;
+        QDockWidget* log_dock = nullptr;
     };
-    std::unordered_map<std::uint32_t, Address> id_to_proxy;
+    std::unordered_map<std::uint32_t, ProxyInfo> id_to_proxy;
 
     // Temporary fields for receiving packets
     std::uint32_t wait_token = 0;
