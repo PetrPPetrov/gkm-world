@@ -88,10 +88,23 @@ void MonitorUDPConnection::onGetProxyInfo(unsigned proxy_index)
 
 void MonitorUDPConnection::onAddProxyLog(unsigned proxy_index, QString ip_adddress, unsigned port_number)
 {
-    ProxyLogInfo new_proxy_log_info;
-    new_proxy_log_info.proxy_port_number = static_cast<std::uint16_t>(port_number);
-    new_proxy_log_info.proxy_ip_address.setAddress(ip_adddress);
-    proxy_log_infos.emplace(proxy_index, new_proxy_log_info);
+    auto find_it = proxies_info.find(proxy_index);
+    if (find_it == proxies_info.end())
+    {
+        auto proxy_server_info = std::make_shared<ServerAddressInfo>();
+        proxy_server_info->server_type = Packet::EServerType::ProxyServer;
+        proxy_server_info->server_token = static_cast<std::uint32_t>(proxy_index);
+        proxy_server_info->ip_address.setAddress(ip_adddress);
+        proxy_server_info->port_number = static_cast<std::uint16_t>(port_number);
+        servers.push_back(proxy_server_info);
+        proxies_info.emplace(proxy_index, proxy_server_info);
+    }
+    else
+    {
+        auto proxy_server_info = find_it->second;
+        proxy_server_info->ip_address.setAddress(ip_adddress);
+        proxy_server_info->port_number = static_cast<std::uint16_t>(port_number);
+    }
 }
 
 void MonitorUDPConnection::onThreadStart()
@@ -119,6 +132,11 @@ void MonitorUDPConnection::onResolve(QHostInfo host_info)
     {
         balancer_server_host_address = host_address;
         found = true;
+        auto balancer_server_info = std::make_shared<ServerAddressInfo>();
+        balancer_server_info->server_type = Packet::EServerType::BalancerServer;
+        balancer_server_info->ip_address = balancer_server_host_address;
+        balancer_server_info->port_number = balancer_server_port_number;
+        servers.push_back(balancer_server_info);
         break;
     }
     if (!found)
@@ -130,7 +148,7 @@ void MonitorUDPConnection::onResolve(QHostInfo host_info)
         main_window->message(tr("resoved IP address - %1").arg(balancer_server_host_address.toString()));
     }
     onGetBalancerServerInfo();
-    get_server_message_timer->start(1000);
+    get_server_message_timer->start(100);
 }
 
 void MonitorUDPConnection::onReadyRead()
@@ -190,12 +208,16 @@ void MonitorUDPConnection::onReadyRead()
 
 void MonitorUDPConnection::onGetServerMessageTimer()
 {
-    Packet::MonitoringMessageCount request;
-    socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), balancer_server_host_address, balancer_server_port_number);
-    for (auto& proxy_log_info : proxy_log_infos)
+    if (cur_server_to_ask_log != servers.end())
     {
+        auto& cur_server_info = *cur_server_to_ask_log;
         Packet::MonitoringMessageCount request;
-        socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), proxy_log_info.second.proxy_ip_address, proxy_log_info.second.proxy_port_number);
+        socket->writeDatagram(reinterpret_cast<const char*>(&request), sizeof(request), cur_server_info->ip_address, cur_server_info->port_number);
+        ++cur_server_to_ask_log;
+    }
+    else
+    {
+        cur_server_to_ask_log = servers.begin();
     }
 }
 

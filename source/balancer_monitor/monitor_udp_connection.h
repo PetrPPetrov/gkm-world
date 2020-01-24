@@ -4,6 +4,9 @@
 #pragma once
 
 #include <map>
+#include <unordered_map>
+#include <list>
+#include <memory>
 #include <QObject>
 #include <QUdpSocket>
 #include <QHostInfo>
@@ -60,10 +63,15 @@ private:
     std::uint16_t balancer_server_port_number;
     QTimer* get_server_message_timer = nullptr;
 
-    struct ProxyLogInfo
+    struct ServerAddressInfo
     {
-        QHostAddress proxy_ip_address;
-        std::uint16_t proxy_port_number = 0;
+        typedef std::shared_ptr<ServerAddressInfo> Ptr;
+        Packet::EServerType server_type;
+        std::uint32_t server_token = 0;
+        QHostAddress ip_address;
+        std::uint16_t port_number = 0;
     };
-    std::map<unsigned, ProxyLogInfo> proxy_log_infos;
+    std::unordered_map<unsigned, ServerAddressInfo::Ptr> proxies_info;
+    std::list<ServerAddressInfo::Ptr> servers;
+    std::list<ServerAddressInfo::Ptr>::const_iterator cur_server_to_ask_log = servers.begin();
 };
