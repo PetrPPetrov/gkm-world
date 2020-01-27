@@ -1,4 +1,4 @@
-// Copyright 2018-2019 Petr Petrovich Petrov. All rights reserved.
+// Copyright 2018-2020 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #pragma once
@@ -45,8 +45,6 @@ public:
 private:
     std::uint32_t allocateId();
     void deallocateId(std::uint32_t id);
-
-    void debugMonitor() const;
 
     void dumpParameters();
     void startImpl();

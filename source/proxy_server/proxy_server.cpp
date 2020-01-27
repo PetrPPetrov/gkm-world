@@ -1,4 +1,4 @@
-// Copyright 2018-2019 Petr Petrovich Petrov. All rights reserved.
+// Copyright 2018-2020 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #include <iostream>
@@ -78,30 +78,6 @@ void ProxyServer::deallocateId(std::uint32_t id)
 {
     online_user_count--;
     id_to_user_info.deallocateIndex(id);
-}
-
-void ProxyServer::debugMonitor() const
-{
-#ifdef DEBUG_MONITOR
-    COORD xy;
-    xy.X = 0;
-    xy.Y = 1;
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), xy);
-    const std::uint32_t max_id = id_to_user_info.getMaxAllocatedIndex();
-    for (std::uint32_t i = 0; i <= max_id; ++i)
-    {
-        UserOnlineInfo* user_info = id_to_user_info.find(i);
-        if (user_info)
-        {
-            std::cout << LINE_SEPARATOR;
-            std::cout << "user_token: " << i;
-            std::cout << "client_end_point: " << user_info->user_end_point;
-            std::cout << "node_server_end_point: " << user_info->node_server_end_point;
-        }
-    }
-    std::cout << LINE_SEPARATOR;
-    std::cout << ENDL_SEPARATOR;
-#endif
 }
 
 void ProxyServer::dumpParameters()
@@ -239,10 +215,6 @@ bool ProxyServer::onLogin(size_t received_bytes)
     answer->user_token = cur_user->user_token;
     standardSend(answer);
 
-#ifdef DEBUG_MONITOR
-    debugMonitor();
-#endif
-
     return true;
 }
 
@@ -314,10 +286,6 @@ bool ProxyServer::onLogoutInternalAnswer(size_t received_bytes)
     auto answer = createPacket<Packet::LogoutAnswer>(packet->client_packet_number);
     answer->success = true;
     standardSendTo(answer, user_end_point);
-
-#ifdef DEBUG_MONITOR
-    debugMonitor();
-#endif
 
     return true;
 }
@@ -417,10 +385,6 @@ bool ProxyServer::onInitializePositionInternalAnswer(size_t received_bytes)
     answer->corrected_location = packet->corrected_location;
     standardSendTo(answer, user_online_info->user_end_point);
 
-#ifdef DEBUG_MONITOR
-    debugMonitor();
-#endif
-
     return true;
 }
 
@@ -428,10 +392,6 @@ bool ProxyServer::onUserAction(size_t received_bytes)
 {
 #ifdef _DEBUG
     LOG_DEBUG << "onUserAction";
-#endif
-
-#ifdef DEBUG_MONITOR
-    debugMonitor();
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::UserAction>();

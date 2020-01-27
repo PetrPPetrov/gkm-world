@@ -1,4 +1,4 @@
-// Copyright 2018-2019 Petr Petrovich Petrov. All rights reserved.
+// Copyright 2018-2020 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #pragma once
@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
-#define DEBUG_MONITOR
 #define NETWORK_LOG
 
 const double CELL_SIZE = 25.0;
