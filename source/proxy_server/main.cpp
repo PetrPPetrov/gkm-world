@@ -1,17 +1,27 @@
 // Copyright 2018-2019 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
+#include <string>
 #include <boost/asio/impl/src.hpp>
 #include "proxy_server.h"
 
 int main(int argc, char** argv)
 {
     std::cout << "Gkm-World Proxy Server Copyright (c) 2018 Petr Petrovich Petrov" << std::endl;
+    std::cout << "usage: proxy_server [configuration_file_name]" << std::endl;
+
+    std::string cfg_file_name = "proxy_server.cfg";
+    if (argc >= 2)
+    {
+        cfg_file_name = argv[1];
+    }
+
+    std::cout << "using configuration file: " << cfg_file_name << std::endl;
 
     bool result = false;
     try
     {
-        std::unique_ptr<ProxyServer> proxy_server = std::make_unique<ProxyServer>();
+        std::unique_ptr<ProxyServer> proxy_server = std::make_unique<ProxyServer>(cfg_file_name);
         result = proxy_server->start();
     }
     catch (boost::system::system_error& error)

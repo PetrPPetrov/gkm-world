@@ -1,7 +1,3 @@
 /build/
 /bin/
-/run_area/node_server.log
-/run_area/balancer_server.log
-/run_area/proxy_server.log
-/run_area/resources/gl_client.log
-/run_area/gl_client_*.log
+/run_area/*.log

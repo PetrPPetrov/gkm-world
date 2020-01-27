@@ -1,6 +1,7 @@
 // Copyright 2018-2019 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
+#include <string>
 #include <boost/asio/impl/src.hpp>
 #include "node_server.h"
 #include "logic_thread.h"
@@ -8,15 +9,18 @@
 int main(int argc, char** argv)
 {
     std::cout << "Gkm-World Node Server Copyright (c) 2018 by Petr Petrovich Petrov" << std::endl;
+    std::cout << "usage: node_server [port_number [configuration_file_name]]" << std::endl;
 
     std::uint16_t port_number = 17014;
     if (argc >= 2)
     {
         port_number = static_cast<std::uint16_t>(std::stoi(argv[1]));
     }
-    else
+
+    std::string cfg_file_name = "node_server.cfg";
+    if (argc >= 3)
     {
-        std::cout << "using default port number 17014, usage is node_server port_number" << std::endl;
+        cfg_file_name = argv[2];
     }
 
     bool result = false;
@@ -24,7 +28,7 @@ int main(int argc, char** argv)
     {
         std::unique_ptr<LogicThread> logic_thread = std::make_unique<LogicThread>();
         logic_thread->start();
-        std::unique_ptr<NodeServer> node_server = std::make_unique<NodeServer>(port_number, *logic_thread);
+        std::unique_ptr<NodeServer> node_server = std::make_unique<NodeServer>(port_number, cfg_file_name , *logic_thread);
         result = node_server->start();
     }
     catch (boost::system::system_error& error)

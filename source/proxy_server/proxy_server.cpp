@@ -11,12 +11,12 @@
 #include "config.h"
 #include "proxy_server.h"
 
-ProxyServer::ProxyServer() :
-    signals(io_service, SIGINT, SIGTERM)
+ProxyServer::ProxyServer(const std::string& cfg_file_name_) :
+    cfg_file_name(cfg_file_name_), signals(io_service, SIGINT, SIGTERM)
 {
     setServerType(Packet::EServerType::ProxyServer);
 
-    std::ifstream config_file("proxy_server.cfg");
+    std::ifstream config_file(cfg_file_name);
     ConfigurationReader config_reader;
     config_reader.addParameter("proxy_server_port_number", port_number);
     config_reader.addParameter("balancer_server_ip", balancer_server_ip);
@@ -42,7 +42,7 @@ extern Log::Logger* g_logger = nullptr;
 bool ProxyServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(minimum_level, "proxy_server.log", log_to_screen, log_to_file);
+    g_logger = new Log::Logger(minimum_level, "proxy_server_" + std::to_string(port_number) + ".log", log_to_screen, log_to_file);
     LOG_INFO << "Proxy Server is starting...";
 
     try
@@ -106,6 +106,7 @@ void ProxyServer::debugMonitor() const
 
 void ProxyServer::dumpParameters()
 {
+    LOG_INFO << "configuration_file_name " << cfg_file_name;
     LOG_INFO << "balancer_server_ip " << balancer_server_ip;
     LOG_INFO << "balancer_server_port_number " << balancer_server_port_number;
 

@@ -14,6 +14,7 @@
 
 class ProxyServer : public Transport
 {
+    const std::string cfg_file_name;
     std::uint16_t port_number = 17012;
     std::string registered_users_file_name = "users.txt";
     boost::asio::signal_set signals;
@@ -37,7 +38,7 @@ class ProxyServer : public Transport
     bool log_to_file = true;
 
 public:
-    ProxyServer();
+    ProxyServer(const std::string& cfg_file_name);
     ~ProxyServer();
     bool start();
 

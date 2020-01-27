@@ -16,6 +16,7 @@
 
 class NodeServer : public Transport
 {
+    const std::string cfg_file_name;
     std::uint16_t port_number;
     boost::asio::signal_set signals;
 
@@ -44,7 +45,7 @@ class NodeServer : public Transport
     bool log_to_file = true;
 
 public:
-    NodeServer(std::uint16_t port_number, LogicThread& logic_thread);
+    NodeServer(std::uint16_t port_number, const std::string& cfg_file_name, LogicThread& logic_thread);
     bool start();
 
 private:

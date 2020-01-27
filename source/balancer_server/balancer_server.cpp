@@ -14,8 +14,8 @@
 #include "process_spawn.h"
 #include "balancer_server.h"
 
-BalancerServer::BalancerServer() :
-    signals(io_service, SIGINT, SIGTERM)
+BalancerServer::BalancerServer(const std::string& cfg_file_name_) :
+    cfg_file_name(cfg_file_name_), signals(io_service, SIGINT, SIGTERM)
 {
     setServerType(Packet::EServerType::BalancerServer);
 
@@ -26,7 +26,7 @@ BalancerServer::BalancerServer() :
     std::list<std::string> node_server_ip_address;
     std::list<unsigned short> node_server_max_process_count;
 
-    std::ifstream config_file("balancer_server.cfg");
+    std::ifstream config_file(cfg_file_name);
     ConfigurationReader config_reader;
     config_reader.addParameter("balancer_server_port_number", port_number);
     config_reader.addParameter("global_bounding_box_start_x", global_bounding_box_start_x);
@@ -96,7 +96,7 @@ extern Log::Logger* g_logger = nullptr;
 bool BalancerServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(minimum_level, "balancer_server.log", log_to_screen, log_to_file);
+    g_logger = new Log::Logger(minimum_level, "balancer_server_" + std::to_string(port_number) + " .log", log_to_screen, log_to_file);
     LOG_INFO << "Balancer Server is starting...";
 
     try
@@ -236,6 +236,7 @@ void BalancerServer::onWakeupTimeout(NodeServerInfo::Ptr node_server_info, const
 
 void BalancerServer::dumpParameters()
 {
+    LOG_INFO << "configuration_file_name " << cfg_file_name;
     LOG_INFO << "balancer_server_ip " << balancer_server_end_point.address();
     LOG_INFO << "balancer_server_port_number " << balancer_server_end_point.port();
 

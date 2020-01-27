@@ -41,6 +41,7 @@ struct NodeInfo
 
 class BalancerServer : public Transport
 {
+    const std::string cfg_file_name;
     std::uint16_t port_number = 17013;
     boost::asio::signal_set signals;
     boost::asio::ip::udp::endpoint balancer_server_end_point;
@@ -67,7 +68,7 @@ class BalancerServer : public Transport
     bool log_to_file = true;
 
 public:
-    BalancerServer();
+    BalancerServer(const std::string& cfg_file_name);
     bool start();
 
     BalanceTree* createNewBalanceNode(const SquareCell& bounding_box, BalanceTree* parent);

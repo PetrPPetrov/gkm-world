@@ -22,13 +22,13 @@
 #include <windows.h>
 #endif
 
-NodeServer::NodeServer(std::uint16_t port_number_, LogicThread& logic_thread_) :
-    port_number(port_number_), logic_thread(logic_thread_), signals(io_service, SIGINT, SIGTERM)
+NodeServer::NodeServer(std::uint16_t port_number_, const std::string& cfg_file_name_, LogicThread& logic_thread_) :
+    cfg_file_name(cfg_file_name_), port_number(port_number_), logic_thread(logic_thread_), signals(io_service, SIGINT, SIGTERM)
 {
     setServerType(Packet::EServerType::NodeServer);
 
     socket = boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port_number));
-    std::ifstream config_file("node_server.cfg");
+    std::ifstream config_file(cfg_file_name);
     ConfigurationReader config_reader;
     config_reader.addParameter("balancer_server_ip", balancer_server_ip);
     config_reader.addParameter("balancer_server_port_number", balancer_server_port_number);
@@ -51,7 +51,7 @@ extern Log::Logger* g_logger = nullptr;
 bool NodeServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(minimum_level, "node_server" + std::to_string(port_number) + ".log", log_to_screen, log_to_file);
+    g_logger = new Log::Logger(minimum_level, "node_server_" + std::to_string(port_number) + ".log", log_to_screen, log_to_file);
     LOG_INFO << "Node Server is starting...";
 
     try
@@ -79,6 +79,7 @@ bool NodeServer::start()
 
 void NodeServer::dumpParameters()
 {
+    LOG_INFO << "configuration_file_name " << cfg_file_name;
     LOG_INFO << "balancer_server_ip " << balancer_server_ip;
     LOG_INFO << "balancer_server_port_number " << balancer_server_port_number;
 
