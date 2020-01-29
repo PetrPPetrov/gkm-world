@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <memory>
 #include "bgfx_common.h"
+#include "bgfx_shader.h"
+#include "bgfx_draw_info.h"
 
 class BgfxEngine
 {
@@ -24,4 +26,5 @@ private:
     std::uint32_t height;
     std::uint32_t debug;
     std::uint32_t reset;
+    BgfxDrawRefInfo::Ptr draw_ref_info;
 };

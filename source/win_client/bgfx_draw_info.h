@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include "bgfx_common.h"
 #include "Eigen/Eigen"
@@ -11,12 +12,12 @@ struct BgfxDrawRefInfo
 {
     typedef std::shared_ptr<BgfxDrawRefInfo> Ptr;
 
-    bgfx_program_ptr program;
+    BgfxProgramPtr program;
 };
 
 struct BgfxDrawInfo
 {
     Eigen::Matrix3d transformation_matrix;
-    uint64_t state = BGFX_STATE_DEFAULT;
+    std::uint64_t state = BGFX_STATE_DEFAULT;
     BgfxDrawRefInfo::Ptr ref_info;
 };

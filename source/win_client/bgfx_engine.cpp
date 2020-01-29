@@ -26,7 +26,8 @@ BgfxEngine::BgfxEngine(std::uint32_t width_, std::uint32_t height_, void* native
 
     BgfxVertex::init();
 
-    //draw_ref_info = std::make_shared<BGFXDrawRefInfo>();
+    draw_ref_info = std::make_shared<BgfxDrawRefInfo>();
+    draw_ref_info->program = loadProgram();
 }
 
 void BgfxEngine::draw()
