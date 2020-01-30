@@ -4,6 +4,7 @@
 #pragma once
 
 #include "bgfx_windows.h"
+#include "bgfx_engine.h"
 
 extern bool g_is_running;
 extern HINSTANCE g_hinstance;
@@ -21,3 +22,5 @@ extern bool g_right_mouse_pressed;
 extern int g_current_mouse_x;
 extern int g_current_mouse_y;
 extern int g_current_mouse_z;
+
+extern bool g_main_menu_open;

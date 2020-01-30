@@ -4,6 +4,7 @@
 #pragma once
 
 #include <Windows.h>
+#include <Windowsx.h>
 
 #ifdef min
 #undef min

@@ -22,12 +22,89 @@ extern int g_current_mouse_x = 0;
 extern int g_current_mouse_y = 0;
 extern int g_current_mouse_z = 0;
 
+extern bool g_main_menu_open = true;
+
 static double g_near = 8.0;
 static double g_far = 16 * 1024.0;
 
+
+
 static void renderScene()
 {
+    bgfx::reset(g_window_width, g_window_height);
+    bgfx::touch(0);
+    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA);
+
+    imguiBeginFrame(
+        g_current_mouse_x,
+        g_current_mouse_y,
+        (g_left_mouse_pressed ? IMGUI_MBUT_LEFT : 0) | (g_right_mouse_pressed ? IMGUI_MBUT_RIGHT : 0),
+        g_current_mouse_z,
+        g_window_width,
+        g_window_height,
+        g_char_pressed
+    );
+
+    if (g_main_menu_open)
+    {
+        //ImGui::SetNextWindowPos(ImVec2(0.0f, g_window_height / 2.0f + 24.0f), ImGuiCond_Once);
+        //ImGui::SetNextWindowSize(ImVec2(160.0f, 100.0f), ImGuiCond_Once);
+        ImGui::Begin("Gkm-World Menu", &g_main_menu_open);
+        ImGui::Button("Options");
+        ImGui::Button("Exit");
+        ImGui::End();
+    }
+
+    imguiEndFrame();
+
     g_bgfx_engine->draw();
+    bgfx::frame();
+}
+
+static void onLeftMouseButtonDown(LPARAM l_param)
+{
+    g_current_mouse_x = GET_X_LPARAM(l_param);
+    g_current_mouse_y = GET_Y_LPARAM(l_param);
+    g_left_mouse_pressed = true;
+}
+
+static void onLeftMouseButtonUp(LPARAM l_param)
+{
+    g_current_mouse_x = GET_X_LPARAM(l_param);
+    g_current_mouse_y = GET_Y_LPARAM(l_param);
+    g_left_mouse_pressed = false;
+}
+
+static void onRightMouseButtonDown(LPARAM l_param)
+{
+    g_current_mouse_x = GET_X_LPARAM(l_param);
+    g_current_mouse_y = GET_Y_LPARAM(l_param);
+    g_right_mouse_pressed = true;
+}
+
+static void onRightMouseButtonUp(LPARAM l_param)
+{
+    g_current_mouse_x = GET_X_LPARAM(l_param);
+    g_current_mouse_y = GET_Y_LPARAM(l_param);
+    g_right_mouse_pressed = false;
+}
+
+static void onMouseMove(LPARAM l_param)
+{
+    g_current_mouse_x = GET_X_LPARAM(l_param);
+    g_current_mouse_y = GET_Y_LPARAM(l_param);
+}
+
+static void onSizing(RECT* rect)
+{
+    g_window_width = rect->right - rect->left;
+    g_window_height = rect->bottom - rect->top;
+}
+
+static void onSize(LPARAM l_param)
+{
+    g_window_width = GET_X_LPARAM(l_param);
+    g_window_height = GET_Y_LPARAM(l_param);
 }
 
 static LRESULT APIENTRY CALLBACK onWindowEvent(HWND window_handle, UINT window_msg, WPARAM w_param, LPARAM l_param)
@@ -35,10 +112,32 @@ static LRESULT APIENTRY CALLBACK onWindowEvent(HWND window_handle, UINT window_m
     LRESULT result = 1;
     switch (window_msg)
     {
+    case WM_LBUTTONDOWN:
+        onLeftMouseButtonDown(l_param);
+        break;
+    case WM_LBUTTONUP:
+        onLeftMouseButtonUp(l_param);
+        break;
+    case WM_RBUTTONDOWN:
+        onRightMouseButtonDown(l_param);
+        break;
+    case WM_RBUTTONUP:
+        onRightMouseButtonUp(l_param);
+        break;
+    case WM_MOUSEMOVE:
+        onMouseMove(l_param);
+        break;
+    case WM_SIZING:
+        onSizing(reinterpret_cast<RECT*>(l_param));
+        break;
+    case WM_SIZE:
+        onSize(l_param);
+        break;
     case WM_KEYDOWN:
         switch (w_param)
         {
         case VK_ESCAPE:
+            g_main_menu_open = !g_main_menu_open;
             break;
         }
         break;
@@ -56,9 +155,6 @@ static void registerWindowClass()
 {
     g_screen_width = GetSystemMetrics(SM_CXSCREEN);
     g_screen_height = GetSystemMetrics(SM_CYSCREEN);
-
-    g_window_width = g_screen_width * 3 / 4;
-    g_window_height = g_screen_height * 3 / 4;
 
     WNDCLASS window_class;
     window_class.style = CS_OWNDC;
@@ -81,6 +177,9 @@ static void registerWindowClass()
 
 static HWND createWindow()
 {
+    g_window_width = g_screen_width * 3 / 4;
+    g_window_height = g_screen_height * 3 / 4;
+
     int window_coord_x = (g_screen_width - g_window_width) / 2;
     int window_coord_y = (g_screen_height - g_window_height) / 2;
 

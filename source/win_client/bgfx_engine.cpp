@@ -1,6 +1,7 @@
 // Copyright 2018-2020 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
+#include "main.h"
 #include "bgfx_engine.h"
 
 bgfx::VertexLayout BgfxVertex::ms_layout;
@@ -28,13 +29,25 @@ BgfxEngine::BgfxEngine(std::uint32_t width_, std::uint32_t height_, void* native
 
     draw_ref_info = std::make_shared<BgfxDrawRefInfo>();
     draw_ref_info->program = loadProgram();
+    //texture = loadJpegRgbTexture("texture.jpg");
 }
 
 void BgfxEngine::draw()
 {
     // This dummy draw call is here to make sure that view 0 is cleared
     // if no other draw calls are submitted to view 0.
-    bgfx::touch(0);
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA);
-    bgfx::frame();
+
+    float view_matrix[16];
+    bx::mtxLookAt(view_matrix, bx::Vec3(0.0f, 0.0f, 20.0f), bx::Vec3(0.0f, 0.0f, 0.0f), bx::Vec3(0.0f, 1.0f, 0.0f));
+
+    float projection_matrix[16];
+    bx::mtxProj(
+        projection_matrix, 50.0f,
+        static_cast<float>(g_window_width) / static_cast<float>(g_window_height),
+        static_cast<float>(0.125f),
+        static_cast<float>(1024.0f),
+        bgfx::getCaps()->homogeneousDepth
+    );
+    bgfx::setViewTransform(0, view_matrix, projection_matrix);
+    bgfx::setViewRect(0, 0, 0, g_window_width, g_window_height);
 }
