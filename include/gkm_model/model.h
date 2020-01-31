@@ -83,7 +83,7 @@ namespace Serialization
     static inline void saveWord(Buffer& buffer, size_t& index, std::uint16_t word)
     {
         const std::uint8_t lo_byte = word & 0x00FF;
-        const std::uint8_t hi_byte = word & 0xFF00;
+        const std::uint8_t hi_byte = (word & 0xFF00) >> 8;
         saveByte(buffer, index, lo_byte);
         saveByte(buffer, index, hi_byte);
     }
@@ -92,9 +92,9 @@ namespace Serialization
     static inline void saveDoubleWord(Buffer& buffer, size_t& index, std::uint32_t double_word)
     {
         const std::uint8_t byte0 = double_word & 0x000000FF;
-        const std::uint8_t byte1 = double_word & 0x0000FF00;
-        const std::uint8_t byte3 = double_word & 0x00FF0000;
-        const std::uint8_t byte4 = double_word & 0xFF000000;
+        const std::uint8_t byte1 = (double_word & 0x0000FF00) >> 8;
+        const std::uint8_t byte3 = (double_word & 0x00FF0000) >> 16;
+        const std::uint8_t byte4 = (double_word & 0xFF000000) >> 24;
         saveByte(buffer, index, byte0);
         saveByte(buffer, index, byte1);
         saveByte(buffer, index, byte3);
