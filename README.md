@@ -5,7 +5,7 @@ Open Source Massive Multiplayer Online Battle Game
 * Boost library 1.60 or higher (Boost.Asio for network)
 * QT library version 5.x (for Balancer Monitor)
 * bgfx library - https://github.com/bkaradzic/bgfx.git (for Windows client)
-* vcpkg - https://github.com/microsoft/vcpkg.git with installed the following packets:
+* vcpkg - https://github.com/microsoft/vcpkg.git with installed the following packages:
   * vcpkg install libjpeg-turbo --triplet x64-windows-static
   * vcpkg install tinyobjloader --triplet x64-windows-static
 
