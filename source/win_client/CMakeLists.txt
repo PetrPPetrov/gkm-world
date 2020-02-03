@@ -8,11 +8,6 @@ if(NOT BGFX_ROOT)
   message(FATAL_ERROR "Need to specify BGFX_ROOT")
 endif()
 
-set(VCPKG_ROOT CACHE PATH VCPKG_ROOT)
-if(NOT VCPKG_ROOT)
-  message(FATAL_ERROR "Need to specify VCPKG_ROOT")
-endif()
-
 add_definitions(-D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_CONSTANT_MACROS)
 add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_DEPRECATE)
 
@@ -22,8 +17,6 @@ set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_RELEASE} /MTd")
 
 add_definitions(-DBOOST_ASIO_SEPARATE_COMPILATION)
-include_directories(${Boost_INCLUDE_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
 
 include_directories(
 ${PROJECT_SOURCE_DIR}/../../include
@@ -38,8 +31,6 @@ ${BGFX_ROOT}/examples/common/imgui
 ${VCPKG_ROOT}/installed/x64-windows-static/include
 ${CMAKE_CURRENT_BINARY_DIR}
 )
-link_directories(${VCPKG_ROOT}/installed/x64-windows-static/lib)
-link_directories(${VCPKG_ROOT}/installed/x64-windows-static/debug/lib)
 link_directories(${BGFX_ROOT}/.build/win64_vs2019/bin)
 
 set(SHADER_H_FILES)
@@ -117,8 +108,8 @@ target_link_libraries(gkm_world debug bimg_encodeDebug)
 target_link_libraries(gkm_world optimized bxRelease)
 target_link_libraries(gkm_world debug bxDebug)
 
-target_link_libraries(gkm_world optimized turbojpeg)
-target_link_libraries(gkm_world debug turbojpegd)
+target_link_libraries(gkm_world optimized ${VCPKG_ROOT}/installed/x64-windows-static/lib/turbojpeg.lib)
+target_link_libraries(gkm_world debug ${VCPKG_ROOT}/installed/x64-windows-static/debug/lib/turbojpegd.lib)
 
 if(WIN32)
   set_target_properties(gkm_world PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${RUN_AREA_DIR})
