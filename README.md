@@ -7,7 +7,9 @@ Open Source Massive Multiplayer Online Battle Game
 * bgfx library - https://github.com/bkaradzic/bgfx.git (for Windows client)
 * vcpkg - https://github.com/microsoft/vcpkg.git with installed the following packages:
   * vcpkg install libjpeg-turbo --triplet x64-windows-static
-  * vcpkg install tinyobjloader --triplet x64-windows-static
+  * vcpkg install boost --triplet x64-windows-static
+  * vcpkg install libjpeg-turbo --triplet x64-windows
+  * vcpkg install tinyobjloader --triplet x64-windows
 
 ## TODO list
 * avoid InitializePositionInternalAnswer packet from Node->Balancer, send it directly Node->Proxy
