@@ -39,11 +39,12 @@ void TextureCache::addCachedTexture(const std::string& file_name, std::uint16_t 
 {
     if (texture_id == 0)
     {
-        throw std::runtime_error("texture id is null");
+        files_to_remove_from_cache.emplace(file_name);
+        return;
     }
-    if (texture_id_to_texture_info.find(texture_id) != texture_id_to_texture_info.end())
+    if (id_to_texture_info.find(texture_id) != id_to_texture_info.end())
     {
-        throw std::runtime_error(std::to_string(texture_id) + " texture hash is always present");
+        throw std::runtime_error(std::to_string(texture_id) + " texture id is always present");
     }
 
     TextureInfo::Ptr new_texture_info = std::make_shared<TextureInfo>();
@@ -57,13 +58,8 @@ void TextureCache::addCachedTexture(const std::string& file_name, std::uint16_t 
         return;
     }
 
-    texture_id_to_texture_info.emplace(new_texture_info->texture_id, new_texture_info);
+    id_to_texture_info.emplace(new_texture_info->texture_id, new_texture_info);
     hash_to_texture_info.emplace(new_texture_info->texture_hash, new_texture_info);
-
-    if (next_texture_id == 0)
-    {
-        throw std::runtime_error("texture id overflow");
-    }
 }
 
 void TextureCache::addNewTexture(const std::string& file_name)
@@ -89,13 +85,13 @@ void TextureCache::addNewTexture(const std::string& file_name)
     new_texture_info->cached = false;
 
     file_path_to_texture_info.emplace(new_texture_info->file_path, new_texture_info);
-    texture_id_to_texture_info.emplace(new_texture_info->texture_id, new_texture_info);
+    id_to_texture_info.emplace(new_texture_info->texture_id, new_texture_info);
     hash_to_texture_info.emplace(new_texture_info->texture_hash, new_texture_info);
 }
 
 std::uint16_t TextureCache::getNextTextureId()
 {
-    while (texture_id_to_texture_info.find(next_texture_id) != texture_id_to_texture_info.end())
+    while (id_to_texture_info.find(next_texture_id) != id_to_texture_info.end())
     {
         ++next_texture_id;
         if (next_texture_id == 0)

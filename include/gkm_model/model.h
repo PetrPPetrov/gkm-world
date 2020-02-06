@@ -5,6 +5,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <array>
 #include <list>
 #include <vector>
 #include <memory>
@@ -12,7 +14,8 @@
 
 namespace Serialization
 {
-    static inline size_t bytesAvailable(const std::vector<std::uint8_t>& buffer, size_t index)
+    template<typename Buffer>
+    static inline size_t bytesAvailable(Buffer& buffer, size_t index)
     {
         const size_t buffer_size = buffer.size();
         if (index <= buffer_size)
@@ -121,6 +124,10 @@ namespace Serialization
         {
             return dummy;
         }
+        size_t size() const
+        {
+            return std::numeric_limits<size_t>::max();
+        }
     };
 }
 
@@ -146,9 +153,17 @@ namespace GkmModelRev0
     {
         typedef std::shared_ptr<Mesh> Ptr;
 
-        std::uint16_t texture_id = 0;
+        std::uint8_t relative_texture_id = 0;
         std::vector<Vertex> vertices;
         std::vector<Triangle> triangles;
+    };
+
+    struct Resource
+    {
+        typedef std::shared_ptr<Resource> Ptr;
+
+        const std::uint8_t revision = 0;
+        std::list<Mesh::Ptr> meshes;
     };
 
     struct Model
@@ -156,7 +171,9 @@ namespace GkmModelRev0
         typedef std::shared_ptr<Model> Ptr;
 
         const std::uint8_t revision = 0;
-        std::list<Mesh::Ptr> meshes;
+        std::uint16_t resource_id;
+        std::uint8_t texture_count;
+        std::array<std::uint16_t, 16> texture_ids = { 0 };
     };
 
     static inline Mesh::Ptr loadMesh(const std::vector<std::uint8_t>& buffer, size_t& index)
@@ -164,7 +181,7 @@ namespace GkmModelRev0
         using namespace Serialization;
 
         Mesh::Ptr result_mesh = std::make_shared<Mesh>();
-        result_mesh->texture_id = readWord(buffer, index);
+        result_mesh->relative_texture_id = readByte(buffer, index);
         const std::uint16_t vertex_count = readWord(buffer, index);
         result_mesh->vertices.reserve(vertex_count);
         for (std::uint16_t i = 0; i < vertex_count; ++i)
@@ -189,7 +206,37 @@ namespace GkmModelRev0
         }
     }
 
-    static inline Model::Ptr loadModel(const std::vector<std::uint8_t>& buffer, size_t& index)
+    static inline Resource::Ptr loadResource(const std::vector<std::uint8_t>& buffer, size_t& index)
+    {
+        using namespace Serialization;
+
+        if (readByte(buffer, index) != 'G')
+        {
+            throw std::runtime_error("wrong signature (GKR)");
+        }
+        if (readByte(buffer, index) != 'K')
+        {
+            throw std::runtime_error("wrong signature (GKR)");
+        }
+        if (readByte(buffer, index) != 'R')
+        {
+            throw std::runtime_error("wrong signature (GKR)");
+        }
+        const std::uint16_t revision = readByte(buffer, index);
+        if (revision != 0)
+        {
+            throw std::runtime_error("wrong revision (0)");
+        }
+        Resource::Ptr result_resource = std::make_shared<Resource>();
+        const std::uint8_t mesh_count = readByte(buffer, index);
+        for (std::uint8_t i = 0; i < mesh_count; ++i)
+        {
+            Mesh::Ptr new_mesh = loadMesh(buffer, index);
+            result_resource->meshes.push_back(new_mesh);
+        }
+    }
+
+    static inline Resource::Ptr loadModel(const std::vector<std::uint8_t>& buffer, size_t& index)
     {
         using namespace Serialization;
 
@@ -211,11 +258,11 @@ namespace GkmModelRev0
             throw std::runtime_error("wrong revision (0)");
         }
         Model::Ptr result_model = std::make_shared<Model>();
-        const std::uint8_t mesh_count = readByte(buffer, index);
-        for (std::uint8_t i = 0; i < mesh_count; ++i)
+        result_model->resource_id = readWord(buffer, index);
+        const std::uint8_t texture_count = result_model->texture_count = readByte(buffer, index);
+        for (std::uint8_t i = 0; i < texture_count && i < result_model->texture_ids.size(); ++i)
         {
-            Mesh::Ptr new_mesh = loadMesh(buffer, index);
-            result_model->meshes.push_back(new_mesh);
+            result_model->texture_ids[i] = readWord(buffer, index);
         }
     }
 
@@ -224,7 +271,7 @@ namespace GkmModelRev0
     {
         using namespace Serialization;
 
-        saveWord(buffer, index, mesh->texture_id);
+        saveByte(buffer, index, mesh->relative_texture_id);
         const std::uint16_t vertex_count = static_cast<std::uint16_t>(mesh->vertices.size());
         saveWord(buffer, index, vertex_count);
         for (std::uint16_t i = 0; i < vertex_count; ++i)
@@ -246,16 +293,16 @@ namespace GkmModelRev0
     }
 
     template<typename Buffer>
-    void saveModel(const Model::Ptr& model, Buffer& buffer, size_t& index)
+    void saveResource(const Resource::Ptr& resource, Buffer& buffer, size_t& index)
     {
         using namespace Serialization;
 
         saveByte(buffer, index, 'G');
         saveByte(buffer, index, 'K');
-        saveByte(buffer, index, 'M');
-        saveByte(buffer, index, model->revision);
-        const std::uint8_t mesh_count = static_cast<std::uint8_t>(model->meshes.size());
-        auto it = model->meshes.begin();
+        saveByte(buffer, index, 'R');
+        saveByte(buffer, index, resource->revision);
+        const std::uint8_t mesh_count = static_cast<std::uint8_t>(resource->meshes.size());
+        auto it = resource->meshes.begin();
         for (std::uint8_t i = 0; i < mesh_count; ++i)
         {
             saveMesh(*it++, buffer, index);
@@ -263,17 +310,39 @@ namespace GkmModelRev0
     }
 
     // We use C++ 11 move semantic feature to avoid copying std::vector
-    static inline std::vector<std::uint8_t> saveModel(const Model::Ptr& model)
+    static inline std::vector<std::uint8_t> saveResource(const Resource::Ptr& resource)
     {
         using namespace Serialization;
 
         DummyVector dummy;
         size_t required_size = 0;
-        saveModel(model, dummy, required_size);
+        saveResource(resource, dummy, required_size);
         std::vector<std::uint8_t> result_buffer;
         result_buffer.resize(required_size, 0);
         size_t index = 0;
-        saveModel(model, result_buffer, index);
+        saveResource(resource, result_buffer, index);
         return result_buffer;
+    }
+
+    // We use C++ 11 move semantic feature to avoid copying std::vector
+    static inline std::vector<std::uint8_t> saveModel(const Model::Ptr& model)
+    {
+        using namespace Serialization;
+
+        std::vector<std::uint8_t> buffer(sizeof(Model) + 3);
+        size_t index = 0;
+
+        saveByte(buffer, index, 'G');
+        saveByte(buffer, index, 'K');
+        saveByte(buffer, index, 'M');
+        saveByte(buffer, index, model->revision);
+        saveWord(buffer, index, model->resource_id);
+        const std::uint8_t texture_count = model->texture_count;
+        saveByte(buffer, index, texture_count);
+        for (std::uint8_t i = 0; i < texture_count; ++i)
+        {
+            saveWord(buffer, index, model->texture_ids[i]);
+        }
+        return buffer;
     }
 }

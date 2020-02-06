@@ -35,10 +35,11 @@ public:
     void updateCache();
     std::uint16_t getTextureId(const std::string& file_name);
 
+private:
     const std::string texture_cache_path;
     std::set<std::string> files_to_remove_from_cache;
     std::map<std::string, TextureInfo::Ptr> file_path_to_texture_info;
-    std::unordered_map<std::uint16_t, TextureInfo::Ptr> texture_id_to_texture_info;
+    std::unordered_map<std::uint16_t, TextureInfo::Ptr> id_to_texture_info;
     std::unordered_map<std::uint64_t, TextureInfo::Ptr> hash_to_texture_info;
     std::uint16_t next_texture_id = 1;
 };
