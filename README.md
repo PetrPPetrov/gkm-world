@@ -8,7 +8,6 @@ Open Source Massive Multiplayer Online Battle Game
 * vcpkg - https://github.com/microsoft/vcpkg.git with installed the following packages:
   * vcpkg install libjpeg-turbo --triplet x64-windows-static (for Windows client)
   * vcpkg install boost --triplet x64-windows-static (for Windows client)
-  * vcpkg install libjpeg-turbo --triplet x64-windows (for resource packer)
   * vcpkg install tinyobjloader --triplet x64-windows (for resource packer)
 
 ## TODO list
