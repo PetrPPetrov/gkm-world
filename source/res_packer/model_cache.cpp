@@ -9,11 +9,14 @@
 
 static GkmModelRev0::Resource::Ptr loadResource(const std::string& file_name)
 {
+    GkmModelRev0::Resource::Ptr result = std::make_shared<GkmModelRev0::Resource>();
     tinyobj::ObjReader obj_reader;
     if (obj_reader.ParseFromFile(file_name))
     {
+        // TODO:
         //obj_reader.GetShapes()
     }
+    return result;
 }
 
 static inline std::uint64_t calcResourceHash(const std::string& file_name)
@@ -38,6 +41,13 @@ static inline std::uint64_t calcResourceHash(const std::string& file_name)
     {
         throw std::runtime_error(file_name + " could not be opended");
     }
+}
+
+static inline std::uint64_t calcResourceHash(const std::vector<std::uint8_t>& resource_data)
+{
+    FnvHash fnv_hash;
+    fnv_hash.Update(&resource_data[0], resource_data.size());
+    return fnv_hash.getHash();
 }
 
 void ResourceCache::addResource(const ResourceInfo::Ptr& resource_info)
@@ -138,6 +148,30 @@ ResourceCache::ResourceCache(const std::string& resource_cache) : resource_cache
 
 void ResourceCache::loadNewResources(const std::string& input_model_dir)
 {
+    boost::filesystem::path input_model_path(input_model_dir);
+    if (!boost::filesystem::exists(input_model_path))
+    {
+        throw std::runtime_error("input model directory is not exist");
+    }
+    if (boost::filesystem::is_regular_file(input_model_path))
+    {
+        throw std::runtime_error("input model directory is a regular file");
+    }
+
+    boost::filesystem::directory_iterator end_it;
+    for (boost::filesystem::directory_iterator it(input_model_path); it != end_it; ++it)
+    {
+        if (it->path().extension() == ".obj")
+        {
+            ResourceInfo::Ptr new_resource_info = std::make_shared<ResourceInfo>();
+            new_resource_info->cached = false;
+            new_resource_info->file_path = it->path().string();
+            auto new_resource = loadResource(new_resource_info->file_path);
+            new_resource_info->resource_data = GkmModelRev0::saveResource(new_resource);
+            new_resource_info->resource_hash = calcResourceHash(new_resource_info->resource_data);
+            addResource(new_resource_info);
+        }
+    }
 }
 
 void ResourceCache::updateCache()

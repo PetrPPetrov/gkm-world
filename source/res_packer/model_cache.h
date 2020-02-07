@@ -19,6 +19,7 @@ struct ResourceInfo
     std::string file_path;
     std::uint16_t resource_id;
     std::uint64_t resource_hash;
+    std::vector<std::uint8_t> resource_data;
     bool cached = true;
 };
 
