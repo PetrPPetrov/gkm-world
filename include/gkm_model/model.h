@@ -133,20 +133,14 @@ namespace Serialization
 
 namespace GkmModelRev0
 {
+    const std::int16_t TEX_COORD_MULTIPLIER = 4096;
     struct Vertex
     {
         float x = 0;
         float y = 0;
         float z = 0;
-        std::uint16_t u = 0;
-        std::uint16_t v = 0;
-    };
-
-    struct Triangle
-    {
-        std::uint16_t a = 0;
-        std::uint16_t b = 0;
-        std::uint16_t c = 0;
+        std::int16_t u = 0;
+        std::int16_t v = 0;
     };
 
     struct Mesh
@@ -155,7 +149,6 @@ namespace GkmModelRev0
 
         std::uint8_t relative_texture_id = 0;
         std::vector<Vertex> vertices;
-        std::vector<Triangle> triangles;
     };
 
     struct Resource
@@ -190,19 +183,9 @@ namespace GkmModelRev0
             new_vertex.x = readFloat(buffer, index);
             new_vertex.y = readFloat(buffer, index);
             new_vertex.z = readFloat(buffer, index);
-            new_vertex.u = readWord(buffer, index);
-            new_vertex.v = readWord(buffer, index);
+            new_vertex.u = static_cast<std::int16_t>(readWord(buffer, index));
+            new_vertex.v = static_cast<std::int16_t>(readWord(buffer, index));
             result_mesh->vertices.push_back(new_vertex);
-        }
-        const std::uint16_t triangle_count = readWord(buffer, index);
-        result_mesh->triangles.reserve(triangle_count);
-        for (std::uint16_t i = 0; i < triangle_count; ++i)
-        {
-            Triangle new_triangle;
-            new_triangle.a = readWord(buffer, index);
-            new_triangle.b = readWord(buffer, index);
-            new_triangle.c = readWord(buffer, index);
-            result_mesh->triangles.push_back(new_triangle);
         }
     }
 
@@ -279,16 +262,8 @@ namespace GkmModelRev0
             saveFloat(buffer, index, mesh->vertices[i].x);
             saveFloat(buffer, index, mesh->vertices[i].y);
             saveFloat(buffer, index, mesh->vertices[i].z);
-            saveWord(buffer, index, mesh->vertices[i].u);
-            saveWord(buffer, index, mesh->vertices[i].v);
-        }
-        const std::uint16_t triangle_count = static_cast<std::uint16_t>(mesh->triangles.size());
-        saveWord(buffer, index, triangle_count);
-        for (std::uint16_t i = 0; i < triangle_count; ++i)
-        {
-            saveWord(buffer, index, mesh->triangles[i].a);
-            saveWord(buffer, index, mesh->triangles[i].b);
-            saveWord(buffer, index, mesh->triangles[i].c);
+            saveWord(buffer, index, static_cast<std::uint16_t>(mesh->vertices[i].u));
+            saveWord(buffer, index, static_cast<std::uint16_t>(mesh->vertices[i].v));
         }
     }
 

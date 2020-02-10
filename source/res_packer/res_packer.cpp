@@ -5,8 +5,8 @@
 
 #include "res_packer.h"
 #include "config.h"
-#include "tiny_obj_loader.h"
 #include "texture_cache.h"
+#include "model_cache.h"
 
 ResPacker::ResPacker(const std::string& cfg_file_name_) : cfg_file_name(cfg_file_name_)
 {
@@ -32,5 +32,8 @@ bool ResPacker::start()
     TextureCache::Ptr texture_cache = std::make_shared<TextureCache>(output_texture_dir);
     texture_cache->loadNewTextures(input_model_dir);
     texture_cache->updateCache();
+    ResourceCache::Ptr resource_cache = std::make_shared<ResourceCache>(output_model_dir);
+    resource_cache->loadNewResources(input_model_dir);
+    resource_cache->updateCache();
     return true;
 }
