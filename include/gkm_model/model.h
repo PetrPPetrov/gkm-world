@@ -277,6 +277,7 @@ namespace GkmModelRev0
         saveByte(buffer, index, 'R');
         saveByte(buffer, index, resource->revision);
         const std::uint8_t mesh_count = static_cast<std::uint8_t>(resource->meshes.size());
+        saveByte(buffer, index, mesh_count);
         auto it = resource->meshes.begin();
         for (std::uint8_t i = 0; i < mesh_count; ++i)
         {
