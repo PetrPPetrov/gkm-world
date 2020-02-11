@@ -30,13 +30,13 @@ class TextureCache
 public:
     typedef std::shared_ptr<TextureCache> Ptr;
 
-    TextureCache(const std::string& texture_cache);
+    TextureCache(const std::string& texture_cache_dir);
     void loadNewTextures(const std::string& input_model_dir);
     void updateCache();
-    std::uint16_t getTextureId(const std::string& file_name);
+    std::uint16_t getTextureId(const std::string& file_name) const;
 
 private:
-    const std::string texture_cache_path;
+    const std::string texture_cache_dir;
     std::set<std::string> files_to_remove_from_cache;
     std::map<std::string, TextureInfo::Ptr> file_path_to_texture_info;
     std::unordered_map<std::uint16_t, TextureInfo::Ptr> id_to_texture_info;

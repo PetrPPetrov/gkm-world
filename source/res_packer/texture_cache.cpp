@@ -102,9 +102,9 @@ std::uint16_t TextureCache::getNextTextureId()
     return next_texture_id++;
 }
 
-TextureCache::TextureCache(const std::string& texture_cache) : texture_cache_path(texture_cache)
+TextureCache::TextureCache(const std::string& texture_cache_dir_) : texture_cache_dir(texture_cache_dir_)
 {
-    boost::filesystem::path texture_cache_path(texture_cache);
+    boost::filesystem::path texture_cache_path(texture_cache_dir);
     if (!boost::filesystem::exists(texture_cache_path))
     {
         boost::filesystem::create_directories(texture_cache_path);
@@ -168,14 +168,14 @@ void TextureCache::updateCache()
         if (!texture_info.second->cached)
         {
             std::stringstream new_file_name_in_cache;
-            new_file_name_in_cache << texture_cache_path << "/" << std::setw(8) << std::setfill('0') << texture_info.second->texture_id << ".jpg";
+            new_file_name_in_cache << texture_cache_dir << "/" << std::setw(8) << std::setfill('0') << texture_info.second->texture_id << ".jpg";
             std::cout << "copying " << texture_info.second->file_path << " => " << new_file_name_in_cache.str() << std::endl;
             boost::filesystem::copy_file(texture_info.second->file_path, new_file_name_in_cache.str(), boost::filesystem::copy_option::overwrite_if_exists);
         }
     }
 }
 
-std::uint16_t TextureCache::getTextureId(const std::string& file_name)
+std::uint16_t TextureCache::getTextureId(const std::string& file_name) const
 {
     auto find_it_by_name = file_path_to_texture_info.find(file_name);
     if (find_it_by_name == file_path_to_texture_info.end())

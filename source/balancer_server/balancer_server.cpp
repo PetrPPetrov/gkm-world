@@ -96,7 +96,7 @@ extern Log::Logger* g_logger = nullptr;
 bool BalancerServer::start()
 {
     Log::Holder log_holder;
-    g_logger = new Log::Logger(minimum_level, "balancer_server_" + std::to_string(port_number) + " .log", log_to_screen, log_to_file);
+    g_logger = new Log::Logger(minimum_level, "balancer_server_" + std::to_string(port_number) + ".log", log_to_screen, log_to_file);
     LOG_INFO << "Balancer Server is starting...";
 
     try

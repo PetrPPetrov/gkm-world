@@ -9,6 +9,7 @@ class ResPacker
 {
     const std::string cfg_file_name;
     std::string input_model_dir;
+    std::string output_resource_dir;
     std::string output_model_dir;
     std::string output_texture_dir;
 
