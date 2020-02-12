@@ -165,8 +165,8 @@ namespace GkmModelRev0
 
         const std::uint8_t revision = 0;
         std::uint16_t resource_id;
-        std::uint8_t texture_count;
-        std::array<std::uint16_t, 16> texture_ids = { 0 };
+        const static std::size_t TEXTURE_COUNT = 16;
+        std::array<std::uint16_t, TEXTURE_COUNT> texture_ids = { 0 };
     };
 
     static inline Mesh::Ptr loadMesh(const std::vector<std::uint8_t>& buffer, size_t& index)
@@ -187,6 +187,7 @@ namespace GkmModelRev0
             new_vertex.v = static_cast<std::int16_t>(readWord(buffer, index));
             result_mesh->vertices.push_back(new_vertex);
         }
+        return result_mesh;
     }
 
     static inline Resource::Ptr loadResource(const std::vector<std::uint8_t>& buffer, size_t& index)
@@ -217,9 +218,10 @@ namespace GkmModelRev0
             Mesh::Ptr new_mesh = loadMesh(buffer, index);
             result_resource->meshes.push_back(new_mesh);
         }
+        return result_resource;
     }
 
-    static inline Resource::Ptr loadModel(const std::vector<std::uint8_t>& buffer, size_t& index)
+    static inline Model::Ptr loadModel(const std::vector<std::uint8_t>& buffer, size_t& index)
     {
         using namespace Serialization;
 
@@ -242,11 +244,11 @@ namespace GkmModelRev0
         }
         Model::Ptr result_model = std::make_shared<Model>();
         result_model->resource_id = readWord(buffer, index);
-        const std::uint8_t texture_count = result_model->texture_count = readByte(buffer, index);
-        for (std::uint8_t i = 0; i < texture_count && i < result_model->texture_ids.size(); ++i)
+        for (std::uint8_t i = 0; i < result_model->texture_ids.size(); ++i)
         {
             result_model->texture_ids[i] = readWord(buffer, index);
         }
+        return result_model;
     }
 
     template<typename Buffer>
@@ -313,9 +315,7 @@ namespace GkmModelRev0
         saveByte(buffer, index, 'M');
         saveByte(buffer, index, model->revision);
         saveWord(buffer, index, model->resource_id);
-        const std::uint8_t texture_count = model->texture_count;
-        saveByte(buffer, index, texture_count);
-        for (std::uint8_t i = 0; i < texture_count; ++i)
+        for (std::uint8_t i = 0; i < model->texture_ids.size(); ++i)
         {
             saveWord(buffer, index, model->texture_ids[i]);
         }

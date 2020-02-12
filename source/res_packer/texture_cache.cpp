@@ -16,12 +16,11 @@ static inline std::uint64_t calcTextureHash(const std::string& file_name)
     std::ifstream input_file(file_name, std::ifstream::binary);
     if (input_file)
     {
-        // get length of file:
         input_file.seekg(0, input_file.end);
         std::size_t length = input_file.tellg();
         input_file.seekg(0, input_file.beg);
 
-        std::vector<std::uint8_t> buffer(length + 1);
+        std::vector<std::uint8_t> buffer(length);
         input_file.read(reinterpret_cast<char*>(&buffer[0]), length);
         input_file.close();
 

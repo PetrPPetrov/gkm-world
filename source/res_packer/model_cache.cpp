@@ -15,12 +15,11 @@ static inline std::uint64_t calcHash(const std::string& file_name)
     std::ifstream input_file(file_name, std::ifstream::binary);
     if (input_file)
     {
-        // get length of file:
         input_file.seekg(0, input_file.end);
         std::size_t length = input_file.tellg();
         input_file.seekg(0, input_file.beg);
 
-        std::vector<std::uint8_t> buffer(length + 1);
+        std::vector<std::uint8_t> buffer(length);
         input_file.read(reinterpret_cast<char*>(&buffer[0]), length);
         input_file.close();
 
@@ -116,7 +115,6 @@ ResourceModelInfo ModelCache::loadResource(const std::string& file_name) const
                         throw std::runtime_error("max number of materials was achieved");
                     }
                     result_model->texture_ids[new_mesh->relative_texture_id] = texture_cache->getTextureId(materials.at(material_index).diffuse_texname);
-                    result_model->texture_count = static_cast<std::uint8_t>(material_to_mesh.size());
                 }
                 GkmModelRev0::Mesh::Ptr& new_mesh = find_material_it->second;
                 for (unsigned char i = 2; i < num_face_vertices; ++i)
