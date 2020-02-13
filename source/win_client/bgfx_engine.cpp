@@ -25,11 +25,19 @@ BgfxEngine::BgfxEngine(std::uint32_t width_, std::uint32_t height_, void* native
     bgfx::setDebug(debug);
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0xbababaff, 1.0f, 0);
 
-    BgfxVertex::init();
+    static bool layers_initialized = false;
+    if (!layers_initialized)
+    {
+        BgfxVertex::init();
+    }
 
     draw_ref_info = std::make_shared<BgfxDrawRefInfo>();
     draw_ref_info->program = loadProgram();
-    //texture = loadJpegRgbTexture("texture.jpg");
+    draw_ref_info->texture = makeBgfxSharedPtr(bgfx::createUniform("s_texColor", bgfx::UniformType::Sampler));
+
+    texture_cache = std::make_shared<BgfxTextureCache>(".\\tex_cache");
+    model_cache = std::make_shared<BgfxModelCache>(texture_cache, ".\\res_cache", ".\\mod_cache");
+    model = model_cache->getModel(1);
 }
 
 void BgfxEngine::draw()
@@ -50,4 +58,22 @@ void BgfxEngine::draw()
     );
     bgfx::setViewTransform(0, view_matrix, projection_matrix);
     bgfx::setViewRect(0, 0, 0, g_window_width, g_window_height);
+
+    bgfx::setState(BGFX_STATE_DEFAULT);
+
+    BgfxDrawInfo draw_info;
+    draw_info.ref_info = draw_ref_info;
+    drawModel(model, draw_info);
+    bgfx::frame();
+}
+
+void BgfxEngine::drawModel(const BgfxModel::Ptr& model, BgfxDrawInfo draw_info)
+{
+    const BgfxResource::Ptr& resource = model->resource;
+    for (auto& mesh : resource->meshes)
+    {
+        bgfx::setTexture(0, *draw_info.ref_info->texture, *model->textures[mesh->relative_texture_id]);
+        bgfx::setVertexBuffer(0, *mesh->vertex_buffer);
+        bgfx::submit(0, *draw_info.ref_info->program);
+    }
 }

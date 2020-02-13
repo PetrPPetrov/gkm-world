@@ -76,7 +76,7 @@ BgfxTexturePtr BgfxTextureCache::loadJpegRgbTexture(const std::vector<std::uint8
     BgfxTexturePtr result_texture = makeBgfxSharedPtr(bgfx::createTexture2D(
         static_cast<std::uint16_t>(image_width),
         static_cast<std::uint16_t>(image_height),
-        false, 1, bgfx::TextureFormat::RGB8U, 0, texture_buffer));
+        false, 1, bgfx::TextureFormat::RGB8, 0, texture_buffer));
     if (result_texture->isValid())
     {
         bgfx::setName(*result_texture, file_name.c_str());

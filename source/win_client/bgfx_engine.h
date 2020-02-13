@@ -20,6 +20,7 @@ public:
     BgfxEngine(std::uint32_t width, std::uint32_t height, void* native_windows_handle, bgfx::RendererType::Enum render_type);
 
     void draw();
+    void drawModel(const BgfxModel::Ptr& model, BgfxDrawInfo draw_info);
 
 private:
     BgfxEngineShutdown bgfx_engine_shutdown;
@@ -29,5 +30,7 @@ private:
     std::uint32_t debug;
     std::uint32_t reset;
     BgfxDrawRefInfo::Ptr draw_ref_info;
-    BgfxTexturePtr texture;
+    BgfxTextureCache::Ptr texture_cache;
+    BgfxModelCache::Ptr model_cache;
+    BgfxModel::Ptr model;
 };

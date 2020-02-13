@@ -32,8 +32,8 @@ BgfxResource::Ptr BgfxModelCache::loadGkmModelRev0BgfxResource(const std::vector
             vbo[i].x = vertices[i].x;
             vbo[i].y = vertices[i].y;
             vbo[i].z = vertices[i].z;
-            vbo[i].u = vertices[i].u;
-            vbo[i].v = vertices[i].v;
+            vbo[i].u = vertices[i].u / GkmModelRev0::TEX_COORD_MULTIPLIER;
+            vbo[i].v = vertices[i].v / GkmModelRev0::TEX_COORD_MULTIPLIER;
         }
 
         new_mesh->vertex_buffer = makeBgfxSharedPtr(bgfx::createVertexBuffer(vertex_buffer, BgfxVertex::ms_layout));

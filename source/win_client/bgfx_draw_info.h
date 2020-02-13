@@ -13,6 +13,7 @@ struct BgfxDrawRefInfo
     typedef std::shared_ptr<BgfxDrawRefInfo> Ptr;
 
     BgfxProgramPtr program;
+    BgfxUniformPtr texture;
 };
 
 struct BgfxDrawInfo

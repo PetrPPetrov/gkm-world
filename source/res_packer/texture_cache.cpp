@@ -150,7 +150,15 @@ void TextureCache::loadNewTextures(const std::string& input_model_dir)
     {
         if (it->path().extension() == ".jpg")
         {
-            addNewTexture(it->path().string());
+            std::string texture_path = it->path().string();
+            if (texture_path.size() >= 2)
+            {
+                if (texture_path[0] == '.' && texture_path[1] == '\\')
+                {
+                    texture_path.erase(0, 2);
+                }
+            }
+            addNewTexture(texture_path);
         }
     }
 }
