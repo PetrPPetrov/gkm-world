@@ -3,62 +3,41 @@
 
 #include <iostream>
 #include "bgfx_engine.h"
+#include "user_interface.h"
 #include "main.h"
 
-extern bool g_is_running = true;
-extern HINSTANCE g_hinstance = 0;
-extern HWND g_hwnd = 0;
-extern BgfxEngine::Ptr g_bgfx_engine = nullptr;
+bool g_is_running = true;
+HINSTANCE g_hinstance = 0;
+HWND g_hwnd = 0;
+BgfxEngine::Ptr g_bgfx_engine = nullptr;
 
-extern int g_screen_width = 0;
-extern int g_screen_height = 0;
-extern int g_window_width = 800;
-extern int g_window_height = 600;
+int g_screen_width = 0;
+int g_screen_height = 0;
+int g_window_width = 800;
+int g_window_height = 600;
 
-extern int g_char_pressed = -1;
-extern bool g_left_mouse_pressed = false;
-extern bool g_right_mouse_pressed = false;
-extern int g_current_mouse_x = 0;
-extern int g_current_mouse_y = 0;
-extern int g_current_mouse_z = 0;
+int g_char_pressed = -1;
+bool g_left_mouse_pressed = false;
+bool g_right_mouse_pressed = false;
+int g_current_mouse_x = 0;
+int g_current_mouse_y = 0;
+int g_current_mouse_z = 0;
 
-extern bool g_main_menu_open = true;
+PlayerLocation g_player_location;
+KeyboardState g_keyboard_state;
+
+bool g_main_menu_open = true;
 
 static double g_near = 8.0;
 static double g_far = 16 * 1024.0;
 
 
-
 static void renderScene()
 {
     bgfx::reset(g_window_width, g_window_height);
-    bgfx::touch(0);
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA);
-
-    imguiBeginFrame(
-        g_current_mouse_x,
-        g_current_mouse_y,
-        (g_left_mouse_pressed ? IMGUI_MBUT_LEFT : 0) | (g_right_mouse_pressed ? IMGUI_MBUT_RIGHT : 0),
-        g_current_mouse_z,
-        g_window_width,
-        g_window_height,
-        g_char_pressed
-    );
-
-    if (g_main_menu_open)
-    {
-        //ImGui::SetNextWindowPos(ImVec2(0.0f, g_window_height / 2.0f + 24.0f), ImGuiCond_Once);
-        //ImGui::SetNextWindowSize(ImVec2(160.0f, 100.0f), ImGuiCond_Once);
-        ImGui::Begin("Gkm-World Menu", &g_main_menu_open);
-        ImGui::Button("Options");
-        ImGui::Button("Exit");
-        ImGui::End();
-    }
-
-    imguiEndFrame();
-
+    drawUserInterface();
     g_bgfx_engine->draw();
-    bgfx::frame();
+    gameStep(g_player_location, g_keyboard_state);
 }
 
 static void onLeftMouseButtonDown(LPARAM l_param)
@@ -138,6 +117,43 @@ static LRESULT APIENTRY CALLBACK onWindowEvent(HWND window_handle, UINT window_m
         {
         case VK_ESCAPE:
             g_main_menu_open = !g_main_menu_open;
+            break;
+        case VK_UP:
+        case 0x57:
+            g_keyboard_state.up = true;
+            break;
+        case VK_DOWN:
+        case 0x53:
+            g_keyboard_state.down = true;
+            break;
+        case VK_LEFT:
+        case 0x41:
+            g_keyboard_state.left = true;
+            break;
+        case VK_RIGHT:
+        case 0x44:
+            g_keyboard_state.right = true;
+            break;
+        }
+        break;
+    case WM_KEYUP:
+        switch (w_param)
+        {
+        case VK_UP:
+        case 0x57:
+            g_keyboard_state.up = false;
+            break;
+        case VK_DOWN:
+        case 0x53:
+            g_keyboard_state.down = false;
+            break;
+        case VK_LEFT:
+        case 0x41:
+            g_keyboard_state.left = false;
+            break;
+        case VK_RIGHT:
+        case 0x44:
+            g_keyboard_state.right = false;
             break;
         }
         break;

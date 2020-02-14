@@ -87,6 +87,7 @@ ${BGFX_ROOT}/3rdparty/dear-imgui/imgui_draw.cpp
 ${BGFX_ROOT}/3rdparty/dear-imgui/imgui_widgets.cpp
 ${BGFX_ROOT}/examples/common/imgui/imgui.cpp
 )
+
 source_group(Common FILES ${COMMON})
 source_group(ShaderBinaries FILES ${SHADER_H_FILES})
 source_group(ShadersSources FILES ${SHADER_SOURCES})
