@@ -18,14 +18,15 @@ void drawUserInterface()
 
     if (g_main_menu_open)
     {
-        const float window_width = 300.0f;
-        const float window_height = 240.0f;
-        ImGui::SetNextWindowSize(ImVec2(window_width, window_height), ImGuiCond_Once);
-        ImGui::SetNextWindowPos(ImVec2((g_window_width - window_width) / 2.0f, (g_window_height - window_height) / 2.0f), ImGuiCond_Once);
+        //const float window_width = 300.0f;
+        //const float window_height = 240.0f;
+        //ImGui::SetNextWindowSize(ImVec2(window_width, window_height), ImGuiCond_Once);
+        //ImGui::SetNextWindowPos(ImVec2((g_window_width - window_width) / 2.0f, (g_window_height - window_height) / 2.0f), ImGuiCond_Once);
 
-        ImGui::Begin("Gkm-World Menu", &g_main_menu_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-        ImGui::Button("Options");
-        ImGui::Button("Exit");
+        //ImGui::Begin("Gkm-World Menu", &g_main_menu_open/*, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove*/);
+        ImGui::Begin("123", &g_main_menu_open/*, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove*/);
+        //ImGui::Button("Options");
+        //ImGui::Button("Exit");
         ImGui::End();
     }
 
