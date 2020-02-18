@@ -62,10 +62,10 @@ void BgfxEngine::draw()
     bgfx::setViewRect(0, 0, 0, g_window_width, g_window_height);
 
     bgfx::touch(0);
-    //BgfxDrawInfo draw_info;
-    //draw_info.ref_info = draw_ref_info;
-    //draw_info.state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA;
-    //drawModel(model, draw_info);
+    BgfxDrawInfo draw_info;
+    draw_info.ref_info = draw_ref_info;
+    draw_info.state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA;
+    drawModel(model, draw_info);
     bgfx::frame();
 }
 

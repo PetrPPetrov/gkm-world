@@ -4,8 +4,8 @@
 #pragma once
 
 #include "logic.h"
-#include "bgfx_windows.h"
 #include "bgfx_engine.h"
+#include "bgfx_windows.h"
 
 extern bool g_is_running;
 extern HINSTANCE g_hinstance;

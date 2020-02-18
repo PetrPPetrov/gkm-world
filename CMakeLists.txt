@@ -26,7 +26,8 @@ set(RUN_AREA_DIR ${CMAKE_CURRENT_LIST_DIR}/run_area)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 
 if(WIN32)
-  add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WIN7)
+  # Note: using _WIN32_WINNT symbol here causes unpredictable ImGui font corruption (win_client)
+  add_definitions(-D_WIN32_WINDOWS=_WIN32_WINNT_WIN7)
   add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS)
 endif()
 
