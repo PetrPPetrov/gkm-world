@@ -31,4 +31,8 @@ if(WIN32)
   add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS)
 endif()
 
+if(MSVC)
+  add_definitions(/MP)
+endif()
+
 add_subdirectory(source)

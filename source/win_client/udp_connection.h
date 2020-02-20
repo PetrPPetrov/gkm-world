@@ -15,7 +15,6 @@
 #include "logic.h"
 #include "packet_pool.h"
 #include "global_parameters.h"
-//#include "player.h"
 
 //typedef std::unordered_map<std::uint32_t, AnotherPlayer::ptr> uuid_to_another_user_t;
 
