@@ -3,14 +3,16 @@
 
 #pragma once
 
-#include <boost/core/noncopyable.hpp>
 #include "logic.h"
 
-struct UserLocation : private boost::noncopyable
+struct UserLocation
 {
     PlayerUuidLocation user_location;
     KeyboardState state;
 
     UserLocation* previous = nullptr;
     UserLocation* next = nullptr;
+
+    UserLocation(const UserLocation&) = delete;
+    UserLocation& operator=(const UserLocation&) = delete;
 };

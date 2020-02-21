@@ -12,11 +12,9 @@
 #include "protocol.h"
 #include "transport.h"
 #include "log.h"
-#include "logic.h"
 #include "packet_pool.h"
 #include "global_parameters.h"
-
-//typedef std::unordered_map<std::uint32_t, AnotherPlayer::ptr> uuid_to_another_user_t;
+#include "another_player.h"
 
 class UDPConnection : public Transport
 {

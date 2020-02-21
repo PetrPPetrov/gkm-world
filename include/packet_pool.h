@@ -5,7 +5,6 @@
 
 #include <memory>
 #include <vector>
-#include <boost/core/noncopyable.hpp>
 #include "pool.h"
 #include "protocol.h"
 

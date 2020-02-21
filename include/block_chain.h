@@ -4,13 +4,26 @@
 #pragma once
 
 #include <cassert>
+#include <list>
 
-template<class BlockType>
-inline void removeBlock(BlockType* block, BlockType*& head)
+template<typename ValueType>
+struct ChainBlock
+{
+    ValueType* pointer = nullptr;
+    ChainBlock<ValueType>* previous = nullptr;
+    ChainBlock<ValueType>* next = nullptr;
+
+    ChainBlock(ValueType* pointer_) : pointer(pointer_)
+    {
+    }
+};
+
+template<class ValueType>
+void removeBlock(ChainBlock<ValueType>* block, ChainBlock<ValueType>*& head)
 {
     assert(block);
-    BlockType* previous = block->previous;
-    BlockType* next = block->next;
+    ChainBlockType* previous = block->previous;
+    ChainBlockType* next = block->next;
     if (previous)
     {
         previous->next = next;
@@ -25,8 +38,8 @@ inline void removeBlock(BlockType* block, BlockType*& head)
     }
 }
 
-template<class BlockType>
-inline void pushFrontBlock(BlockType* block, BlockType*& head)
+template<class ValueType>
+void pushFrontBlock(ChainBlock<ValueType>* block, ChainBlock<ValueType>*& head)
 {
     block->next = head;
     if (head)

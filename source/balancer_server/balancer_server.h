@@ -10,7 +10,6 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/core/noncopyable.hpp>
 #include "protocol.h"
 #include "transport.h"
 #include "packet_pool.h"

@@ -6,9 +6,8 @@
 #include <memory>
 #include <ostream>
 #include <istream>
-#include <boost/core/noncopyable.hpp>
 
-struct UserInfo : private boost::noncopyable
+struct UserInfo
 {
     typedef UserInfo self_type;
     typedef std::shared_ptr<self_type> ptr;
@@ -17,9 +16,12 @@ struct UserInfo : private boost::noncopyable
     std::string full_name;
     bool online = false;
     std::uint32_t user_token = 0;
+
+    UserInfo(const UserInfo&) = delete;
+    UserInfo& operator=(const UserInfo&) = delete;
 };
 
-struct UserOnlineInfo : private boost::noncopyable
+struct UserOnlineInfo
 {
     UserInfo* user_info;
 
@@ -30,6 +32,9 @@ struct UserOnlineInfo : private boost::noncopyable
     UserOnlineInfo(UserInfo* user_info_) : user_info(user_info_)
     {
     }
+
+    UserOnlineInfo(const UserOnlineInfo&) = delete;
+    UserOnlineInfo& operator=(const UserOnlineInfo&) = delete;
 };
 
 inline std::istream& operator>>(std::istream& input_stream, UserInfo& user_info)

@@ -8,17 +8,19 @@
 #include <iostream>
 #include <cassert>
 #include <map>
-#include <boost/core/noncopyable.hpp>
 #include "log.h"
 
 class ConfigurationReader
 {
-    struct IConfigurationParameter : public boost::noncopyable
+    struct IConfigurationParameter
     {
         virtual ~IConfigurationParameter()
         {
         }
         virtual void read(std::istream& stream) = 0;
+
+        IConfigurationParameter(const IConfigurationParameter&) = delete;
+        IConfigurationParameter& operator=(const IConfigurationParameter&) = delete;
     };
 
     template<class Type>

@@ -7,13 +7,12 @@
 #include <memory>
 #include <vector>
 #include <array>
-#include <boost/core/noncopyable.hpp>
 #include "log.h"
 
 namespace Memory
 {
     template<class ElementType, size_t MaxElementCount, size_t ElementSize = sizeof(ElementType)>
-    class Pool : private boost::noncopyable
+    class Pool
     {
         static_assert(ElementSize > 0, "element size is zero");
         static_assert(MaxElementCount > 0, "max element count is zero");
@@ -31,6 +30,9 @@ namespace Memory
         ElementStorage* free_element = nullptr;
 
     public:
+        Pool(const Pool&) = delete;
+        Pool& operator=(const Pool&) = delete;
+
         Pool()
         {
             storage.resize(MAX_CAPACITY);

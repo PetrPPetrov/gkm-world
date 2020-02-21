@@ -55,7 +55,7 @@ void BgfxEngine::draw()
         projection_matrix, 40.0f,
         static_cast<float>(g_window_width) / static_cast<float>(g_window_height),
         static_cast<float>(0.125f),
-        static_cast<float>(1024.0f),
+        static_cast<float>(16 * 1024.0f),
         bgfx::getCaps()->homogeneousDepth
     );
     bgfx::setViewTransform(0, view_matrix, projection_matrix);

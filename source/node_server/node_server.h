@@ -6,7 +6,6 @@
 #include <map>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/core/noncopyable.hpp>
 #include <boost/filesystem.hpp>
 #include "packet_pool.h"
 #include "fast_index_map.h"

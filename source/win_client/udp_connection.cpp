@@ -4,19 +4,7 @@
 #include <set>
 #include "block_chain.h"
 #include "udp_connection.h"
-
-extern long long g_ping;
-extern std::string g_server_ip_address;
-extern unsigned short g_server_port_number;
-extern bool g_is_running;
-//extern PlayerState g_player_state;
-extern KeyboardState g_keyboard_state;
-//extern AnotherPlayer* g_other_players;
-extern std::uint32_t g_user_token;
-extern UDPConnection* g_connection;
-extern UDPConnection::EState g_main_state;
-extern bool g_logout_request;
-//extern uuid_to_another_user_t* g_uuid_to_another_user;
+#include "main.h"
 
 void UDPConnection::start()
 {

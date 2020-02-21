@@ -13,7 +13,7 @@ struct FnvHash
     {
         for (std::size_t i = 0; i < size; ++i)
         {
-            hash = hash ^ (data[i]);         // xor the low 8 bits
+            hash = hash ^ (data[i]); // xor the low 8 bits
             hash = hash * g_fnv_multiple; // multiply by the magic number
         }
     }

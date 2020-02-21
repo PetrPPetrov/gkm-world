@@ -7,7 +7,7 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include "protocol.h"
-#include "logic.h"
+#include "game_logic.h"
 
 class UDPConnection
 {

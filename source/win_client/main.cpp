@@ -28,8 +28,16 @@ KeyboardState g_keyboard_state;
 
 bool g_main_menu_open = true;
 
-static double g_near = 8.0;
-static double g_far = 16 * 1024.0;
+std::string g_server_ip_address;
+unsigned short g_server_port_number;
+long g_ping = 0;
+
+AnotherPlayer* g_other_players_display_list = nullptr;
+OtherPlayersMap* g_uuid_to_another_user = nullptr;
+std::uint32_t g_user_token = 0;
+UDPConnection* g_connection = nullptr;
+UDPConnection::EState g_main_state = UDPConnection::EState::Started;
+bool g_logout_request = false;
 
 
 static void renderScene()

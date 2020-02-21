@@ -10,7 +10,6 @@
 #include <functional>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/core/noncopyable.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
@@ -18,7 +17,7 @@
 #include "packet_pool.h"
 #include "log.h"
 
-class Transport : private boost::noncopyable
+class Transport
 {
 protected:
     boost::asio::io_service io_service;
@@ -58,6 +57,9 @@ private:
     bool guaranteed_delivery_enabled = false;
 
 public:
+    Transport(const Transport&) = delete;
+    Transport& operator=(const Transport&) = delete;
+
     Transport() : socket(io_service)
     {
         handlers.resize(Packet::TYPE_COUNT);

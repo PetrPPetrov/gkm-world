@@ -3,9 +3,14 @@
 
 #pragma once
 
-#include "logic.h"
+#include <unordered_map>
+#include "game_logic.h"
 #include "bgfx_engine.h"
 #include "bgfx_windows.h"
+#include "another_player.h"
+
+typedef std::unordered_map<std::uint32_t, AnotherPlayer::Ptr> OtherPlayersMap;
+class UDPConnection;
 
 extern bool g_is_running;
 extern HINSTANCE g_hinstance;
@@ -28,3 +33,14 @@ extern PlayerLocation g_player_location;
 extern KeyboardState g_keyboard_state;
 
 extern bool g_main_menu_open;
+
+extern std::string g_server_ip_address;
+extern unsigned short g_server_port_number;
+extern long g_ping;
+
+extern AnotherPlayer* g_other_players_display_list;
+extern OtherPlayersMap* g_uuid_to_another_user;
+extern std::uint32_t g_user_token;
+extern UDPConnection* g_connection;
+extern UDPConnection::EState g_main_state;
+extern bool g_logout_request;

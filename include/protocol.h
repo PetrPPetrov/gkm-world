@@ -8,7 +8,7 @@
 #include <boost/asio/ip/address_v4.hpp>
 #include <boost/asio/ip/address_v6.hpp>
 #include "global_types.h"
-#include "logic.h"
+#include "game_logic.h"
 #include "protocol_enum.h"
 #include "mac_address.h"
 #include "balance_tree/common.h"
