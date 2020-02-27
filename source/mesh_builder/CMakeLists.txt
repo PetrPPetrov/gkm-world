@@ -32,11 +32,11 @@ file(GLOB_RECURSE HEADERS ${PROJECT_SOURCE_DIR}/*.h)
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/*.cpp)
 
 set(MESH_BUILDER_UI_FILES
-${PROJECT_SOURCE_DIR}/main_monitor_window.ui
+${PROJECT_SOURCE_DIR}/main_window.ui
 )
 
 set(MESH_BUILDER_MOC_FILES
-${PROJECT_SOURCE_DIR}/main_monitor_window.h
+${PROJECT_SOURCE_DIR}/main_window.h
 )
 
 set(CMAKE_AUTOMOC ON)
