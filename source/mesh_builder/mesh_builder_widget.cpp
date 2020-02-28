@@ -13,298 +13,255 @@
 #include <QPainter>
 #include <QApplication>
 #include <QStatusBar>
-#include "main_monitor_window.h"
-#include "balancer_monitor_widget.h"
+#include <QOpenGLShader>
+#include "main_window.h"
+#include "mesh_builder_widget.h"
 
-BalancerMonitorWidget::BalancerMonitorWidget(QWidget *parent) : QWidget(parent)
+#define PROGRAM_VERTEX_ATTRIBUTE 0
+#define PROGRAM_TEXCOORD_ATTRIBUTE 1
+
+MeshBuilderWidget::MeshBuilderWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
     setMouseTracking(true);
-    cached_zoom = zoom();
+    setDefaultCamera();
 }
 
-void BalancerMonitorWidget::paintEvent(QPaintEvent* event)
+void MeshBuilderWidget::initializeGL()
 {
-    QPainter painter(this);
+    initializeOpenGLFunctions();
+    glClearColor(0.5, 0.5, 0.5, 1.0);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
 
-    const QRect viewport = painter.viewport();
-    screen_center_x = viewport.center().x();
-    screen_center_y = viewport.center().y();
+    static const int coords[6][4][3] = {
+        { { +1, -1, -1 }, { -1, -1, -1 }, { -1, +1, -1 }, { +1, +1, -1 } },
+        { { +1, +1, -1 }, { -1, +1, -1 }, { -1, +1, +1 }, { +1, +1, +1 } },
+        { { +1, -1, +1 }, { +1, -1, -1 }, { +1, +1, -1 }, { +1, +1, +1 } },
+        { { -1, -1, -1 }, { -1, -1, +1 }, { -1, +1, +1 }, { -1, +1, -1 } },
+        { { +1, -1, +1 }, { -1, -1, +1 }, { -1, -1, -1 }, { +1, -1, -1 } },
+        { { -1, -1, +1 }, { +1, -1, +1 }, { +1, +1, +1 }, { -1, +1, +1 } }
+    };
 
-    const double world_to_draw_width = viewport.width() / cached_zoom;
-    const double world_to_draw_height = viewport.height() / cached_zoom;
-    const double actual_cell_size = CELL_SIZE * cached_zoom;
-    bool draw_cell_lines = true;
-    if (actual_cell_size < 8.0)
+    texture = std::make_unique<QOpenGLTexture>(QImage(QString("texture.jpg")));
+
+    QVector<GLfloat> vertData;
+    for (int i = 0; i < 6; ++i)
     {
-        draw_cell_lines = false;
-    }
-    bool print_neighbors = true;
-    if (actual_cell_size < 50.0)
-    {
-        print_neighbors = false;
-    }
-
-    const std::int32_t cells_to_draw_width = static_cast<std::int32_t>(world_to_draw_width / CELL_SIZE) + 1;
-    const std::int32_t cells_to_draw_height = static_cast<std::int32_t>(world_to_draw_height / CELL_SIZE) + 1;
-    const std::int32_t cur_cell_x = static_cast<std::int32_t>(view_point_x / CELL_SIZE);
-    const std::int32_t cur_cell_y = static_cast<std::int32_t>(view_point_y / CELL_SIZE);
-    const std::int32_t start_cell_x = cur_cell_x - cells_to_draw_width / 2 - 1;
-    const std::int32_t start_cell_y = cur_cell_y - cells_to_draw_height / 2 - 1;
-    const std::int32_t end_cell_x = cur_cell_x + cells_to_draw_width / 2 + 1;
-    const std::int32_t end_cell_y = cur_cell_y + cells_to_draw_height / 2 + 1;
-
-    auto server_info = g_main_window->getServerInfo();
-    if (server_info)
-    {
-        typedef boost::polygon::point_data<std::int32_t> Point;
-        typedef boost::polygon::rectangle_data<std::int32_t> Rectangle;
-        typedef boost::polygon::polygon_90_data<std::int32_t> Polygon90;
-        typedef boost::polygon::polygon_90_set_data<std::int32_t> Polygon90Set;
-        using namespace boost::polygon::operators;
-
-        Polygon90Set result_outside_polygon;
-
-        Rectangle outer_rectangle(start_cell_x, start_cell_y, end_cell_x + 1, end_cell_y + 1);
-        result_outside_polygon += outer_rectangle;
-
-        SquareCell global_box = server_info->bounding_box;
-        Rectangle global_box_rectangle(global_box.start.x, global_box.start.y, global_box.start.x + global_box.size, global_box.start.y + global_box.size);
-        result_outside_polygon -= global_box_rectangle;
-
-        QColor out_of_global_box(150, 0, 0);
-        QBrush out_of_global_box_brush(out_of_global_box, Qt::BDiagPattern);
-
-        std::vector<Rectangle> rectangles;
-        result_outside_polygon.get(rectangles);
-        const size_t rectangle_count = rectangles.size();
-        for (size_t i = 0; i < rectangle_count; ++i)
+        for (int j = 0; j < 4; ++j)
         {
-            Rectangle& rectangle = rectangles[i];
-            painter.fillRect(
-                to_screen_x(xl(rectangle) * CELL_SIZE),
-                to_screen_y(yl(rectangle) * CELL_SIZE),
-                to_screen_w((xh(rectangle) - xl(rectangle)) * CELL_SIZE),
-                to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
-                out_of_global_box_brush
-            );
-        }
-
-        if (g_main_window->isShowLeafNodes())
-        {
-            BalancerTreeInfo* cur_node = server_info->token_to_tree_node.find(server_info->tree_root_token);
-            std::list<BalancerTreeInfo*> parent_stack;
-            parent_stack.push_back(cur_node);
-            while (!parent_stack.empty())
-            {
-                cur_node = parent_stack.back();
-                parent_stack.pop_back();
-                if (cur_node)
-                {
-                    if (cur_node->leaf_node)
-                    {
-                        QBrush inside_node_brush(getColor(cur_node->token), Qt::SolidPattern);
-                        Polygon90Set result_polygon;
-                        SquareCell node_box = cur_node->bounding_box;
-                        Rectangle node_box_rectangle(node_box.start.x, node_box.start.y, node_box.start.x + node_box.size, node_box.start.y + node_box.size);
-                        result_polygon += node_box_rectangle;
-                        result_polygon *= outer_rectangle;
-
-                        rectangles.clear();
-                        result_polygon.get(rectangles);
-                        const size_t rectangle_count = rectangles.size();
-                        for (size_t i = 0; i < rectangle_count; ++i)
-                        {
-                            Rectangle& rectangle = rectangles[i];
-                            painter.fillRect(
-                                to_screen_x(xl(rectangle) * CELL_SIZE),
-                                to_screen_y(yl(rectangle) * CELL_SIZE),
-                                to_screen_w((xh(rectangle) - xl(rectangle)) * CELL_SIZE),
-                                to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
-                                inside_node_brush
-                            );
-                            painter.drawText(
-                                to_screen_x(xl(rectangle) * CELL_SIZE),
-                                to_screen_y(yl(rectangle) * CELL_SIZE),
-                                to_screen_w((xh(rectangle) - xl(rectangle)) * CELL_SIZE),
-                                to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
-                                Qt::AlignCenter,
-                                tr("Node Server %1").arg(cur_node->token)
-                            );
-                        }
-                    }
-                    else
-                    {
-                        for (std::uint8_t i = ChildFirst; i < ChildLast; ++i)
-                        {
-                            std::uint32_t child_token = cur_node->children[i];
-                            if (child_token)
-                            {
-                                parent_stack.push_back(server_info->token_to_tree_node.find(child_token));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (g_main_window->isShowSelectedNode() && server_info->selected_node)
-        {
-            Polygon90Set result_selection_polygon;
-            SquareCell selection_box = server_info->selected_node->bounding_box;
-            Rectangle selection_box_rectangle(selection_box.start.x, selection_box.start.y, selection_box.start.x + selection_box.size, selection_box.start.y + selection_box.size);
-            result_selection_polygon += selection_box_rectangle;
-            result_selection_polygon *= outer_rectangle;
-
-            QColor inside_selected_node(0, 250, 0);
-            QBrush inside_selected_node_brush(inside_selected_node, Qt::DiagCrossPattern);
-
-            rectangles.clear();
-            result_selection_polygon.get(rectangles);
-            const size_t rectangle_count = rectangles.size();
-            for (size_t i = 0; i < rectangle_count; ++i)
-            {
-                Rectangle& rectangle = rectangles[i];
-                painter.fillRect(
-                    to_screen_x(xl(rectangle) * CELL_SIZE),
-                    to_screen_y(yl(rectangle) * CELL_SIZE),
-                    to_screen_w((xh(rectangle) - xl(rectangle)) * CELL_SIZE),
-                    to_screen_h((yh(rectangle) - yl(rectangle)) * CELL_SIZE),
-                    inside_selected_node_brush
-                );
-            }
-
-            if (print_neighbors && g_main_window->isShowNeighbor())
-            {
-                for (std::int32_t x = start_cell_x; x <= end_cell_x; ++x)
-                {
-                    for (std::int32_t y = start_cell_y; y <= end_cell_y; ++y)
-                    {
-                        std::pair<std::int32_t, std::int32_t> coordinate(x, y);
-                        auto find_neighbor = server_info->selected_node->neighbor_nodes.find(coordinate);
-                        if (find_neighbor != server_info->selected_node->neighbor_nodes.end())
-                        {
-                            painter.drawText(
-                                to_screen_x(x * CELL_SIZE),
-                                to_screen_y(y * CELL_SIZE),
-                                to_screen_w(CELL_SIZE),
-                                to_screen_h(CELL_SIZE),
-                                Qt::AlignCenter,
-                                tr("Neighbor %1").arg(find_neighbor->second)
-                            );
-                        }
-                    }
-                }
-            }
+            // vertex position
+            vertData.append(0.2 * coords[i][j][0]);
+            vertData.append(0.2 * coords[i][j][1]);
+            vertData.append(0.2 * coords[i][j][2]);
+            // texture coordinate
+            vertData.append(j == 0 || j == 3);
+            vertData.append(j == 0 || j == 1);
         }
     }
 
-    if (draw_cell_lines)
-    {
-        QPen thin_pen;
-        thin_pen.setColor(QColor(0, 0, 0));
-        thin_pen.setStyle(Qt::DotLine);
-        painter.setPen(thin_pen);
+    vbo.create();
+    vbo.bind();
+    vbo.allocate(vertData.constData(), vertData.count() * sizeof(GLfloat));
 
-        for (std::int32_t x = start_cell_x; x <= end_cell_x; ++x)
-        {
-            painter.drawLine(
-                to_screen_x(x * CELL_SIZE), to_screen_y(start_cell_y * CELL_SIZE),
-                to_screen_x(x * CELL_SIZE), to_screen_y((end_cell_y + 1) * CELL_SIZE)
-            );
-        }
-        for (std::int32_t y = start_cell_y; y <= end_cell_y; ++y)
-        {
-            painter.drawLine(
-                to_screen_x(start_cell_x * CELL_SIZE), to_screen_y(y * CELL_SIZE),
-                to_screen_x((end_cell_x + 1) * CELL_SIZE), to_screen_y(y * CELL_SIZE)
-            );
-        }
+    QOpenGLShader* vshader = new QOpenGLShader(QOpenGLShader::Vertex, this);
+    const char* vsrc =
+        "attribute highp vec4 vertex;\n"
+        "attribute mediump vec4 texCoord;\n"
+        "varying mediump vec4 texc;\n"
+        "uniform mediump mat4 matrix;\n"
+        "void main(void)\n"
+        "{\n"
+        "    gl_Position = matrix * vertex;\n"
+        "    texc = texCoord;\n"
+        "}\n";
+    vshader->compileSourceCode(vsrc);
+
+    QOpenGLShader* fshader = new QOpenGLShader(QOpenGLShader::Fragment, this);
+    const char* fsrc =
+        "uniform sampler2D texture;\n"
+        "varying mediump vec4 texc;\n"
+        "void main(void)\n"
+        "{\n"
+        "    gl_FragColor = texture2D(texture, texc.st);\n"
+        "}\n";
+    fshader->compileSourceCode(fsrc);
+
+    program = std::make_unique<QOpenGLShaderProgram>();
+    program->addShader(vshader);
+    program->addShader(fshader);
+    program->bindAttributeLocation("vertex", PROGRAM_VERTEX_ATTRIBUTE);
+    program->bindAttributeLocation("texCoord", PROGRAM_TEXCOORD_ATTRIBUTE);
+    program->link();
+
+    program->bind();
+    program->setUniformValue("texture", 0);
+}
+
+void MeshBuilderWidget::paintGL()
+{
+    glClearColor(0.5, 0.5, 0.5, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    QMatrix4x4 projection_matrix;
+    projection_matrix.perspective(50.0f, static_cast<float>(width()) / height(), 0.125f, 1024.0f);
+
+    QMatrix4x4 view_matrix;
+    view_matrix.lookAt(viewer_pos, viewer_target, viewer_up);
+
+    program->setUniformValue("matrix", projection_matrix * view_matrix);
+    program->enableAttributeArray(PROGRAM_VERTEX_ATTRIBUTE);
+    program->enableAttributeArray(PROGRAM_TEXCOORD_ATTRIBUTE);
+    program->setAttributeBuffer(PROGRAM_VERTEX_ATTRIBUTE, GL_FLOAT, 0, 3, 5 * sizeof(GLfloat));
+    program->setAttributeBuffer(PROGRAM_TEXCOORD_ATTRIBUTE, GL_FLOAT, 3 * sizeof(GLfloat), 2, 5 * sizeof(GLfloat));
+
+    texture->bind();
+    for (int i = 0; i < 6; ++i)
+    {
+        glDrawArrays(GL_TRIANGLE_FAN, i * 4, 4);
     }
 }
 
-void BalancerMonitorWidget::wheelEvent(QWheelEvent* event)
+void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
 {
-    zoom_step += (event->angleDelta().y() / 120);
-    if (zoom_step < MIN_ZOOM_STEP)
+    if (left_mouse_pressed && right_mouse_pressed)
     {
-        zoom_step = MIN_ZOOM_STEP;
-    }
-    if (zoom_step > MAX_ZOOM_STEP)
-    {
-        zoom_step = MAX_ZOOM_STEP;
-    }
-    cached_zoom = zoom();
-    update();
-}
-
-void BalancerMonitorWidget::mouseMoveEvent(QMouseEvent* event)
-{
-    const QPointF current_point = event->localPos();
-
-    if (left_mouse_pressed)
-    {
-        const QPointF delta = previous_point - current_point;
-        const double actual_zoom = zoom();
-        view_point_x = previous_view_point_x + delta.x() / actual_zoom;
-        view_point_y = previous_view_point_y - delta.y() / actual_zoom;
+        // Pan mode
+        QPointF current_point = event->localPos();
+        const double effective_rotation_radius = std::max(rotation_radius, 10.0);
+        double delta_x = (previous_point.x() - current_point.x()) / width() * effective_rotation_radius;
+        double delta_y = (current_point.y() - previous_point.y()) / height() * effective_rotation_radius;
+        auto user_position = viewer_previous_pos - viewer_previous_target;
+        auto right = QVector3D::crossProduct(viewer_up, user_position).normalized();
+        auto offset = right * delta_x + viewer_up * delta_y;
+        viewer_pos = viewer_previous_pos + offset;
+        viewer_target = viewer_previous_target + offset;
+        // Restore rotation orbit radius
+        viewer_target = viewer_pos + (viewer_target - viewer_pos).normalized() * rotation_radius;
         update();
     }
-
-    const QPoint center = rect().center();
-    const QPoint delta = current_point.toPoint() - center;
-    const double world_delta_x = delta.x() / cached_zoom;
-    const double world_delta_y = delta.y() / cached_zoom;
-    const double gkm_world_position_x = view_point_x + world_delta_x;
-    const double gkm_world_position_y = view_point_y - world_delta_y;
-
-    QString mouse_position_in_status = tr("Gkm-World Position: ");
-    std::stringstream mouse_position;
-    mouse_position << std::fixed << std::setprecision(2) << gkm_world_position_x << "; " << gkm_world_position_y;
-    mouse_position_in_status += mouse_position.str().c_str();
-    g_main_window->statusBar()->showMessage(mouse_position_in_status);
+    else if (left_mouse_pressed)
+    {
+        // Rotation mode
+        QPointF current_point = event->localPos();
+        double delta_x = previous_point.x() - current_point.x();
+        double delta_y = current_point.y() - previous_point.y();
+        double x_rotation_angle = delta_x / width() * 180.0f;
+        double y_rotation_angle = delta_y / height() * 180.0f;
+        auto user_position = viewer_previous_pos - viewer_previous_target;
+        QMatrix4x4 rotation_x;
+        rotation_x.rotate(x_rotation_angle, viewer_previous_up);
+        auto temp_user_position = rotation_x * user_position;
+        auto left = QVector3D::crossProduct(temp_user_position, viewer_previous_up).normalized();
+        QMatrix4x4 rotation_y;
+        rotation_y.rotate(y_rotation_angle, left);
+        auto result_rotation = rotation_y * rotation_x;
+        auto rotated_user_position = (result_rotation * user_position).normalized() * rotation_radius;
+        viewer_pos = viewer_previous_target + rotated_user_position;
+        viewer_up = (result_rotation * viewer_previous_up).normalized();
+        // Restore up vector property: up vector must be orthogonal to direction vector
+        auto new_left = QVector3D::crossProduct(rotated_user_position, viewer_up);
+        viewer_up = QVector3D::crossProduct(new_left, rotated_user_position).normalized();
+        update();
+    }
+    else if (right_mouse_pressed)
+    {
+        // First person look mode
+        QPointF current_point = event->localPos();
+        double delta_x = previous_point.x() - current_point.x();
+        double delta_y = current_point.y() - previous_point.y();
+        double x_rotation_angle = delta_x / width() * 180.0f;
+        double y_rotation_angle = delta_y / height() * 180.0f;
+        auto view_direction = viewer_previous_target - viewer_previous_pos;
+        QMatrix4x4 rotation_x;
+        rotation_x.rotate(x_rotation_angle, viewer_previous_up);
+        auto temp_view_direction = rotation_x * view_direction;
+        auto left = QVector3D::crossProduct(viewer_previous_up, temp_view_direction).normalized();
+        QMatrix4x4 rotation_y;
+        rotation_y.rotate(y_rotation_angle, left);
+        auto result_rotation = rotation_y * rotation_x;
+        auto rotated_view_direction = (result_rotation * view_direction).normalized() * rotation_radius;
+        viewer_target = viewer_previous_pos + rotated_view_direction;
+        viewer_up = (result_rotation * viewer_previous_up).normalized();
+        // Restore up vector property: up vector must be orthogonal to direction vector
+        auto new_left = QVector3D::crossProduct(viewer_up, rotated_view_direction);
+        viewer_up = QVector3D::crossProduct(rotated_view_direction, new_left).normalized();
+        update();
+    }
 }
 
-void BalancerMonitorWidget::mousePressEvent(QMouseEvent* event)
+void MeshBuilderWidget::mousePressEvent(QMouseEvent* event)
 {
+    bool left_or_right = false;
     if (event->buttons() & Qt::LeftButton)
     {
         left_mouse_pressed = true;
-        previous_point = event->localPos();
-        previous_view_point_x = view_point_x;
-        previous_view_point_y = view_point_y;
+        left_or_right = true;
     }
+    if (event->buttons() & Qt::RightButton)
+    {
+        right_mouse_pressed = true;
+        left_or_right = true;
+    }
+    if (left_or_right)
+    {
+        previous_point = event->localPos();
+        viewer_previous_pos = viewer_pos;
+        viewer_previous_target = viewer_target;
+        viewer_previous_up = viewer_up;
+    }
+    update();
 }
 
-void BalancerMonitorWidget::mouseReleaseEvent(QMouseEvent* event)
+void MeshBuilderWidget::mouseReleaseEvent(QMouseEvent* event)
 {
-    left_mouse_pressed = false;
-    previous_point = event->localPos();
-    previous_view_point_x = view_point_x;
-    previous_view_point_y = view_point_y;
+    bool left_or_right = false;
+    if (!(event->buttons() & Qt::LeftButton))
+    {
+        left_mouse_pressed = false;
+        left_or_right = true;
+    }
+    if (!(event->buttons() & Qt::RightButton))
+    {
+        right_mouse_pressed = false;
+        left_or_right = true;
+    }
+    if (left_or_right)
+    {
+        previous_point = event->localPos();
+        viewer_previous_pos = viewer_pos;
+        viewer_previous_target = viewer_target;
+        viewer_previous_up = viewer_up;
+    }
+    update();
 }
 
-int BalancerMonitorWidget::to_screen_x(double x) const
+void MeshBuilderWidget::wheelEvent(QWheelEvent* event)
 {
-    return static_cast<int>((x - view_point_x) * cached_zoom + screen_center_x);
+    QPoint delta = event->angleDelta();
+    rotation_radius += delta.y() / 1000.0f * rotation_radius;
+    if (rotation_radius < minimum_rotation_radius)
+    {
+        rotation_radius = minimum_rotation_radius;
+    }
+    if (rotation_radius > maximum_rotation_radius)
+    {
+        rotation_radius = maximum_rotation_radius;
+    }
+    auto user_position = viewer_pos - viewer_target;
+    auto new_user_position = user_position.normalized() * rotation_radius;
+    viewer_pos = viewer_target + new_user_position;
+    update();
 }
 
-int BalancerMonitorWidget::to_screen_y(double y) const
+void MeshBuilderWidget::setDefaultCamera()
 {
-    return static_cast<int>((y - view_point_y) * -cached_zoom + screen_center_y);
-}
-
-int BalancerMonitorWidget::to_screen_w(double w) const
-{
-    return static_cast<int>(w * cached_zoom);
-}
-
-int BalancerMonitorWidget::to_screen_h(double h) const
-{
-    return static_cast<int>(h * -cached_zoom);
-}
-
-double BalancerMonitorWidget::zoom() const
-{
-    const double scale = std::pow(ZOOM_BASE, INITIAL_ZOOM_STEP);
-    return std::pow(ZOOM_BASE, zoom_step) / scale;
+    viewer_pos = QVector3D(0, 0, 3);
+    viewer_target = QVector3D(0, 0, 0);
+    viewer_up = QVector3D(0, 1, 0);
+    rotation_radius = viewer_pos.distanceToPoint(viewer_target);
+    viewer_previous_pos = viewer_pos;
+    viewer_previous_target = viewer_target;
+    viewer_previous_up = viewer_up;
+    minimum_rotation_radius = 0.1;
+    maximum_rotation_radius = 1000.0;
 }

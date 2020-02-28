@@ -3,46 +3,51 @@
 
 #pragma once
 
+#include <memory>
 #include <QObject>
 #include <QWidget>
-#include <QResizeEvent>
-#include "global_types.h"
+#include <QOpenGLWidget>
+#include <QOpenGLFunctions>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLTexture>
+#include <QOpenGLBuffer>
+#include <QVector3D>
 
-class BalancerMonitorWidget : public QWidget
+class MeshBuilderWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
 
 public:
-    BalancerMonitorWidget(QWidget *parent);
+    MeshBuilderWidget(QWidget *parent);
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
-    void wheelEvent(QWheelEvent* event) override;
+    void initializeGL() override;
+    void paintGL() override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
 
 private:
-    double view_point_x = 0.0;
-    double view_point_y = 0.0;
-    double previous_view_point_x = 0.0;
-    double previous_view_point_y = 0.0;
+    void setDefaultCamera();
 
-    QPointF previous_point;
+private:
+    std::unique_ptr<QOpenGLShaderProgram> program;
+    std::unique_ptr<QOpenGLTexture> texture;
+    QOpenGLBuffer vbo;
+
+    QVector3D viewer_pos;
+    QVector3D viewer_target;
+    QVector3D viewer_up;
+
+    QVector3D viewer_previous_pos;
+    QVector3D viewer_previous_target;
+    QVector3D viewer_previous_up;
+
+    double minimum_rotation_radius = 0.1;
+    double maximum_rotation_radius = 1000.0;
+    double rotation_radius = 10.0;
     bool left_mouse_pressed = false;
-
-    double screen_center_x = 0.0;
-    double screen_center_y = 0.0;
-
-    int to_screen_x(double x) const; // We do not use worldTransformation property of QPainter
-    int to_screen_y(double y) const;
-    int to_screen_w(double w) const;
-    int to_screen_h(double h) const;
-    double zoom() const;
-    double cached_zoom = 1.0;
-    const double ZOOM_BASE = 1.1;
-    const std::int32_t INITIAL_ZOOM_STEP = 90;
-    const std::int32_t MIN_ZOOM_STEP = 2;
-    const std::int32_t MAX_ZOOM_STEP = 140;
-    std::int32_t zoom_step = INITIAL_ZOOM_STEP;
+    bool right_mouse_pressed = false;
+    QPointF previous_point;
 };

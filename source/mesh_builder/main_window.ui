@@ -19,7 +19,7 @@
  <customwidgets>
   <customwidget>
    <class>MeshBuilderWidget</class>
-   <extends>QWidget</extends>
+   <extends>QOpenGLWidget</extends>
    <header>mesh_builder_widget.h</header>
    <container>1</container>
   </customwidget>
