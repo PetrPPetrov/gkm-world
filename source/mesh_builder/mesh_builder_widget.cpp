@@ -123,13 +123,12 @@ void MeshBuilderWidget::paintGL()
 
 void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
 {
-    if (left_mouse_pressed && right_mouse_pressed)
+    if (right_mouse_pressed)
     {
         // Pan mode
         QPointF current_point = event->localPos();
-        const double effective_rotation_radius = std::max(rotation_radius, 10.0);
-        double delta_x = (previous_point.x() - current_point.x()) / width() * effective_rotation_radius;
-        double delta_y = (current_point.y() - previous_point.y()) / height() * effective_rotation_radius;
+        double delta_x = (previous_point.x() - current_point.x()) / width() * rotation_radius;
+        double delta_y = (current_point.y() - previous_point.y()) / height() * rotation_radius;
         auto user_position = viewer_previous_pos - viewer_previous_target;
         auto right = QVector3D::crossProduct(viewer_up, user_position).normalized();
         auto offset = right * delta_x + viewer_up * delta_y;
@@ -161,30 +160,6 @@ void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
         // Restore up vector property: up vector must be orthogonal to direction vector
         auto new_left = QVector3D::crossProduct(rotated_user_position, viewer_up);
         viewer_up = QVector3D::crossProduct(new_left, rotated_user_position).normalized();
-        update();
-    }
-    else if (right_mouse_pressed)
-    {
-        // First person look mode
-        QPointF current_point = event->localPos();
-        double delta_x = previous_point.x() - current_point.x();
-        double delta_y = current_point.y() - previous_point.y();
-        double x_rotation_angle = delta_x / width() * 180.0f;
-        double y_rotation_angle = delta_y / height() * 180.0f;
-        auto view_direction = viewer_previous_target - viewer_previous_pos;
-        QMatrix4x4 rotation_x;
-        rotation_x.rotate(x_rotation_angle, viewer_previous_up);
-        auto temp_view_direction = rotation_x * view_direction;
-        auto left = QVector3D::crossProduct(viewer_previous_up, temp_view_direction).normalized();
-        QMatrix4x4 rotation_y;
-        rotation_y.rotate(y_rotation_angle, left);
-        auto result_rotation = rotation_y * rotation_x;
-        auto rotated_view_direction = (result_rotation * view_direction).normalized() * rotation_radius;
-        viewer_target = viewer_previous_pos + rotated_view_direction;
-        viewer_up = (result_rotation * viewer_previous_up).normalized();
-        // Restore up vector property: up vector must be orthogonal to direction vector
-        auto new_left = QVector3D::crossProduct(viewer_up, rotated_view_direction);
-        viewer_up = QVector3D::crossProduct(rotated_view_direction, new_left).normalized();
         update();
     }
 }

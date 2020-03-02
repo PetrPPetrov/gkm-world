@@ -20,6 +20,7 @@ int main(int argc, char *argv[])
     // Center main window on desktop
     QDesktopWidget screen;
     QRect screen_rect = screen.screenGeometry(&main_window);
+    main_window.resize(screen_rect.width() * 3 / 4, screen_rect.height() * 3 / 4);
     QPoint position((screen_rect.width() - main_window.width()) / 2, (screen_rect.height() - main_window.height()) / 2);
     main_window.move(position);
     main_window.show();
