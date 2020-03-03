@@ -31,6 +31,8 @@ private:
     bool first_show = true;
     Ui::MainWindow main_window;
 
+    QDockWidget* image_list = nullptr;
+
     QDockWidget* log_dock = nullptr;
     QPlainTextEdit* log = nullptr;
 
