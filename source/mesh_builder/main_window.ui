@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Gkm-World Mesh Builder</string>
   </property>
-  <widget class="MeshBuilderWidget" name="centralwidget"/>
+  <widget class="QMdiArea" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar"/>
  </widget>
  <customwidgets>

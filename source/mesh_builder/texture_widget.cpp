@@ -14,14 +14,19 @@ TextureWidget::TextureWidget(QWidget* parent, const ImagePtr& image_)
     previous_view_point_y = view_point_y;
 }
 
+void TextureWidget::setDefaultSize(int default_width, int default_height)
+{
+    scale = std::min(static_cast<double>(default_width) / image->width(), static_cast<double>(default_height) / image->height());
+    cached_zoom = zoom();
+    update();
+}
+
 void TextureWidget::showEvent(QShowEvent* event)
 {
     QWidget::showEvent(event);
     if (first_show)
     {
         first_show = false;
-        scale = std::min(static_cast<double>(width()) / image->width(), static_cast<double>(height()) / image->height());
-        cached_zoom = zoom();
     }
 }
 

@@ -14,6 +14,7 @@
 #include <QTreeView>
 #include <QTableView>
 #include <QThread>
+#include <QMdiSubWindow>
 #include "ui_main_window.h"
 #include "texture_widget.h"
 
@@ -31,15 +32,14 @@ private:
     bool first_show = true;
     Ui::MainWindow main_window;
 
-    QDockWidget* image_list = nullptr;
-
-    QDockWidget* log_dock = nullptr;
-    QPlainTextEdit* log = nullptr;
-
-    QDockWidget* texture1_dock = nullptr;
+    MeshBuilderWidget* open_gl_view = nullptr;
+    QMdiSubWindow* open_gl_window = nullptr;
+    QPlainTextEdit* log_view = nullptr;
+    QMdiSubWindow* log_window = nullptr;
     TextureWidget* texture1_view = nullptr;
-    QDockWidget* texture2_dock = nullptr;
+    QMdiSubWindow* texture1_window = nullptr;
     TextureWidget* texture2_view = nullptr;
+    QMdiSubWindow* texture2_window = nullptr;
 
     std::vector<ImagePtr> images;
 };

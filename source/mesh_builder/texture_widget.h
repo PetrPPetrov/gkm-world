@@ -16,6 +16,7 @@ class TextureWidget : public QWidget
 
 public:
     TextureWidget(QWidget* parent, const ImagePtr& image);
+    void setDefaultSize(int default_width, int default_height);
 
 protected:
     void showEvent(QShowEvent* event) override;
