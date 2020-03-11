@@ -18,6 +18,11 @@
 #include "ui_main_window.h"
 #include "texture_widget.h"
 
+struct Vertex
+{
+
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
