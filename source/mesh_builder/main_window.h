@@ -15,6 +15,7 @@
 #include <QTableView>
 #include <QThread>
 #include <QMdiSubWindow>
+#include <QListWidget>
 #include "ui_main_window.h"
 #include "texture_widget.h"
 
@@ -40,6 +41,8 @@ private:
     QMdiSubWindow* texture1_window = nullptr;
     TextureWidget* texture2_view = nullptr;
     QMdiSubWindow* texture2_window = nullptr;
+    QMdiSubWindow* texture_list_window = nullptr;
+    QListWidget* texture_list_view = nullptr;
 
     std::vector<ImagePtr> images;
 };
