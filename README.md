@@ -10,6 +10,7 @@ Open Source Massive Multiplayer Online Battle Game
   * vcpkg install boost --triplet x64-windows-static (for Windows client)
   * vcpkg install tinyobjloader --triplet x64-windows (for resource packer)
 
+
 ## TODO list
 * implement Windows client
 * avoid InitializePositionInternalAnswer packet from Node->Balancer, send it directly Node->Proxy
