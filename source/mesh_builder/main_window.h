@@ -43,6 +43,12 @@ private:
     QMdiSubWindow* texture2_window = nullptr;
     QMdiSubWindow* texture_list_window = nullptr;
     QListWidget* texture_list_view = nullptr;
+    QMdiSubWindow* binding_list_window = nullptr;
+    QListWidget* binding_list_view = nullptr;
+    QMdiSubWindow* vertex_list_window = nullptr;
+    QListWidget* vertex_list_view = nullptr;
+    QMdiSubWindow* triangle_list_window = nullptr;
+    QListWidget* triangle_list_view = nullptr;
 
     std::vector<ImagePtr> images;
 };

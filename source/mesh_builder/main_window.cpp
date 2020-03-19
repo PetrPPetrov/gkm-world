@@ -45,6 +45,22 @@ MainWindow::MainWindow()
     texture_list_view = new QListWidget(main_window.centralwidget);
     texture_list_window = main_window.centralwidget->addSubWindow(texture_list_view);
     texture_list_window->setWindowTitle(tr("Texture List"));
+
+    binding_list_view = new QListWidget(main_window.centralwidget);
+    binding_list_window = main_window.centralwidget->addSubWindow(binding_list_view);
+    binding_list_window->setWindowTitle(tr("Binding List"));
+
+    vertex_list_view = new QListWidget(main_window.centralwidget);
+    vertex_list_window = main_window.centralwidget->addSubWindow(vertex_list_view);
+    vertex_list_window->setWindowTitle(tr("Vertex List"));
+
+    triangle_list_view = new QListWidget(main_window.centralwidget);
+    triangle_list_window = main_window.centralwidget->addSubWindow(triangle_list_view);
+    triangle_list_window->setWindowTitle(tr("Triangle List"));
+
+    texture_list_view->addItem("texture1");
+    texture_list_view->addItem("texture2");
+    texture_list_view->addItem("texture3");
 }
 
 void MainWindow::showEvent(QShowEvent* event)
@@ -68,5 +84,14 @@ void MainWindow::showEvent(QShowEvent* event)
 
         texture_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 4));
         texture_list_window->move(0, main_window.centralwidget->height() * 3 / 4);
+
+        binding_list_window->resize(QSize(main_window.centralwidget->width() * 2 / 3, main_window.centralwidget->height() / 4));
+        binding_list_window->move(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 4);
+
+        vertex_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 8));
+        vertex_list_window->move(0, 0);
+
+        triangle_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 8));
+        triangle_list_window->move(0, main_window.centralwidget->height() * 3 / 8);
     }
 }
