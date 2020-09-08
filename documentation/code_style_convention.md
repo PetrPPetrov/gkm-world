@@ -13,7 +13,7 @@ On Linux and Apply we will use the latest system C++ compiler.
 ## Formatting
 * Spaces should be used in source and header files. Tabs symbols are prohibited.
 * Tab size should be equal to 4 space symbols.
-* Local scopes (```{}``` statements) should be located each at new line.
+* Local scopes (```{``` and ```}``` keywords) should be located each at new line.
 * Don't use space symbols at the end of lines.
 * Empty lines should not contain space symbols.
 * Each source or header file should contain one empty line at the end of file.
