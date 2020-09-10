@@ -32,10 +32,6 @@ private:
     void setDefaultCamera();
 
 private:
-    std::unique_ptr<QOpenGLShaderProgram> program;
-    std::unique_ptr<QOpenGLTexture> texture;
-    QOpenGLBuffer vbo;
-
     QVector3D viewer_pos;
     QVector3D viewer_target;
     QVector3D viewer_up;

@@ -17,7 +17,8 @@
 #include <QMdiSubWindow>
 #include <QListWidget>
 #include "ui_main_window.h"
-#include "texture_widget.h"
+
+typedef std::shared_ptr<QImage> ImagePtr;
 
 class MainWindow : public QMainWindow
 {
@@ -28,29 +29,27 @@ public:
 
 protected:
     void showEvent(QShowEvent* event) override;
+    int getPhotoCount() const;
+    ImagePtr getPhoto(int index) const;
+
+private:
+    void addPhoto(const char* filename);
+    void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
 private:
     bool first_show = true;
     Ui::MainWindow main_window;
 
-    MeshBuilderWidget* open_gl_view = nullptr;
-    QMdiSubWindow* open_gl_window = nullptr;
-    QPlainTextEdit* log_view = nullptr;
-    QMdiSubWindow* log_window = nullptr;
-    TextureWidget* texture1_view = nullptr;
-    QMdiSubWindow* texture1_window = nullptr;
-    TextureWidget* texture2_view = nullptr;
-    QMdiSubWindow* texture2_window = nullptr;
-    QMdiSubWindow* texture_list_window = nullptr;
-    QListWidget* texture_list_view = nullptr;
-    QMdiSubWindow* binding_list_window = nullptr;
-    QListWidget* binding_list_view = nullptr;
-    QMdiSubWindow* vertex_list_window = nullptr;
-    QListWidget* vertex_list_view = nullptr;
-    QMdiSubWindow* triangle_list_window = nullptr;
-    QListWidget* triangle_list_view = nullptr;
+    MeshBuilderWidget* camera_orientation_widget = nullptr;
+    QMdiSubWindow* camera_orientation_window = nullptr;
 
-    std::vector<ImagePtr> images;
+    QPlainTextEdit* log_widget = nullptr;
+    QMdiSubWindow* log_window = nullptr;
+
+    QListWidget* photo_list_widget = nullptr;
+    QMdiSubWindow* photo_list_window = nullptr;
+
+    std::vector<ImagePtr> photos;
 };
 
 extern MainWindow* g_main_window;

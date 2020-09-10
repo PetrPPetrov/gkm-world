@@ -21,46 +21,37 @@ MainWindow::MainWindow()
     g_main_window = this;
     main_window.setupUi(this);
 
-    images.push_back(std::make_shared<QImage>(QString("texture.jpg")));
+    photo_list_widget = new QListWidget(main_window.centralwidget);
+    connect(photo_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onPhotoChanged);
+    photo_list_window = main_window.centralwidget->addSubWindow(photo_list_widget);
+    photo_list_window->setWindowTitle(tr("Photos List"));
 
-    open_gl_view = new MeshBuilderWidget(main_window.centralwidget);
-    open_gl_window = main_window.centralwidget->addSubWindow(open_gl_view);
-    open_gl_window->setWindowTitle(tr("3D Preview"));
+    addPhoto("chair01.jpg");
+    addPhoto("chair02.jpg");
+    addPhoto("chair03.jpg");
+    addPhoto("chair04.jpg");
+    addPhoto("chair05.jpg");
 
-    log_view = new QPlainTextEdit(main_window.centralwidget);
-    log_view->setReadOnly(true);
-    log_view->ensureCursorVisible();
-    log_view->setCenterOnScroll(true);
-    log_window = main_window.centralwidget->addSubWindow(log_view);
+    log_widget = new QPlainTextEdit(main_window.centralwidget);
+    log_widget->setReadOnly(true);
+    log_widget->ensureCursorVisible();
+    log_widget->setCenterOnScroll(true);
+    log_window = main_window.centralwidget->addSubWindow(log_widget);
     log_window->setWindowTitle(tr("Log"));
 
-    texture1_view = new TextureWidget(main_window.centralwidget, images[0]);
-    texture1_window = main_window.centralwidget->addSubWindow(texture1_view);
-    texture1_window->setWindowTitle(tr("Texture 1"));
+    camera_orientation_widget = new MeshBuilderWidget(main_window.centralwidget);
+    camera_orientation_window = main_window.centralwidget->addSubWindow(camera_orientation_widget);
+    camera_orientation_window->setWindowTitle(tr("3D Camera Orientation for Photo"));
+}
 
-    texture2_view = new TextureWidget(main_window.centralwidget, images[0]);
-    texture2_window = main_window.centralwidget->addSubWindow(texture2_view);
-    texture2_window->setWindowTitle(tr("Texture 2"));
+int MainWindow::getPhotoCount() const
+{
+    return static_cast<int>(photos.size());
+}
 
-    texture_list_view = new QListWidget(main_window.centralwidget);
-    texture_list_window = main_window.centralwidget->addSubWindow(texture_list_view);
-    texture_list_window->setWindowTitle(tr("Texture List"));
-
-    binding_list_view = new QListWidget(main_window.centralwidget);
-    binding_list_window = main_window.centralwidget->addSubWindow(binding_list_view);
-    binding_list_window->setWindowTitle(tr("Binding List"));
-
-    vertex_list_view = new QListWidget(main_window.centralwidget);
-    vertex_list_window = main_window.centralwidget->addSubWindow(vertex_list_view);
-    vertex_list_window->setWindowTitle(tr("Vertex List"));
-
-    triangle_list_view = new QListWidget(main_window.centralwidget);
-    triangle_list_window = main_window.centralwidget->addSubWindow(triangle_list_view);
-    triangle_list_window->setWindowTitle(tr("Triangle List"));
-
-    texture_list_view->addItem("texture1");
-    texture_list_view->addItem("texture2");
-    texture_list_view->addItem("texture3");
+ImagePtr MainWindow::getPhoto(int index) const
+{
+    return photos.at(index);
 }
 
 void MainWindow::showEvent(QShowEvent* event)
@@ -71,27 +62,27 @@ void MainWindow::showEvent(QShowEvent* event)
     {
         first_show = false;
 
-        open_gl_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 4));
-        open_gl_window->move(main_window.centralwidget->width() * 2 / 3, 0);
+        camera_orientation_window->resize(QSize(main_window.centralwidget->width() * 3 / 4, main_window.centralwidget->height()));
+        camera_orientation_window->move(main_window.centralwidget->width() / 4, 0);
 
-        texture1_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 8));
-        texture1_window->move(main_window.centralwidget->width() * 1 / 3, 0);
-        texture1_view->setDefaultSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 8);
+        photo_list_window->resize(QSize(main_window.centralwidget->width() / 4, main_window.centralwidget->height() / 2));
+        photo_list_window->move(0, 0);
 
-        texture2_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 8));
-        texture2_window->move(main_window.centralwidget->width() * 1 / 3, main_window.centralwidget->height() * 3 / 8);
-        texture2_view->setDefaultSize(main_window.centralwidget->width() * 1 / 3, main_window.centralwidget->height() * 3 / 8);
+        log_window->resize(QSize(main_window.centralwidget->width() / 4, main_window.centralwidget->height() / 2));
+        log_window->move(0, main_window.centralwidget->height() / 2);
+    }
+}
 
-        texture_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 4));
-        texture_list_window->move(0, main_window.centralwidget->height() * 3 / 4);
+void MainWindow::addPhoto(const char* filename)
+{
+    photo_list_widget->addItem(filename);
+    photos.push_back(std::make_shared<QImage>(QString(filename)));
+}
 
-        binding_list_window->resize(QSize(main_window.centralwidget->width() * 2 / 3, main_window.centralwidget->height() / 4));
-        binding_list_window->move(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 4);
-
-        vertex_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 8));
-        vertex_list_window->move(0, 0);
-
-        triangle_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() * 3 / 8));
-        triangle_list_window->move(0, main_window.centralwidget->height() * 3 / 8);
+void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    if (photo_list_widget->selectedItems().size() > 0)
+    {
+        log_widget->appendPlainText(photo_list_widget->item(photo_list_widget->currentIndex().row())->text());
     }
 }

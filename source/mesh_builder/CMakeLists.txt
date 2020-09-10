@@ -15,6 +15,7 @@ set(CMAKE_PREFIX_PATH ${QT_ROOT})
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Gui REQUIRED)
 find_package(Qt5Widgets REQUIRED)
+find_package(Qt5OpenGL REQUIRED)
 
 include_directories(
 ${PROJECT_SOURCE_DIR}/../../include
@@ -36,7 +37,6 @@ ${PROJECT_SOURCE_DIR}/main_window.ui
 
 set(MESH_BUILDER_MOC_FILES
 ${PROJECT_SOURCE_DIR}/main_window.h
-${PROJECT_SOURCE_DIR}/texture_widget.h
 )
 
 set(CMAKE_AUTOMOC ON)
@@ -52,7 +52,7 @@ ${COMMON}
 ${COMMON_SOURCE}
 )
 
-target_link_libraries(mesh_builder Qt5::Core Qt5::Widgets)
+target_link_libraries(mesh_builder Qt5::Core Qt5::Widgets Qt5::OpenGL opengl32)
 source_group(Common FILES ${COMMON} ${COMMON_SOURCE})
 source_group(UiMoc FILES ${MESH_BUILDER_UI_FILES} ${MESH_BUILDER_MOC_FILES})
 

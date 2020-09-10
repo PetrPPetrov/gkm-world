@@ -17,9 +17,6 @@
 #include "main_window.h"
 #include "mesh_builder_widget.h"
 
-#define PROGRAM_VERTEX_ATTRIBUTE 0
-#define PROGRAM_TEXCOORD_ATTRIBUTE 1
-
 MeshBuilderWidget::MeshBuilderWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
     setMouseTracking(true);
@@ -32,93 +29,32 @@ void MeshBuilderWidget::initializeGL()
     glClearColor(0.5, 0.5, 0.5, 1.0);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
-
-    static const int coords[6][4][3] = {
-        { { +1, -1, -1 }, { -1, -1, -1 }, { -1, +1, -1 }, { +1, +1, -1 } },
-        { { +1, +1, -1 }, { -1, +1, -1 }, { -1, +1, +1 }, { +1, +1, +1 } },
-        { { +1, -1, +1 }, { +1, -1, -1 }, { +1, +1, -1 }, { +1, +1, +1 } },
-        { { -1, -1, -1 }, { -1, -1, +1 }, { -1, +1, +1 }, { -1, +1, -1 } },
-        { { +1, -1, +1 }, { -1, -1, +1 }, { -1, -1, -1 }, { +1, -1, -1 } },
-        { { -1, -1, +1 }, { +1, -1, +1 }, { +1, +1, +1 }, { -1, +1, +1 } }
-    };
-
-    texture = std::make_unique<QOpenGLTexture>(QImage(QString("texture.jpg")));
-
-    QVector<GLfloat> vertData;
-    for (int i = 0; i < 6; ++i)
-    {
-        for (int j = 0; j < 4; ++j)
-        {
-            // vertex position
-            vertData.append(0.2 * coords[i][j][0]);
-            vertData.append(0.2 * coords[i][j][1]);
-            vertData.append(0.2 * coords[i][j][2]);
-            // texture coordinate
-            vertData.append(j == 0 || j == 3);
-            vertData.append(j == 0 || j == 1);
-        }
-    }
-
-    vbo.create();
-    vbo.bind();
-    vbo.allocate(vertData.constData(), vertData.count() * sizeof(GLfloat));
-
-    QOpenGLShader* vshader = new QOpenGLShader(QOpenGLShader::Vertex, this);
-    const char* vsrc =
-        "attribute highp vec4 vertex;\n"
-        "attribute mediump vec4 texCoord;\n"
-        "varying mediump vec4 texc;\n"
-        "uniform mediump mat4 matrix;\n"
-        "void main(void)\n"
-        "{\n"
-        "    gl_Position = matrix * vertex;\n"
-        "    texc = texCoord;\n"
-        "}\n";
-    vshader->compileSourceCode(vsrc);
-
-    QOpenGLShader* fshader = new QOpenGLShader(QOpenGLShader::Fragment, this);
-    const char* fsrc =
-        "uniform sampler2D texture;\n"
-        "varying mediump vec4 texc;\n"
-        "void main(void)\n"
-        "{\n"
-        "    gl_FragColor = texture2D(texture, texc.st);\n"
-        "}\n";
-    fshader->compileSourceCode(fsrc);
-
-    program = std::make_unique<QOpenGLShaderProgram>();
-    program->addShader(vshader);
-    program->addShader(fshader);
-    program->bindAttributeLocation("vertex", PROGRAM_VERTEX_ATTRIBUTE);
-    program->bindAttributeLocation("texCoord", PROGRAM_TEXCOORD_ATTRIBUTE);
-    program->link();
-
-    program->bind();
-    program->setUniformValue("texture", 0);
 }
 
 void MeshBuilderWidget::paintGL()
 {
     glClearColor(0.5, 0.5, 0.5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(0);
 
     QMatrix4x4 projection_matrix;
     projection_matrix.perspective(50.0f, static_cast<float>(width()) / height(), 0.125f, 1024.0f);
 
+    glMatrixMode(GL_PROJECTION_MATRIX);
+    glLoadMatrixf(projection_matrix.constData());
+
     QMatrix4x4 view_matrix;
     view_matrix.lookAt(viewer_pos, viewer_target, viewer_up);
 
-    program->setUniformValue("matrix", projection_matrix * view_matrix);
-    program->enableAttributeArray(PROGRAM_VERTEX_ATTRIBUTE);
-    program->enableAttributeArray(PROGRAM_TEXCOORD_ATTRIBUTE);
-    program->setAttributeBuffer(PROGRAM_VERTEX_ATTRIBUTE, GL_FLOAT, 0, 3, 5 * sizeof(GLfloat));
-    program->setAttributeBuffer(PROGRAM_TEXCOORD_ATTRIBUTE, GL_FLOAT, 3 * sizeof(GLfloat), 2, 5 * sizeof(GLfloat));
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrixf(view_matrix.constData());
 
-    texture->bind();
-    for (int i = 0; i < 6; ++i)
-    {
-        glDrawArrays(GL_TRIANGLE_FAN, i * 4, 4);
-    }
+    glBegin(GL_LINES);
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glColor3f(1, 0, 0);
+    glVertex3f(1.0f, 0.0f, 0.0f);
+    glColor3f(1, 0, 0);
+    glEnd();
 }
 
 void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
@@ -230,8 +166,8 @@ void MeshBuilderWidget::wheelEvent(QWheelEvent* event)
 
 void MeshBuilderWidget::setDefaultCamera()
 {
-    viewer_pos = QVector3D(0, 0, 3);
-    viewer_target = QVector3D(0, 0, 0);
+    viewer_pos = QVector3D(0.5, 0.5, 3);
+    viewer_target = QVector3D(0.5, 0.5, 0.5);
     viewer_up = QVector3D(0, 1, 0);
     rotation_radius = viewer_pos.distanceToPoint(viewer_target);
     viewer_previous_pos = viewer_pos;
