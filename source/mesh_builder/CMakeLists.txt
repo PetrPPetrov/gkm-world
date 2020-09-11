@@ -52,7 +52,7 @@ ${COMMON}
 ${COMMON_SOURCE}
 )
 
-target_link_libraries(mesh_builder Qt5::Core Qt5::Widgets Qt5::OpenGL opengl32)
+target_link_libraries(mesh_builder Qt5::Core Qt5::Widgets Qt5::OpenGL)
 source_group(Common FILES ${COMMON} ${COMMON_SOURCE})
 source_group(UiMoc FILES ${MESH_BUILDER_UI_FILES} ${MESH_BUILDER_MOC_FILES})
 
