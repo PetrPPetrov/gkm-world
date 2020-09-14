@@ -17,15 +17,6 @@
 #include "main_window.h"
 #include "mesh_builder_widget.h"
 
-#define PROGRAM_VERTEX_ATTRIBUTE 0
-#define PROGRAM_COLOR_ATTRIBUTE 1
-
-struct VertexPositionColor
-{
-    float x, y, z;
-    std::uint32_t abgr;
-};
-
 MeshBuilderWidget::MeshBuilderWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
     setMouseTracking(true);
@@ -37,10 +28,22 @@ void MeshBuilderWidget::initializeGL()
     initializeOpenGLFunctions();
     glClearColor(0.5, 0.5, 0.5, 1.0);
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE);
 
-    //texture = std::make_unique<QOpenGLTexture>(QImage(QString("texture.jpg")));
+    photo = std::make_unique<QOpenGLTexture>(QImage(QString("texture.jpg")));
 
+    initializeAuxGeomLineSet();
+    initializePhoto();
+}
+
+struct VertexPositionColor
+{
+    float x, y, z;
+    std::uint32_t abgr;
+};
+
+void MeshBuilderWidget::initializeAuxGeomLineSet()
+{
     const static VertexPositionColor vertex_buffer[] =
     {
         { 0.0f, 0.0f, 0.0f, 0xff0000ff },
@@ -69,12 +72,15 @@ void MeshBuilderWidget::initializeGL()
         { 1.0f, 1.0f, 1.0f, 0xffffffff }
     };
 
-    vbo.create();
-    vbo.bind();
-    vbo.allocate(vertex_buffer, sizeof(vertex_buffer));
+    aux_geom_line_set_vao.create();
+    aux_geom_line_set_vao.bind();
+    aux_geom_line_set_vbo.create();
+    aux_geom_line_set_vbo.bind();
+    aux_geom_line_set_vbo.allocate(vertex_buffer, sizeof(vertex_buffer));
+    //aux_geom_line_set_vao.release();
 
-    QOpenGLShader* vshader = new QOpenGLShader(QOpenGLShader::Vertex, this);
-    const char* vsrc =
+    aux_geom_line_set_program = std::make_unique<QOpenGLShaderProgram>();
+    aux_geom_line_set_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
         "attribute highp vec4 vertex;\n"
         "attribute lowp vec4 color;\n"
         "varying lowp vec4 vcolor;\n"
@@ -83,32 +89,100 @@ void MeshBuilderWidget::initializeGL()
         "{\n"
         "    gl_Position = matrix * vertex;\n"
         "    vcolor = color;\n"
-        "}\n";
-    vshader->compileSourceCode(vsrc);
+        "}\n");
 
-    QOpenGLShader* fshader = new QOpenGLShader(QOpenGLShader::Fragment, this);
-    const char* fsrc =
+    aux_geom_line_set_program->addShaderFromSourceCode(QOpenGLShader::Fragment,
         "varying lowp vec4 vcolor;\n"
         "void main(void)\n"
         "{\n"
         "    gl_FragColor = vcolor;\n"
-        "}\n";
-    fshader->compileSourceCode(fsrc);
+        "}\n");
+    aux_geom_line_set_program->link();
 
-    program = std::make_unique<QOpenGLShaderProgram>();
-    program->addShader(vshader);
-    program->addShader(fshader);
-    program->bindAttributeLocation("vertex", PROGRAM_VERTEX_ATTRIBUTE);
-    program->bindAttributeLocation("color", PROGRAM_COLOR_ATTRIBUTE);
-    program->link();
+    const int vertex_location = aux_geom_line_set_program->attributeLocation("vertex");
+    const int color_location = aux_geom_line_set_program->attributeLocation("color");
+    aux_geom_line_set_matrix_location = aux_geom_line_set_program->uniformLocation("matrix");
 
-    program->bind();
-    //program->setUniformValue("texture", 0);
+    aux_geom_line_set_program->enableAttributeArray(vertex_location);
+    aux_geom_line_set_program->enableAttributeArray(color_location);
+    aux_geom_line_set_program->setAttributeBuffer(vertex_location, GL_FLOAT, 0, 3, sizeof(VertexPositionColor));
+    aux_geom_line_set_program->setAttributeBuffer(color_location, GL_UNSIGNED_BYTE, 3 * sizeof(float), 4, sizeof(VertexPositionColor));
+}
+
+struct VertexPositionTexCoord
+{
+    float x, y, z;
+    float u, v;
+};
+
+void MeshBuilderWidget::initializePhoto()
+{
+    const int width = photo->width();
+    const int height = photo->height();
+    const int x_low = -width / 2;
+    const int x_high = x_low + width;
+    const int y_low = -height / 2;
+    const int y_high = y_low + height;
+
+    const static VertexPositionTexCoord vertex_buffer[] =
+    {
+        //{ x_low, y_low, 0.0f, 0.0f, 0.0f },
+        //{ x_high, y_low, 0.0f, 1.0f, 0.0f },
+        //{ x_high, y_high, 0.0f, 1.0f, 1.0f },
+        //{ x_high, y_high, 0.0f, 1.0f, 1.0f },
+        //{ x_low, y_high, 0.0f, 0.0f, 1.0f },
+        //{ x_low, y_low, 0.0f, 0.0f, 0.0f }
+
+        { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
+        { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f },
+        { 1.0f, 1.0f, 0.0f, 1.0f, 1.0f },
+        { 1.0f, 1.0f, 0.0f, 1.0f, 1.0f },
+        { 0.0f, 1.0f, 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }
+    };
+
+    photo_vao.create();
+    photo_vao.bind();
+    photo_vbo.create();
+    photo_vbo.bind();
+    photo_vbo.allocate(vertex_buffer, sizeof(vertex_buffer));
+    //photo_vao.release();
+
+    photo_program = std::make_unique<QOpenGLShaderProgram>();
+    photo_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+        "attribute highp vec4 vertex;\n"
+        "attribute mediump vec2 texcoord;\n"
+        "varying mediump vec2 vtexcoord;\n"
+        "uniform mediump mat4 matrix;\n"
+        "void main(void)\n"
+        "{\n"
+        "    gl_Position = matrix * vertex;\n"
+        "    vtexcoord = texcoord;\n"
+        "}\n");
+    photo_program->addShaderFromSourceCode(QOpenGLShader::Fragment,
+        "uniform sampler2D texture;\n"
+        "varying mediump vec2 vtexcoord;\n"
+        "void main(void)\n"
+        "{\n"
+        "    gl_FragColor = texture2D(texture, vtexcoord);\n"
+        "}\n");
+    photo_program->link();
+
+    const int vertex_location = photo_program->attributeLocation("vertex");
+    const int texcoord_location = photo_program->attributeLocation("texcoord");
+    photo_matrix_location = photo_program->uniformLocation("matrix");
+    photo_texture_location = photo_program->uniformLocation("texture");
+
+    photo_program->enableAttributeArray(vertex_location);
+    photo_program->enableAttributeArray(texcoord_location);
+    photo_program->setAttributeBuffer(vertex_location, GL_FLOAT, 0, 3, sizeof(VertexPositionTexCoord));
+    photo_program->setAttributeBuffer(texcoord_location, GL_FLOAT, 3 * sizeof(float), 2, sizeof(VertexPositionTexCoord));
+    photo_program->setUniformValue(photo_texture_location, photo->textureId());
 }
 
 void MeshBuilderWidget::paintGL()
 {
-    glClearColor(0.5, 0.5, 0.5, 1.0);
+    glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     QMatrix4x4 projection_matrix;
@@ -117,15 +191,25 @@ void MeshBuilderWidget::paintGL()
     QMatrix4x4 view_matrix;
     view_matrix.lookAt(viewer_pos, viewer_target, viewer_up);
 
-    program->setUniformValue("matrix", projection_matrix * view_matrix);
-    program->enableAttributeArray(PROGRAM_VERTEX_ATTRIBUTE);
-    program->enableAttributeArray(PROGRAM_COLOR_ATTRIBUTE);
-    program->setAttributeBuffer(PROGRAM_VERTEX_ATTRIBUTE, GL_FLOAT, 0, 3, sizeof(VertexPositionColor));
-    program->setAttributeBuffer(PROGRAM_COLOR_ATTRIBUTE, GL_UNSIGNED_BYTE, 3 * sizeof(float), 4, sizeof(VertexPositionColor));
+    QMatrix4x4 mvp_matrix = projection_matrix * view_matrix;
 
-    //texture->bind();
+    {
+        aux_geom_line_set_vao.bind();
+        aux_geom_line_set_program->bind();
+        aux_geom_line_set_program->setUniformValue(aux_geom_line_set_matrix_location, mvp_matrix);
+        aux_geom_line_set_vbo.bind();
+        glDrawArrays(GL_LINES, 0, 24);
+    }
 
-    glDrawArrays(GL_LINES, 0, 24);
+    glDisable(GL_DEPTH_TEST);
+    {
+        photo_vao.bind();
+        photo_program->bind();
+        photo_program->setUniformValue(photo_matrix_location, mvp_matrix);
+        photo->bind();
+        photo_vbo.bind();
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
 }
 
 void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)

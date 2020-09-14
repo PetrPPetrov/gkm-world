@@ -11,6 +11,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QOpenGLBuffer>
+#include <QOpenGLVertexArrayObject>
 #include <QVector3D>
 
 class MeshBuilderWidget : public QOpenGLWidget, protected QOpenGLFunctions
@@ -22,6 +23,8 @@ public:
 
 protected:
     void initializeGL() override;
+    void initializeAuxGeomLineSet();
+    void initializePhoto();
     void paintGL() override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
@@ -32,9 +35,18 @@ private:
     void setDefaultCamera();
 
 private:
-    std::unique_ptr<QOpenGLShaderProgram> program;
-    //std::unique_ptr<QOpenGLTexture> texture;
-    QOpenGLBuffer vbo;
+    std::unique_ptr<QOpenGLShaderProgram> aux_geom_line_set_program;
+    QOpenGLVertexArrayObject aux_geom_line_set_vao;
+    QOpenGLBuffer aux_geom_line_set_vbo;
+    int aux_geom_line_set_matrix_location;
+
+    std::unique_ptr<QOpenGLShaderProgram> photo_program;
+    QOpenGLVertexArrayObject photo_vao;
+    QOpenGLBuffer photo_vbo;
+    int photo_matrix_location;
+    int photo_texture_location;
+
+    std::unique_ptr<QOpenGLTexture> photo;
 
     QVector3D viewer_pos;
     QVector3D viewer_target;

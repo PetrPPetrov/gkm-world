@@ -21,6 +21,7 @@ include_directories(
 ${PROJECT_SOURCE_DIR}/../../include
 ${PROJECT_SOURCE_DIR}/../../3rdparty/eigen/include/eigen3
 ${Qt5Widgets_INCLUDE_DIRS}
+${Qt5OpenGL_INCLUDE_DIRS}
 )
 
 include_directories(${Boost_INCLUDE_DIRS})
