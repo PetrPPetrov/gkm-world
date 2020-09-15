@@ -30,7 +30,7 @@ void MeshBuilderWidget::initializeGL()
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 
-    photo = std::make_unique<QOpenGLTexture>(QImage(QString("texture.jpg")));
+    photo = std::make_unique<QOpenGLTexture>(QImage(QString("chair01.jpg")));
 
     initializeAuxGeomLineSet();
     initializePhoto();
@@ -77,7 +77,6 @@ void MeshBuilderWidget::initializeAuxGeomLineSet()
     aux_geom_line_set_vbo.create();
     aux_geom_line_set_vbo.bind();
     aux_geom_line_set_vbo.allocate(vertex_buffer, sizeof(vertex_buffer));
-    //aux_geom_line_set_vao.release();
 
     aux_geom_line_set_program = std::make_unique<QOpenGLShaderProgram>();
     aux_geom_line_set_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
@@ -117,28 +116,23 @@ struct VertexPositionTexCoord
 
 void MeshBuilderWidget::initializePhoto()
 {
-    const int width = photo->width();
-    const int height = photo->height();
-    const int x_low = -width / 2;
-    const int x_high = x_low + width;
-    const int y_low = -height / 2;
-    const int y_high = y_low + height;
+    photo_width = photo->width();
+    photo_height = photo->height();
+    photo_aspect = static_cast<float>(photo_width) / photo_height;
+
+    const float x_low = -photo_width / 2;
+    const float x_high = x_low + photo_width;
+    const float y_low = -photo_height / 2;
+    const float y_high = y_low + photo_height;
 
     const static VertexPositionTexCoord vertex_buffer[] =
     {
-        //{ x_low, y_low, 0.0f, 0.0f, 0.0f },
-        //{ x_high, y_low, 0.0f, 1.0f, 0.0f },
-        //{ x_high, y_high, 0.0f, 1.0f, 1.0f },
-        //{ x_high, y_high, 0.0f, 1.0f, 1.0f },
-        //{ x_low, y_high, 0.0f, 0.0f, 1.0f },
-        //{ x_low, y_low, 0.0f, 0.0f, 0.0f }
-
-        { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
-        { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f },
-        { 1.0f, 1.0f, 0.0f, 1.0f, 1.0f },
-        { 1.0f, 1.0f, 0.0f, 1.0f, 1.0f },
-        { 0.0f, 1.0f, 0.0f, 0.0f, 1.0f },
-        { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }
+        { x_low, y_low, -1.0f, 0.0f, 1.0f },
+        { x_high, y_low, -1.0f, 1.0f, 1.0f },
+        { x_high, y_high, -1.0f, 1.0f, 0.0f },
+        { x_high, y_high, -1.0f, 1.0f, 0.0f },
+        { x_low, y_high, -1.0f, 0.0f, 0.0f },
+        { x_low, y_low, -1.0f, 0.0f, 1.0f }
     };
 
     photo_vao.create();
@@ -146,7 +140,6 @@ void MeshBuilderWidget::initializePhoto()
     photo_vbo.create();
     photo_vbo.bind();
     photo_vbo.allocate(vertex_buffer, sizeof(vertex_buffer));
-    //photo_vao.release();
 
     photo_program = std::make_unique<QOpenGLShaderProgram>();
     photo_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
@@ -182,34 +175,38 @@ void MeshBuilderWidget::initializePhoto()
 
 void MeshBuilderWidget::paintGL()
 {
+    const int viewport_width = width();
+    const int viewport_height = height();
+    const float viewport_aspect = static_cast<double>(viewport_width) / viewport_height;
+
+    float x_low = -photo_width / 2;
+    float x_high = x_low + photo_width;
+    float y_low = -photo_height / 2;
+    float y_high = y_low + photo_height;
+
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    QMatrix4x4 ortho_projection;
+    ortho_projection.ortho(x_low, x_high, y_low, y_high, 0.125f, 1024.0f);
+    photo_vao.bind();
+    photo_program->bind();
+    photo_program->setUniformValue(photo_matrix_location, ortho_projection);
+    photo->bind();
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
     QMatrix4x4 projection_matrix;
-    projection_matrix.perspective(50.0f, static_cast<float>(width()) / height(), 0.125f, 1024.0f);
+    projection_matrix.perspective(50.0f, viewport_aspect, 0.125f, 1024.0f);
 
     QMatrix4x4 view_matrix;
     view_matrix.lookAt(viewer_pos, viewer_target, viewer_up);
 
     QMatrix4x4 mvp_matrix = projection_matrix * view_matrix;
-
-    {
-        aux_geom_line_set_vao.bind();
-        aux_geom_line_set_program->bind();
-        aux_geom_line_set_program->setUniformValue(aux_geom_line_set_matrix_location, mvp_matrix);
-        aux_geom_line_set_vbo.bind();
-        glDrawArrays(GL_LINES, 0, 24);
-    }
-
     glDisable(GL_DEPTH_TEST);
-    {
-        photo_vao.bind();
-        photo_program->bind();
-        photo_program->setUniformValue(photo_matrix_location, mvp_matrix);
-        photo->bind();
-        photo_vbo.bind();
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-    }
+    aux_geom_line_set_vao.bind();
+    aux_geom_line_set_program->bind();
+    aux_geom_line_set_program->setUniformValue(aux_geom_line_set_matrix_location, mvp_matrix);
+    glDrawArrays(GL_LINES, 0, 24);
 }
 
 void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
