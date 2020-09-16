@@ -13,6 +13,7 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QVector3D>
+#include "aux_geometry.h"
 
 class MeshBuilderWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -20,6 +21,8 @@ class MeshBuilderWidget : public QOpenGLWidget, protected QOpenGLFunctions
 
 public:
     MeshBuilderWidget(QWidget *parent);
+    void setAuxGeometry(const AuxGeometry::Ptr& geometry);
+    void updateAuxGeometry();
 
 protected:
     void initializeGL() override;
@@ -35,9 +38,12 @@ private:
     void setDefaultCamera();
 
 private:
+    AuxGeometry::Ptr aux_geometry;
+
     std::unique_ptr<QOpenGLShaderProgram> aux_geom_line_set_program;
-    QOpenGLVertexArrayObject aux_geom_line_set_vao;
-    QOpenGLBuffer aux_geom_line_set_vbo;
+    std::unique_ptr<QOpenGLVertexArrayObject> aux_geom_line_set_vao;
+    std::unique_ptr<QOpenGLBuffer> aux_geom_line_set_vbo;
+    int aux_geom_line_set_vbo_size;
     int aux_geom_line_set_matrix_location;
 
     std::unique_ptr<QOpenGLShaderProgram> photo_program;

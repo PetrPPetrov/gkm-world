@@ -17,6 +17,7 @@
 #include <QMdiSubWindow>
 #include <QListWidget>
 #include "ui_main_window.h"
+#include "aux_geometry.h"
 
 typedef std::shared_ptr<QImage> ImagePtr;
 
@@ -37,6 +38,8 @@ private:
     void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
 
 private:
+    AuxGeometry::Ptr aux_geometry;
+
     bool first_show = true;
     Ui::MainWindow main_window;
 

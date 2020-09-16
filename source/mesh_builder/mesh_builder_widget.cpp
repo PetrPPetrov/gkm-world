@@ -17,34 +17,32 @@
 #include "main_window.h"
 #include "mesh_builder_widget.h"
 
-MeshBuilderWidget::MeshBuilderWidget(QWidget *parent) : QOpenGLWidget(parent)
-{
-    setMouseTracking(true);
-    setDefaultCamera();
-}
-
-void MeshBuilderWidget::initializeGL()
-{
-    initializeOpenGLFunctions();
-    glClearColor(0.5, 0.5, 0.5, 1.0);
-    glEnable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-
-    photo = std::make_unique<QOpenGLTexture>(QImage(QString("chair01.jpg")));
-
-    initializeAuxGeomLineSet();
-    initializePhoto();
-}
-
 struct VertexPositionColor
 {
     float x, y, z;
     std::uint32_t abgr;
 };
 
-void MeshBuilderWidget::initializeAuxGeomLineSet()
+struct VertexPositionTexCoord
 {
-    const static VertexPositionColor vertex_buffer[] =
+    float x, y, z;
+    float u, v;
+};
+
+MeshBuilderWidget::MeshBuilderWidget(QWidget *parent) : QOpenGLWidget(parent)
+{
+    setMouseTracking(true);
+    setDefaultCamera();
+}
+
+void MeshBuilderWidget::setAuxGeometry(const AuxGeometry::Ptr& geometry)
+{
+    aux_geometry = geometry;
+}
+
+void MeshBuilderWidget::updateAuxGeometry()
+{
+    const static VertexPositionColor box_vertex_buffer[] =
     {
         { 0.0f, 0.0f, 0.0f, 0xff0000ff },
         { 1.0f, 0.0f, 0.0f, 0xff0000ff },
@@ -71,12 +69,53 @@ void MeshBuilderWidget::initializeAuxGeomLineSet()
         { 1.0f, 1.0f, 0.0f, 0xffffffff },
         { 1.0f, 1.0f, 1.0f, 0xffffffff }
     };
+    const size_t box_vertex_buffer_size = sizeof(box_vertex_buffer) / sizeof(box_vertex_buffer[0]);
 
-    aux_geom_line_set_vao.create();
-    aux_geom_line_set_vao.bind();
-    aux_geom_line_set_vbo.create();
-    aux_geom_line_set_vbo.bind();
-    aux_geom_line_set_vbo.allocate(vertex_buffer, sizeof(vertex_buffer));
+    std::vector<VertexPositionColor> vertex_buffer;
+    vertex_buffer.reserve(box_vertex_buffer_size * aux_geometry->boxes.size());
+
+    for (auto box : aux_geometry->boxes)
+    {
+        for (size_t i = 0; i < box_vertex_buffer_size; ++i)
+        {
+            VertexPositionColor cur_vertex = box_vertex_buffer[i];
+            cur_vertex.x = box->position.x() + cur_vertex.x * box->size.x();
+            cur_vertex.y = box->position.y() + cur_vertex.y * box->size.y();
+            cur_vertex.z = box->position.z() + cur_vertex.z * box->size.z();
+            vertex_buffer.push_back(cur_vertex);
+        }
+    }
+
+    aux_geom_line_set_vao.reset(nullptr);
+    aux_geom_line_set_vbo.reset(nullptr);
+
+    aux_geom_line_set_vao = std::make_unique<QOpenGLVertexArrayObject>();
+    aux_geom_line_set_vao->create();
+    aux_geom_line_set_vao->bind();
+    aux_geom_line_set_vbo = std::make_unique<QOpenGLBuffer>();
+    aux_geom_line_set_vbo->create();
+    aux_geom_line_set_vbo->bind();
+    aux_geom_line_set_vbo->allocate(&vertex_buffer[0], static_cast<int>(vertex_buffer.size() * sizeof(VertexPositionColor)));
+
+    aux_geom_line_set_vbo_size = static_cast<int>(vertex_buffer.size());
+}
+
+void MeshBuilderWidget::initializeGL()
+{
+    initializeOpenGLFunctions();
+    glClearColor(0.5, 0.5, 0.5, 1.0);
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    photo = std::make_unique<QOpenGLTexture>(QImage(QString("chair06.jpg")));
+
+    initializeAuxGeomLineSet();
+    initializePhoto();
+}
+
+void MeshBuilderWidget::initializeAuxGeomLineSet()
+{
+    updateAuxGeometry();
 
     aux_geom_line_set_program = std::make_unique<QOpenGLShaderProgram>();
     aux_geom_line_set_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
@@ -107,12 +146,6 @@ void MeshBuilderWidget::initializeAuxGeomLineSet()
     aux_geom_line_set_program->setAttributeBuffer(vertex_location, GL_FLOAT, 0, 3, sizeof(VertexPositionColor));
     aux_geom_line_set_program->setAttributeBuffer(color_location, GL_UNSIGNED_BYTE, 3 * sizeof(float), 4, sizeof(VertexPositionColor));
 }
-
-struct VertexPositionTexCoord
-{
-    float x, y, z;
-    float u, v;
-};
 
 void MeshBuilderWidget::initializePhoto()
 {
@@ -203,10 +236,10 @@ void MeshBuilderWidget::paintGL()
 
     QMatrix4x4 mvp_matrix = projection_matrix * view_matrix;
     glDisable(GL_DEPTH_TEST);
-    aux_geom_line_set_vao.bind();
+    aux_geom_line_set_vao->bind();
     aux_geom_line_set_program->bind();
     aux_geom_line_set_program->setUniformValue(aux_geom_line_set_matrix_location, mvp_matrix);
-    glDrawArrays(GL_LINES, 0, 24);
+    glDrawArrays(GL_LINES, 0, aux_geom_line_set_vbo_size);
 }
 
 void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)

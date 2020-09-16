@@ -21,6 +21,11 @@ MainWindow::MainWindow()
     g_main_window = this;
     main_window.setupUi(this);
 
+    aux_geometry = std::make_shared<AuxGeometry>();
+    auto new_box = std::make_shared<Box>();
+    new_box->size = QVector3D(1, 1, 1);
+    aux_geometry->boxes.push_back(new_box);
+
     photo_list_widget = new QListWidget(main_window.centralwidget);
     connect(photo_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onPhotoChanged);
     photo_list_window = main_window.centralwidget->addSubWindow(photo_list_widget);
@@ -40,6 +45,7 @@ MainWindow::MainWindow()
     log_window->setWindowTitle(tr("Log"));
 
     camera_orientation_widget = new MeshBuilderWidget(main_window.centralwidget);
+    camera_orientation_widget->setAuxGeometry(aux_geometry);
     camera_orientation_window = main_window.centralwidget->addSubWindow(camera_orientation_widget);
     camera_orientation_window->setWindowTitle(tr("3D Camera Orientation for Photo"));
 }
@@ -83,6 +89,23 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
 {
     if (photo_list_widget->selectedItems().size() > 0)
     {
-        log_widget->appendPlainText(photo_list_widget->item(photo_list_widget->currentIndex().row())->text());
+        int index = photo_list_widget->currentIndex().row();
+        if (index == 1)
+        {
+            aux_geometry->boxes.front()->size = QVector3D(1, 2, 3);
+            camera_orientation_widget->updateAuxGeometry();
+        }
+        else if (index == 2)
+        {
+            aux_geometry->boxes.front()->size = QVector3D(5, 6, 7);
+            camera_orientation_widget->updateAuxGeometry();
+        }
+        else
+        {
+            aux_geometry->boxes.front()->size = QVector3D(1, 1, 1);
+            camera_orientation_widget->updateAuxGeometry();
+        }
+
+        log_widget->appendPlainText(photo_list_widget->item(index)->text());
     }
 }
