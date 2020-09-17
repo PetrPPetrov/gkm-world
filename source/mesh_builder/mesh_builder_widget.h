@@ -47,8 +47,8 @@ private:
     int aux_geom_line_set_matrix_location;
 
     std::unique_ptr<QOpenGLShaderProgram> photo_program;
-    QOpenGLVertexArrayObject photo_vao;
-    QOpenGLBuffer photo_vbo;
+    std::unique_ptr<QOpenGLVertexArrayObject> photo_vao;
+    std::unique_ptr<QOpenGLBuffer> photo_vbo;
     int photo_matrix_location;
     int photo_texture_location;
 

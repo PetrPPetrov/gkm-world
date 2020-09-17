@@ -42,6 +42,9 @@ void MeshBuilderWidget::setAuxGeometry(const AuxGeometry::Ptr& geometry)
 
 void MeshBuilderWidget::updateAuxGeometry()
 {
+    aux_geom_line_set_vao->bind();
+
+    // Need to create new or re-create VBO, however, re-creating VBO does not have any effects
     const static VertexPositionColor box_vertex_buffer[] =
     {
         { 0.0f, 0.0f, 0.0f, 0xff0000ff },
@@ -86,16 +89,11 @@ void MeshBuilderWidget::updateAuxGeometry()
         }
     }
 
-    aux_geom_line_set_vao.reset(nullptr);
-    aux_geom_line_set_vbo.reset(nullptr);
-
-    aux_geom_line_set_vao = std::make_unique<QOpenGLVertexArrayObject>();
-    aux_geom_line_set_vao->create();
-    aux_geom_line_set_vao->bind();
     aux_geom_line_set_vbo = std::make_unique<QOpenGLBuffer>();
     aux_geom_line_set_vbo->create();
     aux_geom_line_set_vbo->bind();
     aux_geom_line_set_vbo->allocate(&vertex_buffer[0], static_cast<int>(vertex_buffer.size() * sizeof(VertexPositionColor)));
+    aux_geom_line_set_vbo->bind();
 
     aux_geom_line_set_vbo_size = static_cast<int>(vertex_buffer.size());
 }
@@ -107,14 +105,15 @@ void MeshBuilderWidget::initializeGL()
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 
-    photo = std::make_unique<QOpenGLTexture>(QImage(QString("chair06.jpg")));
-
     initializeAuxGeomLineSet();
     initializePhoto();
 }
 
 void MeshBuilderWidget::initializeAuxGeomLineSet()
 {
+    aux_geom_line_set_vao = std::make_unique<QOpenGLVertexArrayObject>();
+    aux_geom_line_set_vao->create();
+
     updateAuxGeometry();
 
     aux_geom_line_set_program = std::make_unique<QOpenGLShaderProgram>();
@@ -149,6 +148,8 @@ void MeshBuilderWidget::initializeAuxGeomLineSet()
 
 void MeshBuilderWidget::initializePhoto()
 {
+    photo = std::make_unique<QOpenGLTexture>(QImage(QString("chair06.jpg")));
+
     photo_width = photo->width();
     photo_height = photo->height();
     photo_aspect = static_cast<float>(photo_width) / photo_height;
@@ -168,11 +169,13 @@ void MeshBuilderWidget::initializePhoto()
         { x_low, y_low, -1.0f, 0.0f, 1.0f }
     };
 
-    photo_vao.create();
-    photo_vao.bind();
-    photo_vbo.create();
-    photo_vbo.bind();
-    photo_vbo.allocate(vertex_buffer, sizeof(vertex_buffer));
+    photo_vao = std::make_unique<QOpenGLVertexArrayObject>();
+    photo_vao->create();
+    photo_vao->bind();
+    photo_vbo = std::make_unique<QOpenGLBuffer>();
+    photo_vbo->create();
+    photo_vbo->bind();
+    photo_vbo->allocate(vertex_buffer, sizeof(vertex_buffer));
 
     photo_program = std::make_unique<QOpenGLShaderProgram>();
     photo_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
@@ -222,7 +225,7 @@ void MeshBuilderWidget::paintGL()
 
     QMatrix4x4 ortho_projection;
     ortho_projection.ortho(x_low, x_high, y_low, y_high, 0.125f, 1024.0f);
-    photo_vao.bind();
+    photo_vao->bind();
     photo_program->bind();
     photo_program->setUniformValue(photo_matrix_location, ortho_projection);
     photo->bind();

@@ -105,7 +105,6 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
             aux_geometry->boxes.front()->size = QVector3D(1, 1, 1);
             camera_orientation_widget->updateAuxGeometry();
         }
-
         log_widget->appendPlainText(photo_list_widget->item(index)->text());
     }
 }
