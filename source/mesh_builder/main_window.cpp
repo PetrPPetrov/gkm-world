@@ -36,6 +36,14 @@ MainWindow::MainWindow()
     addPhoto("chair03.jpg");
     addPhoto("chair04.jpg");
     addPhoto("chair05.jpg");
+    addPhoto("chair06.jpg");
+    addPhoto("chair07.jpg");
+    addPhoto("chair08.jpg");
+    addPhoto("chair09.jpg");
+    addPhoto("chair10.jpg");
+    addPhoto("chair11.jpg");
+    addPhoto("chair12.jpg");
+    addPhoto("chair13.jpg");
 
     log_widget = new QPlainTextEdit(main_window.centralwidget);
     log_widget->setReadOnly(true);
@@ -46,6 +54,7 @@ MainWindow::MainWindow()
 
     camera_orientation_widget = new MeshBuilderWidget(main_window.centralwidget);
     camera_orientation_widget->setAuxGeometry(aux_geometry);
+    camera_orientation_widget->setPhotoImage(getPhoto(0));
     camera_orientation_window = main_window.centralwidget->addSubWindow(camera_orientation_widget);
     camera_orientation_window->setWindowTitle(tr("3D Camera Orientation for Photo"));
 }
@@ -90,21 +99,9 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
     if (photo_list_widget->selectedItems().size() > 0)
     {
         int index = photo_list_widget->currentIndex().row();
-        if (index == 1)
-        {
-            aux_geometry->boxes.front()->size = QVector3D(1, 2, 3);
-            camera_orientation_widget->updateAuxGeometry();
-        }
-        else if (index == 2)
-        {
-            aux_geometry->boxes.front()->size = QVector3D(5, 6, 7);
-            camera_orientation_widget->updateAuxGeometry();
-        }
-        else
-        {
-            aux_geometry->boxes.front()->size = QVector3D(1, 1, 1);
-            camera_orientation_widget->updateAuxGeometry();
-        }
+        camera_orientation_widget->setPhotoImage(photos[index]);
+        camera_orientation_widget->updatePhotoTexture();
+        camera_orientation_widget->update();
         log_widget->appendPlainText(photo_list_widget->item(index)->text());
     }
 }

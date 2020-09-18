@@ -14,6 +14,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QVector3D>
 #include "aux_geometry.h"
+#include "common.h"
 
 class MeshBuilderWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -23,6 +24,8 @@ public:
     MeshBuilderWidget(QWidget *parent);
     void setAuxGeometry(const AuxGeometry::Ptr& geometry);
     void updateAuxGeometry();
+    void setPhotoImage(const ImagePtr& value);
+    void updatePhotoTexture();
 
 protected:
     void initializeGL() override;
@@ -52,7 +55,8 @@ private:
     int photo_matrix_location;
     int photo_texture_location;
 
-    std::unique_ptr<QOpenGLTexture> photo;
+    ImagePtr photo_image;
+    std::unique_ptr<QOpenGLTexture> photo_texture;
     int photo_width;
     int photo_height;
     float photo_aspect;

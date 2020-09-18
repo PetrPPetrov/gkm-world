@@ -17,6 +17,8 @@
 #include "main_window.h"
 #include "mesh_builder_widget.h"
 
+constexpr static int AUX_GEOM_VBO_MAX_VERTEX_COUNT = 16 * 1024;
+
 struct VertexPositionColor
 {
     float x, y, z;
@@ -42,8 +44,6 @@ void MeshBuilderWidget::setAuxGeometry(const AuxGeometry::Ptr& geometry)
 
 void MeshBuilderWidget::updateAuxGeometry()
 {
-    aux_geom_line_set_vao->bind();
-
     // Need to create new or re-create VBO, however, re-creating VBO does not have any effects
     const static VertexPositionColor box_vertex_buffer[] =
     {
@@ -73,9 +73,10 @@ void MeshBuilderWidget::updateAuxGeometry()
         { 1.0f, 1.0f, 1.0f, 0xffffffff }
     };
     const size_t box_vertex_buffer_size = sizeof(box_vertex_buffer) / sizeof(box_vertex_buffer[0]);
+    const size_t vertex_count = std::min(box_vertex_buffer_size * aux_geometry->boxes.size(), static_cast<size_t>(AUX_GEOM_VBO_MAX_VERTEX_COUNT));
 
     std::vector<VertexPositionColor> vertex_buffer;
-    vertex_buffer.reserve(box_vertex_buffer_size * aux_geometry->boxes.size());
+    vertex_buffer.reserve(vertex_count);
 
     for (auto box : aux_geometry->boxes)
     {
@@ -85,17 +86,27 @@ void MeshBuilderWidget::updateAuxGeometry()
             cur_vertex.x = box->position.x() + cur_vertex.x * box->size.x();
             cur_vertex.y = box->position.y() + cur_vertex.y * box->size.y();
             cur_vertex.z = box->position.z() + cur_vertex.z * box->size.z();
-            vertex_buffer.push_back(cur_vertex);
+            if (vertex_buffer.size() < vertex_count)
+            {
+                vertex_buffer.push_back(cur_vertex);
+            }
         }
     }
 
-    aux_geom_line_set_vbo = std::make_unique<QOpenGLBuffer>();
-    aux_geom_line_set_vbo->create();
     aux_geom_line_set_vbo->bind();
-    aux_geom_line_set_vbo->allocate(&vertex_buffer[0], static_cast<int>(vertex_buffer.size() * sizeof(VertexPositionColor)));
-    aux_geom_line_set_vbo->bind();
+    aux_geom_line_set_vbo->write(0, &vertex_buffer[0], static_cast<int>(vertex_count * sizeof(VertexPositionColor)));
 
-    aux_geom_line_set_vbo_size = static_cast<int>(vertex_buffer.size());
+    aux_geom_line_set_vbo_size = static_cast<int>(vertex_count);
+}
+
+void MeshBuilderWidget::setPhotoImage(const ImagePtr& image)
+{
+    photo_image = image;
+}
+
+void MeshBuilderWidget::updatePhotoTexture()
+{
+    photo_texture = std::make_unique<QOpenGLTexture>(*photo_image);
 }
 
 void MeshBuilderWidget::initializeGL()
@@ -113,6 +124,13 @@ void MeshBuilderWidget::initializeAuxGeomLineSet()
 {
     aux_geom_line_set_vao = std::make_unique<QOpenGLVertexArrayObject>();
     aux_geom_line_set_vao->create();
+    aux_geom_line_set_vao->bind();
+
+    aux_geom_line_set_vbo = std::make_unique<QOpenGLBuffer>();
+    aux_geom_line_set_vbo->setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    aux_geom_line_set_vbo->create();
+    aux_geom_line_set_vbo->bind();
+    aux_geom_line_set_vbo->allocate(AUX_GEOM_VBO_MAX_VERTEX_COUNT * sizeof(VertexPositionColor));
 
     updateAuxGeometry();
 
@@ -148,10 +166,10 @@ void MeshBuilderWidget::initializeAuxGeomLineSet()
 
 void MeshBuilderWidget::initializePhoto()
 {
-    photo = std::make_unique<QOpenGLTexture>(QImage(QString("chair06.jpg")));
+    updatePhotoTexture();
 
-    photo_width = photo->width();
-    photo_height = photo->height();
+    photo_width = photo_texture->width();
+    photo_height = photo_texture->height();
     photo_aspect = static_cast<float>(photo_width) / photo_height;
 
     const float x_low = -photo_width / 2;
@@ -206,7 +224,7 @@ void MeshBuilderWidget::initializePhoto()
     photo_program->enableAttributeArray(texcoord_location);
     photo_program->setAttributeBuffer(vertex_location, GL_FLOAT, 0, 3, sizeof(VertexPositionTexCoord));
     photo_program->setAttributeBuffer(texcoord_location, GL_FLOAT, 3 * sizeof(float), 2, sizeof(VertexPositionTexCoord));
-    photo_program->setUniformValue(photo_texture_location, photo->textureId());
+    photo_program->setUniformValue(photo_texture_location, photo_texture->textureId());
 }
 
 void MeshBuilderWidget::paintGL()
@@ -228,7 +246,7 @@ void MeshBuilderWidget::paintGL()
     photo_vao->bind();
     photo_program->bind();
     photo_program->setUniformValue(photo_matrix_location, ortho_projection);
-    photo->bind();
+    photo_texture->bind();
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     QMatrix4x4 projection_matrix;

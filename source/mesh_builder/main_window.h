@@ -18,8 +18,7 @@
 #include <QListWidget>
 #include "ui_main_window.h"
 #include "aux_geometry.h"
-
-typedef std::shared_ptr<QImage> ImagePtr;
+#include "common.h"
 
 class MainWindow : public QMainWindow
 {
