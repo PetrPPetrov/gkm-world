@@ -99,14 +99,20 @@ void MeshBuilderWidget::updateAuxGeometry()
     aux_geom_line_set_vbo_size = static_cast<int>(vertex_count);
 }
 
-void MeshBuilderWidget::setPhotoImage(const ImagePtr& image)
+void MeshBuilderWidget::setPhoto(const CameraInfo::Ptr& camera_info_)
 {
-    photo_image = image;
+    camera_info = camera_info_;
+    viewer_previous_pos = viewer_pos = to_qt(camera_info->viewer_pos);
+    viewer_previous_target = viewer_target = to_qt(camera_info->viewer_target);
+    viewer_previous_up = viewer_up = to_qt(camera_info->viewer_up);
+    left_mouse_pressed = false;
+    right_mouse_pressed = false;
+    rotation_radius = camera_info->rotation_radius;
 }
 
 void MeshBuilderWidget::updatePhotoTexture()
 {
-    photo_texture = std::make_unique<QOpenGLTexture>(*photo_image);
+    photo_texture = std::make_unique<QOpenGLTexture>(*camera_info->photo_image);
 }
 
 void MeshBuilderWidget::initializeGL()
@@ -279,6 +285,7 @@ void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
         // Restore rotation orbit radius
         viewer_target = viewer_pos + (viewer_target - viewer_pos).normalized() * rotation_radius;
         update();
+        updateCameraInfo();
     }
     else if (left_mouse_pressed)
     {
@@ -303,6 +310,7 @@ void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
         auto new_left = QVector3D::crossProduct(rotated_user_position, viewer_up);
         viewer_up = QVector3D::crossProduct(new_left, rotated_user_position).normalized();
         update();
+        updateCameraInfo();
     }
 }
 
@@ -327,6 +335,7 @@ void MeshBuilderWidget::mousePressEvent(QMouseEvent* event)
         viewer_previous_up = viewer_up;
     }
     update();
+    updateCameraInfo();
 }
 
 void MeshBuilderWidget::mouseReleaseEvent(QMouseEvent* event)
@@ -350,6 +359,7 @@ void MeshBuilderWidget::mouseReleaseEvent(QMouseEvent* event)
         viewer_previous_up = viewer_up;
     }
     update();
+    updateCameraInfo();
 }
 
 void MeshBuilderWidget::wheelEvent(QWheelEvent* event)
@@ -368,6 +378,7 @@ void MeshBuilderWidget::wheelEvent(QWheelEvent* event)
     auto new_user_position = user_position.normalized() * rotation_radius;
     viewer_pos = viewer_target + new_user_position;
     update();
+    updateCameraInfo();
 }
 
 void MeshBuilderWidget::setDefaultCamera()
@@ -379,6 +390,12 @@ void MeshBuilderWidget::setDefaultCamera()
     viewer_previous_pos = viewer_pos;
     viewer_previous_target = viewer_target;
     viewer_previous_up = viewer_up;
-    minimum_rotation_radius = 0.1;
-    maximum_rotation_radius = 10000.0;
+}
+
+void MeshBuilderWidget::updateCameraInfo()
+{
+    camera_info->viewer_pos = to_eigen(viewer_pos);
+    camera_info->viewer_target = to_eigen(viewer_target);
+    camera_info->viewer_up = to_eigen(viewer_up);
+    camera_info->rotation_radius = rotation_radius;
 }

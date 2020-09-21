@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 #include <QObject>
 #include <QMainWindow>
 #include <QFileDialog>
@@ -16,9 +17,11 @@
 #include <QThread>
 #include <QMdiSubWindow>
 #include <QListWidget>
+#include <QCloseEvent>
 #include "ui_main_window.h"
-#include "aux_geometry.h"
 #include "common.h"
+#include "aux_geometry.h"
+#include "build_info.h"
 
 class MainWindow : public QMainWindow
 {
@@ -29,16 +32,17 @@ public:
 
 protected:
     void showEvent(QShowEvent* event) override;
-    int getPhotoCount() const;
-    ImagePtr getPhoto(int index) const;
 
 private:
+    void createDefaultProject();
     void addPhoto(const char* filename);
+    void loadPhotos();
+    void updatePhotoListWidget();
+
     void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
+    void closeEvent(QCloseEvent* event);
 
 private:
-    AuxGeometry::Ptr aux_geometry;
-
     bool first_show = true;
     Ui::MainWindow main_window;
 
@@ -51,7 +55,10 @@ private:
     QListWidget* photo_list_widget = nullptr;
     QMdiSubWindow* photo_list_window = nullptr;
 
-    std::vector<ImagePtr> photos;
+    const std::string auto_save_file_name = "autosave.gmb";
+
+    AuxGeometry::Ptr aux_geometry;
+    BuildInfo::Ptr build_info;
 };
 
 extern MainWindow* g_main_window;

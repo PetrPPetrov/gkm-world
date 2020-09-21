@@ -13,8 +13,9 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QVector3D>
-#include "aux_geometry.h"
 #include "common.h"
+#include "aux_geometry.h"
+#include "build_info.h"
 
 class MeshBuilderWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -24,7 +25,7 @@ public:
     MeshBuilderWidget(QWidget *parent);
     void setAuxGeometry(const AuxGeometry::Ptr& geometry);
     void updateAuxGeometry();
-    void setPhotoImage(const ImagePtr& value);
+    void setPhoto(const CameraInfo::Ptr& camera_info);
     void updatePhotoTexture();
 
 protected:
@@ -39,9 +40,11 @@ protected:
 
 private:
     void setDefaultCamera();
+    void updateCameraInfo();
 
 private:
     AuxGeometry::Ptr aux_geometry;
+    CameraInfo::Ptr camera_info;
 
     std::unique_ptr<QOpenGLShaderProgram> aux_geom_line_set_program;
     std::unique_ptr<QOpenGLVertexArrayObject> aux_geom_line_set_vao;
@@ -55,7 +58,6 @@ private:
     int photo_matrix_location;
     int photo_texture_location;
 
-    ImagePtr photo_image;
     std::unique_ptr<QOpenGLTexture> photo_texture;
     int photo_width;
     int photo_height;
@@ -69,8 +71,8 @@ private:
     QVector3D viewer_previous_target;
     QVector3D viewer_previous_up;
 
-    double minimum_rotation_radius = 0.1;
-    double maximum_rotation_radius = 1000.0;
+    const double minimum_rotation_radius = 0.01;
+    const double maximum_rotation_radius = 1000.0;
     double rotation_radius = 10.0;
     bool left_mouse_pressed = false;
     bool right_mouse_pressed = false;
