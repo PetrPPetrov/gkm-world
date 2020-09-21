@@ -30,18 +30,28 @@ struct BuildInfo
     std::vector<CameraInfo::Ptr> cameras_info;
 };
 
+inline std::string loadToken(const std::string& expected_line, std::ifstream& file_in)
+{
+    std::string read_line;
+    while (!file_in.eof())
+    {
+        std::getline(file_in, read_line);
+        if (expected_line == read_line)
+        {
+            return read_line;
+        }
+    }
+    return read_line;
+}
+
 inline void loadEigenVector3d(Eigen::Vector3d& vector, std::ifstream& file_in)
 {
-    std::string buffer;
-    std::getline(file_in, buffer);
+    loadToken("x", file_in);
     file_in >> vector.x();
-    std::getline(file_in, buffer);
-    std::getline(file_in, buffer);
+    loadToken("y", file_in);
     file_in >> vector.y();
-    std::getline(file_in, buffer);
-    std::getline(file_in, buffer);
+    loadToken("z", file_in);
     file_in >> vector.z();
-    std::getline(file_in, buffer);
 }
 
 inline void saveEigenVector3d(const Eigen::Vector3d& vector, std::ofstream& file_out)
@@ -56,20 +66,16 @@ inline void saveEigenVector3d(const Eigen::Vector3d& vector, std::ofstream& file
 
 inline void loadCameraInfo(CameraInfo::Ptr& camera_info, std::ifstream& file_in)
 {
-    std::string buffer;
-    //std::getline(file_in, buffer);
-    std::getline(file_in, buffer);
+    loadToken("photo_image_path", file_in);
     file_in >> camera_info->photo_image_path;
-    std::getline(file_in, buffer);
-    std::getline(file_in, buffer);
+    loadToken("viewer_pos", file_in);
     loadEigenVector3d(camera_info->viewer_pos, file_in);
-    std::getline(file_in, buffer);
+    loadToken("viewer_target", file_in);
     loadEigenVector3d(camera_info->viewer_target, file_in);
-    std::getline(file_in, buffer);
+    loadToken("viewer_up", file_in);
     loadEigenVector3d(camera_info->viewer_up, file_in);
-    std::getline(file_in, buffer);
+    loadToken("rotation_radius", file_in);
     file_in >> camera_info->rotation_radius;
-    std::getline(file_in, buffer);
 }
 
 inline void saveCameraInfo(const CameraInfo::Ptr& camera_info, std::ofstream& file_out)
@@ -88,15 +94,17 @@ inline void saveCameraInfo(const CameraInfo::Ptr& camera_info, std::ofstream& fi
 inline void loadBuildInfo(BuildInfo::Ptr& build_info, const std::string& file_name)
 {
     std::ifstream file_in(file_name);
-    std::string buffer;
-    std::getline(file_in, buffer);
-    std::getline(file_in, buffer);
-    while (buffer == "camera_info")
+    loadToken("# Gkm-World Mesh Builder project file", file_in);
+    while (!file_in.eof())
     {
-        auto new_camera_info = std::make_shared<CameraInfo>();
-        loadCameraInfo(new_camera_info, file_in);
-        build_info->cameras_info.push_back(new_camera_info);
-        std::getline(file_in, buffer);
+        std::string next_token;
+        std::getline(file_in, next_token);
+        if (next_token == "camera_info")
+        {
+            auto new_camera_info = std::make_shared<CameraInfo>();
+            loadCameraInfo(new_camera_info, file_in);
+            build_info->cameras_info.push_back(new_camera_info);
+        }
     }
 }
 
