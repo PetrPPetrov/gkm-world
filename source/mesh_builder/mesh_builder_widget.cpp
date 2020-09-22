@@ -18,6 +18,7 @@
 #include "mesh_builder_widget.h"
 
 constexpr static int AUX_GEOM_VBO_MAX_VERTEX_COUNT = 16 * 1024;
+constexpr static int PHOTO_MAX_VERTEX_COUNT = 6;
 
 struct VertexPositionColor
 {
@@ -102,17 +103,58 @@ void MeshBuilderWidget::updateAuxGeometry()
 void MeshBuilderWidget::setPhoto(const CameraInfo::Ptr& camera_info_)
 {
     camera_info = camera_info_;
-    viewer_previous_pos = viewer_pos = to_qt(camera_info->viewer_pos);
-    viewer_previous_target = viewer_target = to_qt(camera_info->viewer_target);
-    viewer_previous_up = viewer_up = to_qt(camera_info->viewer_up);
-    left_mouse_pressed = false;
-    right_mouse_pressed = false;
-    rotation_radius = camera_info->rotation_radius;
+    if (camera_info)
+    {
+        viewer_previous_pos = viewer_pos = to_qt(camera_info->viewer_pos);
+        viewer_previous_target = viewer_target = to_qt(camera_info->viewer_target);
+        viewer_previous_up = viewer_up = to_qt(camera_info->viewer_up);
+        left_mouse_pressed = false;
+        right_mouse_pressed = false;
+        rotation_radius = camera_info->rotation_radius;
+    }
+    else
+    {
+        setDefaultCamera();
+    }
 }
 
 void MeshBuilderWidget::updatePhotoTexture()
 {
-    photo_texture = std::make_unique<QOpenGLTexture>(*camera_info->photo_image);
+    if (camera_info)
+    {
+        photo_texture = std::make_unique<QOpenGLTexture>(*camera_info->photo_image);
+    }
+    else
+    {
+        photo_texture = std::make_unique<QOpenGLTexture>(QImage("power01.jpg"));
+        //QImage dummy_image(2, 2, QImage::Format::Format_RGB888);
+        //dummy_image.fill(QColor(Qt::gray).rgb());
+        //photo_texture = std::make_unique<QOpenGLTexture>(dummy_image);
+    }
+
+    photo_width = photo_texture->width();
+    photo_height = photo_texture->height();
+    photo_aspect = static_cast<float>(photo_width) / photo_height;
+
+    const float x_low = -photo_width / 2;
+    const float x_high = x_low + photo_width;
+    const float y_low = -photo_height / 2;
+    const float y_high = y_low + photo_height;
+
+    const static VertexPositionTexCoord vertex_buffer[] =
+    {
+        { x_low, y_low, -1.0f, 0.0f, 1.0f },
+        { x_high, y_low, -1.0f, 1.0f, 1.0f },
+        { x_high, y_high, -1.0f, 1.0f, 0.0f },
+        { x_high, y_high, -1.0f, 1.0f, 0.0f },
+        { x_low, y_high, -1.0f, 0.0f, 0.0f },
+        { x_low, y_low, -1.0f, 0.0f, 1.0f }
+    };
+
+    photo_vbo->bind();
+    photo_vbo->write(0, vertex_buffer, static_cast<int>(PHOTO_MAX_VERTEX_COUNT * sizeof(VertexPositionTexCoord)));
+
+    photo_program->setUniformValue(photo_texture_location, photo_texture->textureId());
 }
 
 void MeshBuilderWidget::initializeGL()
@@ -172,34 +214,15 @@ void MeshBuilderWidget::initializeAuxGeomLineSet()
 
 void MeshBuilderWidget::initializePhoto()
 {
-    updatePhotoTexture();
-
-    photo_width = photo_texture->width();
-    photo_height = photo_texture->height();
-    photo_aspect = static_cast<float>(photo_width) / photo_height;
-
-    const float x_low = -photo_width / 2;
-    const float x_high = x_low + photo_width;
-    const float y_low = -photo_height / 2;
-    const float y_high = y_low + photo_height;
-
-    const static VertexPositionTexCoord vertex_buffer[] =
-    {
-        { x_low, y_low, -1.0f, 0.0f, 1.0f },
-        { x_high, y_low, -1.0f, 1.0f, 1.0f },
-        { x_high, y_high, -1.0f, 1.0f, 0.0f },
-        { x_high, y_high, -1.0f, 1.0f, 0.0f },
-        { x_low, y_high, -1.0f, 0.0f, 0.0f },
-        { x_low, y_low, -1.0f, 0.0f, 1.0f }
-    };
-
     photo_vao = std::make_unique<QOpenGLVertexArrayObject>();
     photo_vao->create();
     photo_vao->bind();
+
     photo_vbo = std::make_unique<QOpenGLBuffer>();
+    photo_vbo->setUsagePattern(QOpenGLBuffer::DynamicDraw);
     photo_vbo->create();
     photo_vbo->bind();
-    photo_vbo->allocate(vertex_buffer, sizeof(vertex_buffer));
+    photo_vbo->allocate(PHOTO_MAX_VERTEX_COUNT * sizeof(VertexPositionTexCoord));
 
     photo_program = std::make_unique<QOpenGLShaderProgram>();
     photo_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
@@ -226,11 +249,12 @@ void MeshBuilderWidget::initializePhoto()
     photo_matrix_location = photo_program->uniformLocation("matrix");
     photo_texture_location = photo_program->uniformLocation("texture");
 
+    updatePhotoTexture();
+
     photo_program->enableAttributeArray(vertex_location);
     photo_program->enableAttributeArray(texcoord_location);
     photo_program->setAttributeBuffer(vertex_location, GL_FLOAT, 0, 3, sizeof(VertexPositionTexCoord));
     photo_program->setAttributeBuffer(texcoord_location, GL_FLOAT, 3 * sizeof(float), 2, sizeof(VertexPositionTexCoord));
-    photo_program->setUniformValue(photo_texture_location, photo_texture->textureId());
 }
 
 void MeshBuilderWidget::paintGL()
@@ -383,8 +407,8 @@ void MeshBuilderWidget::wheelEvent(QWheelEvent* event)
 
 void MeshBuilderWidget::setDefaultCamera()
 {
-    viewer_pos = QVector3D(3, 3, 3);
-    viewer_target = QVector3D(0.5, 0.5, 0.5);
+    viewer_pos = QVector3D(0, 0, 10);
+    viewer_target = QVector3D(0, 0, 0);
     viewer_up = QVector3D(0, 0, 1);
     rotation_radius = viewer_pos.distanceToPoint(viewer_target);
     viewer_previous_pos = viewer_pos;
@@ -394,8 +418,11 @@ void MeshBuilderWidget::setDefaultCamera()
 
 void MeshBuilderWidget::updateCameraInfo()
 {
-    camera_info->viewer_pos = to_eigen(viewer_pos);
-    camera_info->viewer_target = to_eigen(viewer_target);
-    camera_info->viewer_up = to_eigen(viewer_up);
-    camera_info->rotation_radius = rotation_radius;
+    if (camera_info)
+    {
+        camera_info->viewer_pos = to_eigen(viewer_pos);
+        camera_info->viewer_target = to_eigen(viewer_target);
+        camera_info->viewer_up = to_eigen(viewer_up);
+        camera_info->rotation_radius = rotation_radius;
+    }
 }

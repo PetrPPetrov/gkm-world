@@ -34,7 +34,6 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
-    void createDefaultProject();
     void addPhoto(const char* filename);
     void loadPhotos();
     void updatePhotoListWidget();
@@ -42,9 +41,29 @@ private:
     void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
     void closeEvent(QCloseEvent* event);
 
+    void onNewProject();
+    void onOpenProject();
+    void onSaveProject();
+    void onSaveAsProject();
+    void onCloseProject();
+    void onQuit();
+
+    void onAddPhoto();
+    void onRemovePhoto();
+
 private:
     bool first_show = true;
     Ui::MainWindow main_window;
+
+    QAction* new_project_act = nullptr;
+    QAction* open_project_act = nullptr;
+    QAction* save_project_act = nullptr;
+    QAction* save_project_as_act = nullptr;
+    QAction* close_project_act = nullptr;
+    QAction* quit_act = nullptr;
+
+    QAction* add_photo_act = nullptr;
+    QAction* remove_photo_act = nullptr;
 
     MeshBuilderWidget* camera_orientation_widget = nullptr;
     QMdiSubWindow* camera_orientation_window = nullptr;

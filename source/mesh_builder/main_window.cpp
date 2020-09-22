@@ -12,6 +12,7 @@
 #include <QSpinBox>
 #include <QHeaderView>
 #include <QPushButton>
+#include <QFileDialog>
 #include "main_window.h"
 
 extern MainWindow* g_main_window = nullptr;
@@ -21,41 +22,89 @@ MainWindow::MainWindow()
     g_main_window = this;
     main_window.setupUi(this);
 
-    aux_geometry = std::make_shared<AuxGeometry>();
-    auto new_box = std::make_shared<Box>();
-    new_box->size = QVector3D(1, 1, 1);
-    aux_geometry->boxes.push_back(new_box);
+    QMenu* project_menu = menuBar()->addMenu("Project");
 
-    build_info = std::make_shared<BuildInfo>();
+    new_project_act = new QAction("&New", this);
+    new_project_act->setShortcuts(QKeySequence::New);
+    new_project_act->setStatusTip("Create new project");
+    connect(new_project_act, &QAction::triggered, this, &MainWindow::onNewProject);
+    project_menu->addAction(new_project_act);
+
+    project_menu->addSeparator();
+    open_project_act = new QAction("&Open", this);
+    open_project_act->setShortcuts(QKeySequence::Open);
+    open_project_act->setStatusTip("Open existing project");
+    connect(open_project_act, &QAction::triggered, this, &MainWindow::onOpenProject);
+    project_menu->addAction(open_project_act);
+
+    save_project_act = new QAction("&Save", this);
+    save_project_act->setShortcuts(QKeySequence::Save);
+    save_project_act->setStatusTip("Save project");
+    connect(save_project_act, &QAction::triggered, this, &MainWindow::onSaveProject);
+    project_menu->addAction(save_project_act);
+
+    save_project_as_act = new QAction("&Save as...", this);
+    save_project_as_act->setShortcuts(QKeySequence::SaveAs);
+    save_project_as_act->setStatusTip("Save project as...");
+    connect(save_project_as_act, &QAction::triggered, this, &MainWindow::onSaveAsProject);
+    project_menu->addAction(save_project_as_act);
+
+    project_menu->addSeparator();
+    close_project_act = new QAction("&Close", this);
+    close_project_act->setShortcuts(QKeySequence::SaveAs);
+    close_project_act->setStatusTip("Close project");
+    connect(close_project_act, &QAction::triggered, this, &MainWindow::onCloseProject);
+    project_menu->addAction(close_project_act);
+
+    project_menu->addSeparator();
+    quit_act = new QAction("&Quit", this);
+    quit_act->setShortcuts(QKeySequence::Quit);
+    quit_act->setStatusTip("Quit application");
+    connect(quit_act, &QAction::triggered, this, &MainWindow::onQuit);
+    project_menu->addAction(quit_act);
+
+    QMenu* photo_menu = menuBar()->addMenu("Photo");
+
+    add_photo_act = new QAction("&Add photo", this);
+    add_photo_act->setShortcuts(QKeySequence::AddTab);
+    add_photo_act->setStatusTip("Add existing photo to project");
+    connect(add_photo_act, &QAction::triggered, this, &MainWindow::onAddPhoto);
+    photo_menu->addAction(add_photo_act);
+
+    remove_photo_act = new QAction("&Remove photo", this);
+    remove_photo_act->setStatusTip("Remove photo from project");
+    connect(remove_photo_act, &QAction::triggered, this, &MainWindow::onRemovePhoto);
+    photo_menu->addAction(remove_photo_act);
 
     photo_list_widget = new QListWidget(main_window.centralwidget);
     connect(photo_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onPhotoChanged);
     photo_list_window = main_window.centralwidget->addSubWindow(photo_list_widget);
-    photo_list_window->setWindowTitle(tr("Photos List"));
+    photo_list_window->setWindowTitle("Photos List");
 
     log_widget = new QPlainTextEdit(main_window.centralwidget);
     log_widget->setReadOnly(true);
     log_widget->ensureCursorVisible();
     log_widget->setCenterOnScroll(true);
     log_window = main_window.centralwidget->addSubWindow(log_widget);
-    log_window->setWindowTitle(tr("Log"));
+    log_window->setWindowTitle("Log");
 
+    camera_orientation_widget = new MeshBuilderWidget(main_window.centralwidget);
+
+    onNewProject();
     if (fileExists(auto_save_file_name))
     {
         loadBuildInfo(build_info, auto_save_file_name);
     }
-    else
-    {
-        createDefaultProject();
-    }
     loadPhotos();
     updatePhotoListWidget();
 
-    camera_orientation_widget = new MeshBuilderWidget(main_window.centralwidget);
     camera_orientation_widget->setAuxGeometry(aux_geometry);
-    camera_orientation_widget->setPhoto(build_info->cameras_info[0]);
+    if (build_info->cameras_info.size() > 0)
+    {
+        camera_orientation_widget->setPhoto(build_info->cameras_info[0]);
+    }
     camera_orientation_window = main_window.centralwidget->addSubWindow(camera_orientation_widget);
-    camera_orientation_window->setWindowTitle(tr("3D Camera Orientation for Photo"));
+    camera_orientation_window->setWindowTitle("3D Camera Orientation for Photo");
 }
 
 void MainWindow::showEvent(QShowEvent* event)
@@ -77,30 +126,13 @@ void MainWindow::showEvent(QShowEvent* event)
     }
 }
 
-void MainWindow::createDefaultProject()
-{
-    addPhoto("chair01.jpg");
-    addPhoto("chair02.jpg");
-    addPhoto("chair03.jpg");
-    addPhoto("chair04.jpg");
-    addPhoto("chair05.jpg");
-    addPhoto("chair06.jpg");
-    addPhoto("chair07.jpg");
-    addPhoto("chair08.jpg");
-    addPhoto("chair09.jpg");
-    addPhoto("chair10.jpg");
-    addPhoto("chair11.jpg");
-    addPhoto("chair12.jpg");
-    addPhoto("chair13.jpg");
-}
-
 void MainWindow::addPhoto(const char* filename)
 {
     CameraInfo::Ptr new_camera_info = std::make_shared<CameraInfo>();
     new_camera_info->photo_image_path = filename;
     new_camera_info->viewer_pos = Eigen::Vector3d(0, 0, 10);
     new_camera_info->viewer_target = Eigen::Vector3d(0, 0, 0);
-    new_camera_info->viewer_up = Eigen::Vector3d(0, 1, 0);
+    new_camera_info->viewer_up = Eigen::Vector3d(0, 0, 1);
     new_camera_info->rotation_radius = 10;
     build_info->cameras_info.push_back(new_camera_info);
 }
@@ -118,6 +150,7 @@ void MainWindow::loadPhotos()
 
 void MainWindow::updatePhotoListWidget()
 {
+    photo_list_widget->clear();
     for (auto camera_info : build_info->cameras_info)
     {
         photo_list_widget->addItem(QString(camera_info->photo_image_path.c_str()));
@@ -140,4 +173,59 @@ void MainWindow::closeEvent(QCloseEvent* event)
 {
     saveBuildInfo(build_info, auto_save_file_name);
     event->accept();
+}
+
+void MainWindow::onNewProject()
+{
+    build_info = std::make_shared<BuildInfo>();
+
+    aux_geometry = std::make_shared<AuxGeometry>();
+    auto new_box = std::make_shared<Box>();
+    new_box->size = QVector3D(1, 1, 1);
+    aux_geometry->boxes.push_back(new_box);
+    camera_orientation_widget->setAuxGeometry(aux_geometry);
+
+    photo_list_widget->clear();
+    camera_orientation_widget->setPhoto(nullptr);
+}
+
+void MainWindow::onOpenProject()
+{
+    log_widget->appendPlainText("Open project");
+}
+
+void MainWindow::onSaveProject()
+{
+    log_widget->appendPlainText("Save project");
+}
+
+void MainWindow::onSaveAsProject()
+{
+    log_widget->appendPlainText("Save as project");
+}
+
+void MainWindow::onCloseProject()
+{
+    log_widget->appendPlainText("Close project");
+}
+
+void MainWindow::onQuit()
+{
+    log_widget->appendPlainText("Quit application");
+}
+
+void MainWindow::onAddPhoto()
+{
+    QString filename = QFileDialog::getOpenFileName(this, "Select photo", QDir::currentPath(), "JPEG files (*.jpg *.jpeg);; PNG files (*.png)");
+    if (!filename.isNull())
+    {
+        addPhoto(filename.toStdString().c_str());
+        loadPhotos();
+        updatePhotoListWidget();
+    }
+}
+
+void MainWindow::onRemovePhoto()
+{
+    log_widget->appendPlainText("Remove photo");
 }
