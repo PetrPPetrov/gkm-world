@@ -126,35 +126,32 @@ void MeshBuilderWidget::updatePhotoTexture()
     }
     else
     {
-        photo_texture = std::make_unique<QOpenGLTexture>(QImage("power01.jpg"));
-        //QImage dummy_image(2, 2, QImage::Format::Format_RGB888);
-        //dummy_image.fill(QColor(Qt::gray).rgb());
-        //photo_texture = std::make_unique<QOpenGLTexture>(dummy_image);
+        QImage dummy_image(2, 2, QImage::Format::Format_RGB888);
+        dummy_image.fill(QColor(Qt::gray).rgb());
+        photo_texture = std::make_unique<QOpenGLTexture>(dummy_image);
     }
 
     photo_width = photo_texture->width();
     photo_height = photo_texture->height();
     photo_aspect = static_cast<float>(photo_width) / photo_height;
 
-    const float x_low = -photo_width / 2;
-    const float x_high = x_low + photo_width;
-    const float y_low = -photo_height / 2;
-    const float y_high = y_low + photo_height;
+    photo_x_low = -photo_width / 2;
+    photo_x_high = photo_x_low + photo_width;
+    photo_y_low = -photo_height / 2;
+    photo_y_high = photo_y_low + photo_height;
 
-    const static VertexPositionTexCoord vertex_buffer[] =
+    const VertexPositionTexCoord vertex_buffer[] =
     {
-        { x_low, y_low, -1.0f, 0.0f, 1.0f },
-        { x_high, y_low, -1.0f, 1.0f, 1.0f },
-        { x_high, y_high, -1.0f, 1.0f, 0.0f },
-        { x_high, y_high, -1.0f, 1.0f, 0.0f },
-        { x_low, y_high, -1.0f, 0.0f, 0.0f },
-        { x_low, y_low, -1.0f, 0.0f, 1.0f }
+        { photo_x_low, photo_y_low, -1.0f, 0.0f, 1.0f },
+        { photo_x_high, photo_y_low, -1.0f, 1.0f, 1.0f },
+        { photo_x_high, photo_y_high, -1.0f, 1.0f, 0.0f },
+        { photo_x_high, photo_y_high, -1.0f, 1.0f, 0.0f },
+        { photo_x_low, photo_y_high, -1.0f, 0.0f, 0.0f },
+        { photo_x_low, photo_y_low, -1.0f, 0.0f, 1.0f }
     };
 
     photo_vbo->bind();
     photo_vbo->write(0, vertex_buffer, static_cast<int>(PHOTO_MAX_VERTEX_COUNT * sizeof(VertexPositionTexCoord)));
-
-    photo_program->setUniformValue(photo_texture_location, photo_texture->textureId());
 }
 
 void MeshBuilderWidget::initializeGL()
@@ -224,6 +221,8 @@ void MeshBuilderWidget::initializePhoto()
     photo_vbo->bind();
     photo_vbo->allocate(PHOTO_MAX_VERTEX_COUNT * sizeof(VertexPositionTexCoord));
 
+    updatePhotoTexture();
+
     photo_program = std::make_unique<QOpenGLShaderProgram>();
     photo_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
         "attribute highp vec4 vertex;\n"
@@ -249,8 +248,6 @@ void MeshBuilderWidget::initializePhoto()
     photo_matrix_location = photo_program->uniformLocation("matrix");
     photo_texture_location = photo_program->uniformLocation("texture");
 
-    updatePhotoTexture();
-
     photo_program->enableAttributeArray(vertex_location);
     photo_program->enableAttributeArray(texcoord_location);
     photo_program->setAttributeBuffer(vertex_location, GL_FLOAT, 0, 3, sizeof(VertexPositionTexCoord));
@@ -263,29 +260,23 @@ void MeshBuilderWidget::paintGL()
     const int viewport_height = height();
     const float viewport_aspect = static_cast<double>(viewport_width) / viewport_height;
 
-    float x_low = -photo_width / 2;
-    float x_high = x_low + photo_width;
-    float y_low = -photo_height / 2;
-    float y_high = y_low + photo_height;
-
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     QMatrix4x4 ortho_projection;
-    ortho_projection.ortho(x_low, x_high, y_low, y_high, 0.125f, 1024.0f);
+    ortho_projection.ortho(photo_x_low, photo_x_high, photo_y_low, photo_y_high, 0.125f, 1024.0f);
     photo_vao->bind();
     photo_program->bind();
     photo_program->setUniformValue(photo_matrix_location, ortho_projection);
     photo_texture->bind();
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDrawArrays(GL_TRIANGLES, 0, PHOTO_MAX_VERTEX_COUNT);
 
     QMatrix4x4 projection_matrix;
     projection_matrix.perspective(50.0f, viewport_aspect, 0.125f, 1024.0f);
-
     QMatrix4x4 view_matrix;
     view_matrix.lookAt(viewer_pos, viewer_target, viewer_up);
-
     QMatrix4x4 mvp_matrix = projection_matrix * view_matrix;
+
     glDisable(GL_DEPTH_TEST);
     aux_geom_line_set_vao->bind();
     aux_geom_line_set_program->bind();

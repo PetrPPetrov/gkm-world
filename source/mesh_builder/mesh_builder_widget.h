@@ -61,6 +61,10 @@ private:
     std::unique_ptr<QOpenGLTexture> photo_texture;
     int photo_width;
     int photo_height;
+    float photo_x_low;
+    float photo_x_high;
+    float photo_y_low;
+    float photo_y_high;
     float photo_aspect;
 
     QVector3D viewer_pos;
