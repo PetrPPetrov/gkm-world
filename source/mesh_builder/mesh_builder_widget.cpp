@@ -45,7 +45,12 @@ void MeshBuilderWidget::setAuxGeometry(const AuxGeometry::Ptr& geometry)
 
 void MeshBuilderWidget::updateAuxGeometry()
 {
-    // Need to create new or re-create VBO, however, re-creating VBO does not have any effects
+    if (!aux_geometry)
+    {
+        aux_geom_line_set_vbo_size = 0;
+        return;
+    }
+
     const static VertexPositionColor box_vertex_buffer[] =
     {
         { 0.0f, 0.0f, 0.0f, 0xff0000ff },
@@ -94,8 +99,11 @@ void MeshBuilderWidget::updateAuxGeometry()
         }
     }
 
-    aux_geom_line_set_vbo->bind();
-    aux_geom_line_set_vbo->write(0, &vertex_buffer[0], static_cast<int>(vertex_count * sizeof(VertexPositionColor)));
+    if (vertex_count > 0)
+    {
+        aux_geom_line_set_vbo->bind();
+        aux_geom_line_set_vbo->write(0, &vertex_buffer[0], static_cast<int>(vertex_count * sizeof(VertexPositionColor)));
+    }
 
     aux_geom_line_set_vbo_size = static_cast<int>(vertex_count);
 }
@@ -277,11 +285,14 @@ void MeshBuilderWidget::paintGL()
     view_matrix.lookAt(viewer_pos, viewer_target, viewer_up);
     QMatrix4x4 mvp_matrix = projection_matrix * view_matrix;
 
-    glDisable(GL_DEPTH_TEST);
-    aux_geom_line_set_vao->bind();
-    aux_geom_line_set_program->bind();
-    aux_geom_line_set_program->setUniformValue(aux_geom_line_set_matrix_location, mvp_matrix);
-    glDrawArrays(GL_LINES, 0, aux_geom_line_set_vbo_size);
+    if (aux_geom_line_set_vbo_size > 0)
+    {
+        glDisable(GL_DEPTH_TEST);
+        aux_geom_line_set_vao->bind();
+        aux_geom_line_set_program->bind();
+        aux_geom_line_set_program->setUniformValue(aux_geom_line_set_matrix_location, mvp_matrix);
+        glDrawArrays(GL_LINES, 0, aux_geom_line_set_vbo_size);
+    }
 }
 
 void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
@@ -398,7 +409,7 @@ void MeshBuilderWidget::wheelEvent(QWheelEvent* event)
 
 void MeshBuilderWidget::setDefaultCamera()
 {
-    viewer_pos = QVector3D(0, 0, 10);
+    viewer_pos = QVector3D(3, 3, 3);
     viewer_target = QVector3D(0, 0, 0);
     viewer_up = QVector3D(0, 0, 1);
     rotation_radius = viewer_pos.distanceToPoint(viewer_target);

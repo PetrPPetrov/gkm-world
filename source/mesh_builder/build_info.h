@@ -30,40 +30,6 @@ struct BuildInfo
     std::vector<CameraInfo::Ptr> cameras_info;
 };
 
-inline std::string loadToken(const std::string& expected_line, std::ifstream& file_in)
-{
-    std::string read_line;
-    while (!file_in.eof())
-    {
-        std::getline(file_in, read_line);
-        if (expected_line == read_line)
-        {
-            return read_line;
-        }
-    }
-    return read_line;
-}
-
-inline void loadEigenVector3d(Eigen::Vector3d& vector, std::ifstream& file_in)
-{
-    loadToken("x", file_in);
-    file_in >> vector.x();
-    loadToken("y", file_in);
-    file_in >> vector.y();
-    loadToken("z", file_in);
-    file_in >> vector.z();
-}
-
-inline void saveEigenVector3d(const Eigen::Vector3d& vector, std::ofstream& file_out)
-{
-    file_out << "x\n";
-    file_out << vector.x() << "\n";
-    file_out << "y\n";
-    file_out << vector.y() << "\n";
-    file_out << "z\n";
-    file_out << vector.z() << "\n";
-}
-
 inline void loadCameraInfo(CameraInfo::Ptr& camera_info, std::ifstream& file_in)
 {
     loadToken("photo_image_path", file_in);
@@ -89,31 +55,4 @@ inline void saveCameraInfo(const CameraInfo::Ptr& camera_info, std::ofstream& fi
     file_out << "viewer_up\n";
     saveEigenVector3d(camera_info->viewer_up, file_out);
     file_out << "rotation_radius\n" << camera_info->rotation_radius << "\n";
-}
-
-inline void loadBuildInfo(BuildInfo::Ptr& build_info, const std::string& file_name)
-{
-    std::ifstream file_in(file_name);
-    loadToken("# Gkm-World Mesh Builder project file", file_in);
-    while (!file_in.eof())
-    {
-        std::string next_token;
-        std::getline(file_in, next_token);
-        if (next_token == "camera_info")
-        {
-            auto new_camera_info = std::make_shared<CameraInfo>();
-            loadCameraInfo(new_camera_info, file_in);
-            build_info->cameras_info.push_back(new_camera_info);
-        }
-    }
-}
-
-inline void saveBuildInfo(const BuildInfo::Ptr& build_info, const std::string& file_name)
-{
-    std::ofstream file_out(file_name);
-    file_out << "# Gkm-World Mesh Builder project file\n";
-    for (auto camera_info : build_info->cameras_info)
-    {
-        saveCameraInfo(camera_info, file_out);
-    }
 }

@@ -89,20 +89,6 @@ MainWindow::MainWindow()
     log_window->setWindowTitle("Log");
 
     camera_orientation_widget = new MeshBuilderWidget(main_window.centralwidget);
-
-    onNewProject();
-    if (fileExists(auto_save_file_name))
-    {
-        loadBuildInfo(build_info, auto_save_file_name);
-    }
-    loadPhotos();
-    updatePhotoListWidget();
-
-    camera_orientation_widget->setAuxGeometry(aux_geometry);
-    if (build_info->cameras_info.size() > 0)
-    {
-        camera_orientation_widget->setPhoto(build_info->cameras_info[0]);
-    }
     camera_orientation_window = main_window.centralwidget->addSubWindow(camera_orientation_widget);
     camera_orientation_window->setWindowTitle("3D Camera Orientation for Photo");
 }
@@ -123,6 +109,17 @@ void MainWindow::showEvent(QShowEvent* event)
 
         log_window->resize(QSize(main_window.centralwidget->width() / 4, main_window.centralwidget->height() / 2));
         log_window->move(0, main_window.centralwidget->height() / 2);
+
+        if (fileExists(auto_save_file_name))
+        {
+            loadMeshProject(mesh_project, auto_save_file_name);
+            loadPhotos();
+            updateProject();
+        }
+        else
+        {
+            onNewProject();
+        }
     }
 }
 
@@ -130,16 +127,16 @@ void MainWindow::addPhoto(const char* filename)
 {
     CameraInfo::Ptr new_camera_info = std::make_shared<CameraInfo>();
     new_camera_info->photo_image_path = filename;
-    new_camera_info->viewer_pos = Eigen::Vector3d(0, 0, 10);
+    new_camera_info->viewer_pos = Eigen::Vector3d(3, 3, 3);
     new_camera_info->viewer_target = Eigen::Vector3d(0, 0, 0);
     new_camera_info->viewer_up = Eigen::Vector3d(0, 0, 1);
-    new_camera_info->rotation_radius = 10;
-    build_info->cameras_info.push_back(new_camera_info);
+    new_camera_info->rotation_radius = (new_camera_info->viewer_pos - new_camera_info->viewer_target).norm();
+    mesh_project->build_info->cameras_info.push_back(new_camera_info);
 }
 
 void MainWindow::loadPhotos()
 {
-    for (auto camera_info : build_info->cameras_info)
+    for (auto camera_info : mesh_project->build_info->cameras_info)
     {
         if (!camera_info->photo_image)
         {
@@ -148,10 +145,31 @@ void MainWindow::loadPhotos()
     }
 }
 
+void MainWindow::updateProject()
+{
+    updatePhotoListWidget();
+
+    camera_orientation_widget->setAuxGeometry(mesh_project->aux_geometry);
+    camera_orientation_widget->updateAuxGeometry();
+
+    if (mesh_project->build_info->cameras_info.size() > 0)
+    {
+        camera_orientation_widget->setPhoto(mesh_project->build_info->cameras_info[0]);
+        photo_list_widget->setCurrentRow(0);
+    }
+    else
+    {
+        camera_orientation_widget->setPhoto(nullptr);
+    }
+    camera_orientation_widget->updatePhotoTexture();
+
+    camera_orientation_widget->update();
+}
+
 void MainWindow::updatePhotoListWidget()
 {
     photo_list_widget->clear();
-    for (auto camera_info : build_info->cameras_info)
+    for (auto camera_info : mesh_project->build_info->cameras_info)
     {
         photo_list_widget->addItem(QString(camera_info->photo_image_path.c_str()));
     }
@@ -162,7 +180,7 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
     if (photo_list_widget->selectedItems().size() > 0)
     {
         int index = photo_list_widget->currentIndex().row();
-        camera_orientation_widget->setPhoto(build_info->cameras_info.at(index));
+        camera_orientation_widget->setPhoto(mesh_project->build_info->cameras_info.at(index));
         camera_orientation_widget->updatePhotoTexture();
         camera_orientation_widget->update();
         log_widget->appendPlainText(photo_list_widget->item(index)->text());
@@ -171,22 +189,19 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    saveBuildInfo(build_info, auto_save_file_name);
+    saveMeshProject(mesh_project, auto_save_file_name);
     event->accept();
 }
 
 void MainWindow::onNewProject()
 {
-    build_info = std::make_shared<BuildInfo>();
+    mesh_project = std::make_shared<MeshProject>();
 
-    aux_geometry = std::make_shared<AuxGeometry>();
-    auto new_box = std::make_shared<Box>();
+    auto new_box = std::make_shared<AuxGeometryBox>();
     new_box->size = QVector3D(1, 1, 1);
-    aux_geometry->boxes.push_back(new_box);
-    camera_orientation_widget->setAuxGeometry(aux_geometry);
+    mesh_project->aux_geometry->boxes.push_back(new_box);
 
-    photo_list_widget->clear();
-    camera_orientation_widget->setPhoto(nullptr);
+    updateProject();
 }
 
 void MainWindow::onOpenProject()
@@ -221,7 +236,7 @@ void MainWindow::onAddPhoto()
     {
         addPhoto(filename.toStdString().c_str());
         loadPhotos();
-        updatePhotoListWidget();
+        updateProject();
     }
 }
 

@@ -6,10 +6,11 @@
 #include <list>
 #include <memory>
 #include <QVector3D>
+#include "common.h"
 
-struct Box
+struct AuxGeometryBox
 {
-    typedef std::shared_ptr<Box> Ptr;
+    typedef std::shared_ptr<AuxGeometryBox> Ptr;
 
     QVector3D position;
     QVector3D size;
@@ -19,5 +20,22 @@ struct AuxGeometry
 {
     typedef std::shared_ptr<AuxGeometry> Ptr;
 
-    std::list<Box::Ptr> boxes;
+    std::list<AuxGeometryBox::Ptr> boxes;
 };
+
+inline void loadAuxGeometryBox(AuxGeometryBox::Ptr& box, std::ifstream& file_in)
+{
+    loadToken("position", file_in);
+    loadQtVector3d(box->position, file_in);
+    loadToken("size", file_in);
+    loadQtVector3d(box->size, file_in);
+}
+
+inline void saveAuxGeometryBox(const AuxGeometryBox::Ptr& box, std::ofstream& file_out)
+{
+    file_out << "aux_geometry_box\n";
+    file_out << "position\n";
+    saveQtVector3d(box->position, file_out);
+    file_out << "size\n";
+    saveQtVector3d(box->size, file_out);
+}

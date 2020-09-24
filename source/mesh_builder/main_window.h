@@ -20,8 +20,7 @@
 #include <QCloseEvent>
 #include "ui_main_window.h"
 #include "common.h"
-#include "aux_geometry.h"
-#include "build_info.h"
+#include "mesh_project.h"
 
 class MainWindow : public QMainWindow
 {
@@ -36,6 +35,7 @@ protected:
 private:
     void addPhoto(const char* filename);
     void loadPhotos();
+    void updateProject();
     void updatePhotoListWidget();
 
     void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
@@ -76,8 +76,7 @@ private:
 
     const std::string auto_save_file_name = "autosave.gmb";
 
-    AuxGeometry::Ptr aux_geometry;
-    BuildInfo::Ptr build_info;
+    MeshProject::Ptr mesh_project;
 };
 
 extern MainWindow* g_main_window;
