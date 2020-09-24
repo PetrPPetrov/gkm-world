@@ -50,13 +50,6 @@ MainWindow::MainWindow()
     project_menu->addAction(save_project_as_act);
 
     project_menu->addSeparator();
-    close_project_act = new QAction("&Close", this);
-    close_project_act->setShortcuts(QKeySequence::SaveAs);
-    close_project_act->setStatusTip("Close project");
-    connect(close_project_act, &QAction::triggered, this, &MainWindow::onCloseProject);
-    project_menu->addAction(close_project_act);
-
-    project_menu->addSeparator();
     quit_act = new QAction("&Quit", this);
     quit_act->setShortcuts(QKeySequence::Quit);
     quit_act->setStatusTip("Quit application");
@@ -147,6 +140,7 @@ void MainWindow::loadPhotos()
 
 void MainWindow::updateProject()
 {
+    updateWindowTitle();
     updatePhotoListWidget();
 
     camera_orientation_widget->setAuxGeometry(mesh_project->aux_geometry);
@@ -173,6 +167,16 @@ void MainWindow::updatePhotoListWidget()
     {
         photo_list_widget->addItem(QString(camera_info->photo_image_path.c_str()));
     }
+}
+
+void MainWindow::updateWindowTitle()
+{
+    QString file_name = "Unnamed";
+    if (!mesh_project->file_name.empty())
+    {
+        file_name = QString(mesh_project->file_name.c_str());
+    }
+    setWindowTitle(file_name + QString(" - Gkm-World Mesh-Builder"));
 }
 
 void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected)
@@ -206,22 +210,37 @@ void MainWindow::onNewProject()
 
 void MainWindow::onOpenProject()
 {
-    log_widget->appendPlainText("Open project");
+    QString filename = QFileDialog::getOpenFileName(this, "Select Mesh-Builder project", QDir::currentPath(), "Mesh-Builder projects (*.gmb)");
+    if (!filename.isNull() && fileExists(filename.toStdString()))
+    {
+        loadMeshProject(mesh_project, filename.toStdString());
+        mesh_project->file_name = filename.toStdString();
+        loadPhotos();
+        updateProject();
+    }
 }
 
 void MainWindow::onSaveProject()
 {
-    log_widget->appendPlainText("Save project");
+    if (mesh_project->file_name.empty())
+    {
+        onSaveAsProject();
+        return;
+    }
+
+    saveMeshProject(mesh_project, mesh_project->file_name);
+    updateWindowTitle();
 }
 
 void MainWindow::onSaveAsProject()
 {
-    log_widget->appendPlainText("Save as project");
-}
-
-void MainWindow::onCloseProject()
-{
-    log_widget->appendPlainText("Close project");
+    QString filename = QFileDialog::getSaveFileName(this, "Select Mesh-Builder project", QDir::currentPath(), "Mesh-Builder projects (*.gmb)");
+    if (!filename.isNull())
+    {
+        saveMeshProject(mesh_project, filename.toStdString());
+        mesh_project->file_name = filename.toStdString();
+        updateWindowTitle();
+    }
 }
 
 void MainWindow::onQuit()
@@ -232,7 +251,7 @@ void MainWindow::onQuit()
 void MainWindow::onAddPhoto()
 {
     QString filename = QFileDialog::getOpenFileName(this, "Select photo", QDir::currentPath(), "JPEG files (*.jpg *.jpeg);; PNG files (*.png)");
-    if (!filename.isNull())
+    if (!filename.isNull() && fileExists(filename.toStdString()))
     {
         addPhoto(filename.toStdString().c_str());
         loadPhotos();

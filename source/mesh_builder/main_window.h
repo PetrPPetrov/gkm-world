@@ -37,6 +37,7 @@ private:
     void loadPhotos();
     void updateProject();
     void updatePhotoListWidget();
+    void updateWindowTitle();
 
     void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
     void closeEvent(QCloseEvent* event);
@@ -45,7 +46,6 @@ private:
     void onOpenProject();
     void onSaveProject();
     void onSaveAsProject();
-    void onCloseProject();
     void onQuit();
 
     void onAddPhoto();

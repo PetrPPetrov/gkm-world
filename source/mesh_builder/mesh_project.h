@@ -17,6 +17,7 @@ struct MeshProject
 
     AuxGeometry::Ptr aux_geometry = std::make_shared<AuxGeometry>();
     BuildInfo::Ptr build_info = std::make_shared<BuildInfo>();
+    std::string file_name;
 };
 
 inline void loadMeshProject(MeshProject::Ptr& project, const std::string& file_name)
