@@ -86,6 +86,21 @@ MainWindow::MainWindow()
     camera_orientation_window->setWindowTitle("3D Camera Orientation for Photo");
 }
 
+void MainWindow::updateWindowTitle()
+{
+    QString file_name = "Unnamed";
+    if (!mesh_project->file_name.empty())
+    {
+        file_name = QString(mesh_project->file_name.c_str());
+    }
+    QString dirty_flag = "";
+    if (mesh_project->dirty)
+    {
+        dirty_flag = "*";
+    }
+    setWindowTitle(dirty_flag + file_name + QString(" - Gkm-World Mesh-Builder"));
+}
+
 void MainWindow::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
@@ -103,16 +118,16 @@ void MainWindow::showEvent(QShowEvent* event)
         log_window->resize(QSize(main_window.centralwidget->width() / 4, main_window.centralwidget->height() / 2));
         log_window->move(0, main_window.centralwidget->height() / 2);
 
-        if (fileExists(auto_save_file_name))
-        {
-            loadMeshProject(mesh_project, auto_save_file_name);
-            loadPhotos();
-            updateProject();
-        }
-        else
-        {
+        //if (fileExists(auto_save_file_name))
+        //{
+        //    loadMeshProject(mesh_project, auto_save_file_name);
+        //    loadPhotos();
+        //    updateProject();
+        //}
+        //else
+        //{
             onNewProject();
-        }
+        //}
     }
 }
 
@@ -143,7 +158,7 @@ void MainWindow::updateProject()
     updateWindowTitle();
     updatePhotoListWidget();
 
-    camera_orientation_widget->setAuxGeometry(mesh_project->aux_geometry);
+    camera_orientation_widget->setMeshProject(mesh_project);
     camera_orientation_widget->updateAuxGeometry();
 
     if (mesh_project->build_info->cameras_info.size() > 0)
@@ -169,16 +184,6 @@ void MainWindow::updatePhotoListWidget()
     }
 }
 
-void MainWindow::updateWindowTitle()
-{
-    QString file_name = "Unnamed";
-    if (!mesh_project->file_name.empty())
-    {
-        file_name = QString(mesh_project->file_name.c_str());
-    }
-    setWindowTitle(file_name + QString(" - Gkm-World Mesh-Builder"));
-}
-
 void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
     if (photo_list_widget->selectedItems().size() > 0)
@@ -193,8 +198,28 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    saveMeshProject(mesh_project, auto_save_file_name);
-    event->accept();
+    if (mesh_project->dirty)
+    {
+        QMessageBox msg_box;
+        msg_box.setText("The project has been modified.");
+        msg_box.setWindowTitle("Gkm-World Mesh-Builder");
+        msg_box.setInformativeText("Do you want to save your changes?");
+        msg_box.setStandardButtons(QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+        msg_box.setDefaultButton(QMessageBox::Save);
+        int ret = msg_box.exec();
+        switch (ret)
+        {
+        case QMessageBox::Save:
+            onSaveProject();
+        case QMessageBox::Discard:
+            event->accept();
+            break;
+        case QMessageBox::Cancel:
+            event->ignore();
+        default:
+            break;
+        }
+    }
 }
 
 void MainWindow::onNewProject()
@@ -228,8 +253,12 @@ void MainWindow::onSaveProject()
         return;
     }
 
-    saveMeshProject(mesh_project, mesh_project->file_name);
-    updateWindowTitle();
+    if (mesh_project->dirty)
+    {
+        saveMeshProject(mesh_project, mesh_project->file_name);
+        mesh_project->dirty = false;
+        updateWindowTitle();
+    }
 }
 
 void MainWindow::onSaveAsProject()
@@ -239,13 +268,14 @@ void MainWindow::onSaveAsProject()
     {
         saveMeshProject(mesh_project, filename.toStdString());
         mesh_project->file_name = filename.toStdString();
+        mesh_project->dirty = false;
         updateWindowTitle();
     }
 }
 
 void MainWindow::onQuit()
 {
-    log_widget->appendPlainText("Quit application");
+    QMainWindow::close();
 }
 
 void MainWindow::onAddPhoto()
@@ -255,6 +285,7 @@ void MainWindow::onAddPhoto()
     {
         addPhoto(filename.toStdString().c_str());
         loadPhotos();
+        mesh_project->dirty = true;
         updateProject();
     }
 }

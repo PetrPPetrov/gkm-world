@@ -28,6 +28,7 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow();
+    void updateWindowTitle();
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -37,7 +38,6 @@ private:
     void loadPhotos();
     void updateProject();
     void updatePhotoListWidget();
-    void updateWindowTitle();
 
     void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
     void closeEvent(QCloseEvent* event);

@@ -38,14 +38,14 @@ MeshBuilderWidget::MeshBuilderWidget(QWidget *parent) : QOpenGLWidget(parent)
     setDefaultCamera();
 }
 
-void MeshBuilderWidget::setAuxGeometry(const AuxGeometry::Ptr& geometry)
+void MeshBuilderWidget::setMeshProject(const MeshProject::Ptr& project)
 {
-    aux_geometry = geometry;
+    mesh_project = project;
 }
 
 void MeshBuilderWidget::updateAuxGeometry()
 {
-    if (!aux_geometry)
+    if (!mesh_project || !mesh_project->aux_geometry)
     {
         aux_geom_line_set_vbo_size = 0;
         return;
@@ -79,12 +79,12 @@ void MeshBuilderWidget::updateAuxGeometry()
         { 1.0f, 1.0f, 1.0f, 0xffffffff }
     };
     const size_t box_vertex_buffer_size = sizeof(box_vertex_buffer) / sizeof(box_vertex_buffer[0]);
-    const size_t vertex_count = std::min(box_vertex_buffer_size * aux_geometry->boxes.size(), static_cast<size_t>(AUX_GEOM_VBO_MAX_VERTEX_COUNT));
+    const size_t vertex_count = std::min(box_vertex_buffer_size * mesh_project->aux_geometry->boxes.size(), static_cast<size_t>(AUX_GEOM_VBO_MAX_VERTEX_COUNT));
 
     std::vector<VertexPositionColor> vertex_buffer;
     vertex_buffer.reserve(vertex_count);
 
-    for (auto box : aux_geometry->boxes)
+    for (auto box : mesh_project->aux_geometry->boxes)
     {
         for (size_t i = 0; i < box_vertex_buffer_size; ++i)
         {
@@ -426,5 +426,10 @@ void MeshBuilderWidget::updateCameraInfo()
         camera_info->viewer_target = to_eigen(viewer_target);
         camera_info->viewer_up = to_eigen(viewer_up);
         camera_info->rotation_radius = rotation_radius;
+        if (mesh_project)
+        {
+            mesh_project->dirty = true;
+            g_main_window->updateWindowTitle();
+        }
     }
 }

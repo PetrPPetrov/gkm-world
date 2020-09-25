@@ -14,8 +14,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QVector3D>
 #include "common.h"
-#include "aux_geometry.h"
-#include "build_info.h"
+#include "mesh_project.h"
 
 class MeshBuilderWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -23,7 +22,7 @@ class MeshBuilderWidget : public QOpenGLWidget, protected QOpenGLFunctions
 
 public:
     MeshBuilderWidget(QWidget *parent);
-    void setAuxGeometry(const AuxGeometry::Ptr& geometry);
+    void setMeshProject(const MeshProject::Ptr& mesh_project);
     void updateAuxGeometry();
     void setPhoto(const CameraInfo::Ptr& camera_info);
     void updatePhotoTexture();
@@ -43,7 +42,7 @@ private:
     void updateCameraInfo();
 
 private:
-    AuxGeometry::Ptr aux_geometry;
+    MeshProject::Ptr mesh_project;
     CameraInfo::Ptr camera_info;
 
     std::unique_ptr<QOpenGLShaderProgram> aux_geom_line_set_program;
