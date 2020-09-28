@@ -66,6 +66,7 @@ MainWindow::MainWindow()
 
     remove_photo_act = new QAction("&Remove photo", this);
     remove_photo_act->setStatusTip("Remove photo from project");
+    remove_photo_act->setEnabled(false);
     connect(remove_photo_act, &QAction::triggered, this, &MainWindow::onRemovePhoto);
     photo_menu->addAction(remove_photo_act);
 
@@ -120,9 +121,7 @@ void MainWindow::showEvent(QShowEvent* event)
 
         //if (fileExists(auto_save_file_name))
         //{
-        //    loadMeshProject(mesh_project, auto_save_file_name);
-        //    loadPhotos();
-        //    updateProject();
+        //    loadProject(auto_save_file_name);
         //}
         //else
         //{
@@ -140,6 +139,24 @@ void MainWindow::addPhoto(const char* filename)
     new_camera_info->viewer_up = Eigen::Vector3d(0, 0, 1);
     new_camera_info->rotation_radius = (new_camera_info->viewer_pos - new_camera_info->viewer_target).norm();
     mesh_project->build_info->cameras_info.push_back(new_camera_info);
+    photo_list_widget->addItem(QString(filename));
+}
+
+void MainWindow::loadProject(const char* filename)
+{
+    loadMeshProject(mesh_project, filename);
+    mesh_project->file_name = filename;
+    fillPhotoListWidget();
+    loadPhotos();
+    if (mesh_project->build_info->cameras_info.size() > 0)
+    {
+        photo_list_widget->setCurrentRow(0);
+    }
+    else
+    {
+        photo_list_widget->clearSelection();
+    }
+    updateProject();
 }
 
 void MainWindow::loadPhotos()
@@ -155,27 +172,14 @@ void MainWindow::loadPhotos()
 
 void MainWindow::updateProject()
 {
-    updateWindowTitle();
-    updatePhotoListWidget();
-
     camera_orientation_widget->setMeshProject(mesh_project);
     camera_orientation_widget->updateAuxGeometry();
-
-    if (mesh_project->build_info->cameras_info.size() > 0)
-    {
-        camera_orientation_widget->setPhoto(mesh_project->build_info->cameras_info[0]);
-        photo_list_widget->setCurrentRow(0);
-    }
-    else
-    {
-        camera_orientation_widget->setPhoto(nullptr);
-    }
     camera_orientation_widget->updatePhotoTexture();
-
+    updateWindowTitle();
     camera_orientation_widget->update();
 }
 
-void MainWindow::updatePhotoListWidget()
+void MainWindow::fillPhotoListWidget()
 {
     photo_list_widget->clear();
     for (auto camera_info : mesh_project->build_info->cameras_info)
@@ -190,10 +194,15 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
     {
         int index = photo_list_widget->currentIndex().row();
         camera_orientation_widget->setPhoto(mesh_project->build_info->cameras_info.at(index));
-        camera_orientation_widget->updatePhotoTexture();
-        camera_orientation_widget->update();
-        log_widget->appendPlainText(photo_list_widget->item(index)->text());
+        remove_photo_act->setEnabled(true);
     }
+    else
+    {
+        camera_orientation_widget->setPhoto(nullptr);
+        remove_photo_act->setEnabled(false);
+    }
+    camera_orientation_widget->updatePhotoTexture();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
@@ -230,6 +239,7 @@ void MainWindow::onNewProject()
     new_box->size = QVector3D(1, 1, 1);
     mesh_project->aux_geometry->boxes.push_back(new_box);
 
+    fillPhotoListWidget();
     updateProject();
 }
 
@@ -238,10 +248,7 @@ void MainWindow::onOpenProject()
     QString filename = QFileDialog::getOpenFileName(this, "Select Mesh-Builder project", QDir::currentPath(), "Mesh-Builder projects (*.gmb)");
     if (!filename.isNull() && fileExists(filename.toStdString()))
     {
-        loadMeshProject(mesh_project, filename.toStdString());
-        mesh_project->file_name = filename.toStdString();
-        loadPhotos();
-        updateProject();
+        loadProject(filename.toStdString().c_str());
     }
 }
 
@@ -292,5 +299,31 @@ void MainWindow::onAddPhoto()
 
 void MainWindow::onRemovePhoto()
 {
-    log_widget->appendPlainText("Remove photo");
+    const int index = photo_list_widget->currentRow();
+    QString format_string("Are you sure to remove photo %1?");
+    QString photo_name(mesh_project->build_info->cameras_info.at(index)->photo_image_path.c_str());
+
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Confirmation", format_string.arg(photo_name), QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::Yes)
+    {
+        auto selected_items = photo_list_widget->selectedItems();
+        if (index > 0)
+        {
+            photo_list_widget->setCurrentRow(index - 1);
+        }
+        else if (photo_list_widget->count() > 1)
+        {
+            photo_list_widget->setCurrentRow(1);
+        }
+        else
+        {
+            photo_list_widget->clearSelection();
+            mesh_project->file_name = "";
+            mesh_project->dirty = false;
+        }
+        mesh_project->build_info->cameras_info.erase(mesh_project->build_info->cameras_info.begin() + index);
+        qDeleteAll(selected_items);
+        updateProject();
+    }
 }

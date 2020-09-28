@@ -35,9 +35,10 @@ protected:
 
 private:
     void addPhoto(const char* filename);
+    void loadProject(const char* filename);
     void loadPhotos();
     void updateProject();
-    void updatePhotoListWidget();
+    void fillPhotoListWidget();
 
     void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
     void closeEvent(QCloseEvent* event);
