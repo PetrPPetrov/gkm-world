@@ -128,9 +128,11 @@ void MeshBuilderWidget::setPhoto(const CameraInfo::Ptr& camera_info_)
 
 void MeshBuilderWidget::updatePhotoTexture()
 {
+    int rotation = 0;
     if (camera_info)
     {
         photo_texture = std::make_unique<QOpenGLTexture>(*camera_info->photo_image);
+        rotation = camera_info->rotation;
     }
     else
     {
@@ -148,7 +150,7 @@ void MeshBuilderWidget::updatePhotoTexture()
     photo_y_low = -photo_height / 2;
     photo_y_high = photo_y_low + photo_height;
 
-    const VertexPositionTexCoord vertex_buffer[] =
+    VertexPositionTexCoord vertex_buffer[] =
     {
         { photo_x_low, photo_y_low, -1.0f, 0.0f, 1.0f },
         { photo_x_high, photo_y_low, -1.0f, 1.0f, 1.0f },
@@ -157,6 +159,59 @@ void MeshBuilderWidget::updatePhotoTexture()
         { photo_x_low, photo_y_high, -1.0f, 0.0f, 0.0f },
         { photo_x_low, photo_y_low, -1.0f, 0.0f, 1.0f }
     };
+    switch (rotation)
+    {
+    case 90:
+    {
+        vertex_buffer[0].u = 0.0f;
+        vertex_buffer[0].v = 0.0f;
+        vertex_buffer[1].u = 0.0f;
+        vertex_buffer[1].v = 1.0f;
+        vertex_buffer[2].u = 1.0f;
+        vertex_buffer[2].v = 1.0f;
+        vertex_buffer[3].u = 1.0f;
+        vertex_buffer[3].v = 1.0f;
+        vertex_buffer[4].u = 1.0f;
+        vertex_buffer[4].v = 0.0f;
+        vertex_buffer[5].u = 0.0f;
+        vertex_buffer[5].v = 0.0f;
+    }
+        break;
+    case 180:
+    {
+        vertex_buffer[0].u = 1.0f;
+        vertex_buffer[0].v = 0.0f;
+        vertex_buffer[1].u = 0.0f;
+        vertex_buffer[1].v = 0.0f;
+        vertex_buffer[2].u = 0.0f;
+        vertex_buffer[2].v = 1.0f;
+        vertex_buffer[3].u = 0.0f;
+        vertex_buffer[3].v = 1.0f;
+        vertex_buffer[4].u = 1.0f;
+        vertex_buffer[4].v = 1.0f;
+        vertex_buffer[5].u = 1.0f;
+        vertex_buffer[5].v = 0.0f;
+    }
+        break;
+    case 270:
+    {
+        vertex_buffer[0].u = 1.0f;
+        vertex_buffer[0].v = 1.0f;
+        vertex_buffer[1].u = 1.0f;
+        vertex_buffer[1].v = 0.0f;
+        vertex_buffer[2].u = 0.0f;
+        vertex_buffer[2].v = 0.0f;
+        vertex_buffer[3].u = 0.0f;
+        vertex_buffer[3].v = 0.0f;
+        vertex_buffer[4].u = 0.0f;
+        vertex_buffer[4].v = 1.0f;
+        vertex_buffer[5].u = 1.0f;
+        vertex_buffer[5].v = 1.0f;
+    }
+        break;
+    default:
+        break;
+    }
 
     photo_vbo->bind();
     photo_vbo->write(0, vertex_buffer, static_cast<int>(PHOTO_MAX_VERTEX_COUNT * sizeof(VertexPositionTexCoord)));
@@ -297,6 +352,12 @@ void MeshBuilderWidget::paintGL()
 
 void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
 {
+    if (camera_info && camera_info->locked)
+    {
+        resetNavigation();
+        return;
+    }
+
     if (right_mouse_pressed)
     {
         // Pan mode
@@ -342,6 +403,12 @@ void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
 
 void MeshBuilderWidget::mousePressEvent(QMouseEvent* event)
 {
+    if (camera_info && camera_info->locked)
+    {
+        resetNavigation();
+        return;
+    }
+
     bool left_or_right = false;
     if (event->buttons() & Qt::LeftButton)
     {
@@ -366,6 +433,12 @@ void MeshBuilderWidget::mousePressEvent(QMouseEvent* event)
 
 void MeshBuilderWidget::mouseReleaseEvent(QMouseEvent* event)
 {
+    if (camera_info && camera_info->locked)
+    {
+        resetNavigation();
+        return;
+    }
+
     bool left_or_right = false;
     if (!(event->buttons() & Qt::LeftButton))
     {
@@ -390,6 +463,12 @@ void MeshBuilderWidget::mouseReleaseEvent(QMouseEvent* event)
 
 void MeshBuilderWidget::wheelEvent(QWheelEvent* event)
 {
+    if (camera_info && camera_info->locked)
+    {
+        resetNavigation();
+        return;
+    }
+
     QPoint delta = event->angleDelta();
     rotation_radius += delta.y() / 1000.0f * rotation_radius;
     if (rotation_radius < minimum_rotation_radius)
@@ -432,4 +511,13 @@ void MeshBuilderWidget::updateCameraInfo()
             g_main_window->updateWindowTitle();
         }
     }
+}
+
+void MeshBuilderWidget::resetNavigation()
+{
+    viewer_previous_pos = viewer_pos;
+    viewer_previous_target = viewer_target;
+    viewer_previous_up = viewer_up;
+    left_mouse_pressed = false;
+    right_mouse_pressed = false;
 }

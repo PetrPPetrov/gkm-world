@@ -21,6 +21,32 @@ struct CameraInfo
     Eigen::Vector3d viewer_target;
     Eigen::Vector3d viewer_up;
     double rotation_radius;
+
+    bool locked = false;
+    int rotation = 0;
+
+    int width() const
+    {
+        if (rotation == 0 || rotation == 180)
+        {
+            return photo_image->width();
+        }
+        else
+        {
+            return photo_image->height();
+        }
+    }
+    int height() const
+    {
+        if (rotation == 0 || rotation == 180)
+        {
+            return photo_image->height();
+        }
+        else
+        {
+            return photo_image->width();
+        }
+    }
 };
 
 struct BuildInfo
@@ -42,6 +68,10 @@ inline void loadCameraInfo(CameraInfo::Ptr& camera_info, std::ifstream& file_in)
     loadEigenVector3d(camera_info->viewer_up, file_in);
     loadToken("rotation_radius", file_in);
     file_in >> camera_info->rotation_radius;
+    loadToken("locked", file_in);
+    file_in >> camera_info->locked;
+    loadToken("rotation", file_in);
+    file_in >> camera_info->rotation;
 }
 
 inline void saveCameraInfo(const CameraInfo::Ptr& camera_info, std::ofstream& file_out)
@@ -55,4 +85,6 @@ inline void saveCameraInfo(const CameraInfo::Ptr& camera_info, std::ofstream& fi
     file_out << "viewer_up\n";
     saveEigenVector3d(camera_info->viewer_up, file_out);
     file_out << "rotation_radius\n" << camera_info->rotation_radius << "\n";
+    file_out << "locked\n" << camera_info->locked << "\n";
+    file_out << "rotation\n" << camera_info->rotation << "\n";
 }

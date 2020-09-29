@@ -18,6 +18,7 @@
 #include <QMdiSubWindow>
 #include <QListWidget>
 #include <QCloseEvent>
+#include <QResizeEvent>
 #include "ui_main_window.h"
 #include "common.h"
 #include "mesh_project.h"
@@ -39,9 +40,12 @@ private:
     void loadPhotos();
     void updateProject();
     void fillPhotoListWidget();
+    void addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info);
+    void updateCameraWidgetSize(const CameraInfo::Ptr& camera_info);
 
     void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
     void closeEvent(QCloseEvent* event);
+    void resizeEvent(QResizeEvent* event);
 
     void onNewProject();
     void onOpenProject();
@@ -51,6 +55,9 @@ private:
 
     void onAddPhoto();
     void onRemovePhoto();
+
+    void onLockedChanged(int state);
+    void onRotationChanged(int index);
 
 private:
     bool first_show = true;
@@ -68,6 +75,10 @@ private:
 
     MeshBuilderWidget* camera_orientation_widget = nullptr;
     QMdiSubWindow* camera_orientation_window = nullptr;
+    int initial_camera_available_width = 300;
+    int initial_camera_available_height = 200;
+    int camera_available_width = 300;
+    int camera_available_height = 200;
 
     QPlainTextEdit* log_widget = nullptr;
     QMdiSubWindow* log_window = nullptr;

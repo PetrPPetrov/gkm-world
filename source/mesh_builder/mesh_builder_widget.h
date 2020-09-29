@@ -40,6 +40,7 @@ protected:
 private:
     void setDefaultCamera();
     void updateCameraInfo();
+    void resetNavigation();
 
 private:
     MeshProject::Ptr mesh_project;

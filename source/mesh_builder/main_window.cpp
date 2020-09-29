@@ -10,6 +10,8 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QSpinBox>
+#include <QCheckBox>
+#include <QComboBox>
 #include <QHeaderView>
 #include <QPushButton>
 #include <QFileDialog>
@@ -110,14 +112,17 @@ void MainWindow::showEvent(QShowEvent* event)
     {
         first_show = false;
 
-        camera_orientation_window->resize(QSize(main_window.centralwidget->width() * 3 / 4, main_window.centralwidget->height()));
-        camera_orientation_window->move(main_window.centralwidget->width() / 4, 0);
+        initial_camera_available_width = camera_available_width = main_window.centralwidget->width() * 2 / 3;
+        initial_camera_available_height = camera_available_height = main_window.centralwidget->height();
 
-        photo_list_window->resize(QSize(main_window.centralwidget->width() / 4, main_window.centralwidget->height() / 2));
+        camera_orientation_window->setFixedSize(QSize(camera_available_width, camera_available_height));
+        camera_orientation_window->move(main_window.centralwidget->width() / 3, 0);
+
+        photo_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 2));
         photo_list_window->move(0, 0);
 
-        log_window->resize(QSize(main_window.centralwidget->width() / 4, main_window.centralwidget->height() / 2));
-        log_window->move(0, main_window.centralwidget->height() / 2);
+        log_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 4));
+        log_window->move(0, main_window.centralwidget->height() * 3 / 4);
 
         //if (fileExists(auto_save_file_name))
         //{
@@ -139,7 +144,8 @@ void MainWindow::addPhoto(const char* filename)
     new_camera_info->viewer_up = Eigen::Vector3d(0, 0, 1);
     new_camera_info->rotation_radius = (new_camera_info->viewer_pos - new_camera_info->viewer_target).norm();
     mesh_project->build_info->cameras_info.push_back(new_camera_info);
-    photo_list_widget->addItem(QString(filename));
+
+    addPhotoListWidgetItem(new_camera_info);
 }
 
 void MainWindow::loadProject(const char* filename)
@@ -184,8 +190,75 @@ void MainWindow::fillPhotoListWidget()
     photo_list_widget->clear();
     for (auto camera_info : mesh_project->build_info->cameras_info)
     {
-        photo_list_widget->addItem(QString(camera_info->photo_image_path.c_str()));
+        addPhotoListWidgetItem(camera_info);
     }
+}
+
+void MainWindow::addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info)
+{
+    QWidget* widget = new QWidget(photo_list_widget);
+    QLabel* label = new QLabel(QString(camera_info->photo_image_path.c_str()), photo_list_widget);
+
+    QCheckBox* locked = new QCheckBox("locked", photo_list_widget);
+    locked->setChecked(camera_info->locked);
+    locked->setEnabled(false);
+    connect(locked, &QCheckBox::stateChanged, this, &MainWindow::onLockedChanged);
+
+    QComboBox* rotation = new QComboBox(photo_list_widget);
+    rotation->addItem("0 degree");
+    rotation->addItem("90 degree");
+    rotation->addItem("180 degree");
+    rotation->addItem("270 degree");
+    rotation->setEnabled(false);
+    switch (camera_info->rotation)
+    {
+    default:
+    case 0:
+        rotation->setCurrentIndex(0);
+        break;
+    case 90:
+        rotation->setCurrentIndex(1);
+        break;
+    case 180:
+        rotation->setCurrentIndex(2);
+        break;
+    case 270:
+        rotation->setCurrentIndex(3);
+        break;
+    }
+    connect(rotation, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onRotationChanged);
+
+    QHBoxLayout* layout = new QHBoxLayout(photo_list_widget);
+    layout->addWidget(label);
+    layout->addWidget(locked);
+    layout->addWidget(rotation);
+    layout->addStretch();
+    layout->setSizeConstraint(QLayout::SetFixedSize);
+    widget->setLayout(layout);
+
+    QListWidgetItem* item = new QListWidgetItem(photo_list_widget);
+    item->setSizeHint(widget->sizeHint());
+    photo_list_widget->addItem(item);
+    photo_list_widget->setItemWidget(item, widget);
+}
+
+void MainWindow::updateCameraWidgetSize(const CameraInfo::Ptr& camera_info)
+{
+    camera_orientation_widget->setPhoto(camera_info);
+    int photo_width = camera_info->width();
+    int photo_height = camera_info->height();
+    double photo_aspect = static_cast<double>(photo_width) / photo_height;
+    double available_aspect = static_cast<double>(camera_available_width) / camera_available_height;
+    if (available_aspect > photo_aspect)
+    {
+        camera_orientation_window->setFixedSize(QSize(static_cast<int>(camera_available_height * photo_aspect), camera_available_height));
+    }
+    else
+    {
+        camera_orientation_window->setFixedSize(QSize(camera_available_width, static_cast<int>(camera_available_width / photo_aspect)));
+    }
+    camera_orientation_widget->updatePhotoTexture();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected)
@@ -193,13 +266,30 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
     if (photo_list_widget->selectedItems().size() > 0)
     {
         int index = photo_list_widget->currentIndex().row();
-        camera_orientation_widget->setPhoto(mesh_project->build_info->cameras_info.at(index));
-        remove_photo_act->setEnabled(true);
+        if (index >= 0 && static_cast<size_t>(index) < mesh_project->build_info->cameras_info.size())
+        {
+            remove_photo_act->setEnabled(true);
+            photo_list_widget->itemWidget(photo_list_widget->item(index))->layout()->itemAt(1)->widget()->setEnabled(true);
+            photo_list_widget->itemWidget(photo_list_widget->item(index))->layout()->itemAt(2)->widget()->setEnabled(true);
+            int prev_index = -1;
+            if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
+            {
+                prev_index = deselected.front().indexes().front().row();
+            }
+            if (prev_index >= 0)
+            {
+                photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->layout()->itemAt(1)->widget()->setEnabled(false);
+                photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->layout()->itemAt(2)->widget()->setEnabled(false);
+            }
+            auto camera_info = mesh_project->build_info->cameras_info[index];
+            updateCameraWidgetSize(camera_info);
+        }
     }
     else
     {
         camera_orientation_widget->setPhoto(nullptr);
         remove_photo_act->setEnabled(false);
+        camera_orientation_window->setFixedSize(QSize(camera_available_width, camera_available_height));
     }
     camera_orientation_widget->updatePhotoTexture();
     camera_orientation_widget->update();
@@ -229,6 +319,23 @@ void MainWindow::closeEvent(QCloseEvent* event)
             break;
         }
     }
+}
+
+void MainWindow::resizeEvent(QResizeEvent* event)
+{
+    int new_camera_available_width = main_window.centralwidget->width() * 2 / 3;
+    int new_camera_available_height = main_window.centralwidget->height();
+    if (new_camera_available_width > initial_camera_available_width && new_camera_available_height > initial_camera_available_height)
+    {
+        camera_available_width = new_camera_available_width;
+        camera_available_height = new_camera_available_height;
+    }
+    else
+    {
+        camera_available_width = initial_camera_available_width;
+        camera_available_height = initial_camera_available_height;
+    }
+    QMainWindow::resizeEvent(event);
 }
 
 void MainWindow::onNewProject()
@@ -325,5 +432,46 @@ void MainWindow::onRemovePhoto()
         mesh_project->build_info->cameras_info.erase(mesh_project->build_info->cameras_info.begin() + index);
         qDeleteAll(selected_items);
         updateProject();
+    }
+}
+
+void MainWindow::onLockedChanged(int state)
+{
+    int index = photo_list_widget->currentRow();
+    if (index >= 0 && index < mesh_project->build_info->cameras_info.size())
+    {
+        mesh_project->build_info->cameras_info[index]->locked = state == Qt::Checked;
+        mesh_project->dirty = true;
+        updateWindowTitle();
+    }
+}
+
+void MainWindow::onRotationChanged(int rotation_index)
+{
+    int index = photo_list_widget->currentRow();
+    if (index >= 0 && index < mesh_project->build_info->cameras_info.size())
+    {
+        int new_rotation = 0;
+        switch (rotation_index)
+        {
+        default:
+        case 0:
+            new_rotation = 0;
+            break;
+        case 1:
+            new_rotation = 90;
+            break;
+        case 2:
+            new_rotation = 180;
+            break;
+        case 3:
+            new_rotation = 270;
+            break;
+        }
+        auto camera_info = mesh_project->build_info->cameras_info[index];
+        camera_info->rotation = new_rotation;
+        mesh_project->dirty = true;
+        updateWindowTitle();
+        updateCameraWidgetSize(camera_info);
     }
 }
