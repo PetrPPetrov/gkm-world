@@ -262,6 +262,7 @@ void MainWindow::addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info)
     locked->setChecked(camera_info->locked);
     connect(locked, &QCheckBox::stateChanged, this, &MainWindow::onLockedChanged);
 
+    QLabel* rotation_label = new QLabel("Rotation", photo_list_widget);
     QComboBox* rotation = new QComboBox(photo_list_widget);
     rotation->addItem("0 degree");
     rotation->addItem("90 degree");
@@ -285,11 +286,19 @@ void MainWindow::addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info)
     }
     connect(rotation, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onRotationChanged);
 
-    QHBoxLayout* layout = new QHBoxLayout(photo_list_widget);
-    layout->addWidget(label);
-    layout->addWidget(locked);
-    layout->addWidget(rotation);
-    layout->addStretch();
+    QLabel* fov_label = new QLabel("FOV", photo_list_widget);
+    QDoubleSpinBox* fov = new QDoubleSpinBox(photo_list_widget);
+    fov->setRange(10, 120);
+    fov->setValue(camera_info->fov);
+    connect(fov, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onFovChanged);
+
+    QGridLayout* layout = new QGridLayout(photo_list_widget);
+    layout->addWidget(label, 0, 0);
+    layout->addWidget(locked, 0, 1);
+    layout->addWidget(rotation_label, 1, 0);
+    layout->addWidget(rotation, 1, 1);
+    layout->addWidget(fov_label, 1, 2);
+    layout->addWidget(fov, 1, 3);
     layout->setSizeConstraint(QLayout::SetFixedSize);
     widget->setLayout(layout);
     widget->setEnabled(false);
@@ -649,6 +658,18 @@ void MainWindow::onRotationChanged(int rotation_index)
         camera_info->rotation = new_rotation;
         dirtyProject();
         updateCameraWidgetSize(camera_info);
+    }
+}
+
+void MainWindow::onFovChanged(double value)
+{
+    int index = photo_list_widget->currentRow();
+    if (index >= 0 && index < mesh_project->build_info->cameras_info.size())
+    {
+        auto camera_info = mesh_project->build_info->cameras_info[index];
+        camera_info->fov = value;
+        dirtyProject();
+        camera_orientation_widget->update();
     }
 }
 

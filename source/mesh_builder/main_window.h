@@ -68,6 +68,7 @@ private:
 
     void onLockedChanged(int state);
     void onRotationChanged(int index);
+    void onFovChanged(double value);
 
     void onAuxBoxPosXChanged(double value);
     void onAuxBoxPosYChanged(double value);

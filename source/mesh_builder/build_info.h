@@ -24,6 +24,7 @@ struct CameraInfo
 
     bool locked = false;
     int rotation = 0;
+    double fov = 50.0;
 
     int width() const
     {
@@ -72,6 +73,8 @@ inline void loadCameraInfo(CameraInfo::Ptr& camera_info, std::ifstream& file_in)
     file_in >> camera_info->locked;
     loadToken("rotation", file_in);
     file_in >> camera_info->rotation;
+    loadToken("fov", file_in);
+    file_in >> camera_info->fov;
 }
 
 inline void saveCameraInfo(const CameraInfo::Ptr& camera_info, std::ofstream& file_out)
@@ -87,4 +90,5 @@ inline void saveCameraInfo(const CameraInfo::Ptr& camera_info, std::ofstream& fi
     file_out << "rotation_radius\n" << camera_info->rotation_radius << "\n";
     file_out << "locked\n" << camera_info->locked << "\n";
     file_out << "rotation\n" << camera_info->rotation << "\n";
+    file_out << "fov\n" << camera_info->fov << "\n";
 }
