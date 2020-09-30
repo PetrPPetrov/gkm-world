@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <QObject>
 #include <QMainWindow>
 #include <QFileDialog>
@@ -35,15 +37,20 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
+    void dirtyProject();
     void addPhoto(const char* filename);
+    void addAuxBox();
     void loadProject(const char* filename);
     void loadPhotos();
     void updateProject();
     void fillPhotoListWidget();
+    void fillAuxGeometryListWidget();
     void addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info);
+    void addAuxGeometryListWidgetItem(const AuxGeometryBox::Ptr& aux_box);
     void updateCameraWidgetSize(const CameraInfo::Ptr& camera_info);
 
-    void onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected);
+    void onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected);
+    void onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected);
     void closeEvent(QCloseEvent* event);
     void resizeEvent(QResizeEvent* event);
 
@@ -56,8 +63,18 @@ private:
     void onAddPhoto();
     void onRemovePhoto();
 
+    void onAddAuxBox();
+    void onRemoveAuxGeom();
+
     void onLockedChanged(int state);
     void onRotationChanged(int index);
+
+    void onAuxBoxPosXChanged(double value);
+    void onAuxBoxPosYChanged(double value);
+    void onAuxBoxPosZChanged(double value);
+    void onAuxBoxSizeXChanged(double value);
+    void onAuxBoxSizeYChanged(double value);
+    void onAuxBoxSizeZChanged(double value);
 
 private:
     bool first_show = true;
@@ -73,6 +90,9 @@ private:
     QAction* add_photo_act = nullptr;
     QAction* remove_photo_act = nullptr;
 
+    QAction* add_aux_box_act = nullptr;
+    QAction* remove_aux_geom_act = nullptr;
+
     MeshBuilderWidget* camera_orientation_widget = nullptr;
     QMdiSubWindow* camera_orientation_window = nullptr;
     int initial_camera_available_width = 300;
@@ -85,6 +105,10 @@ private:
 
     QListWidget* photo_list_widget = nullptr;
     QMdiSubWindow* photo_list_window = nullptr;
+
+    QListWidget* aux_geometry_list_widget = nullptr;
+    QMdiSubWindow* aux_geometry_list_window = nullptr;
+    std::unordered_map<QListWidgetItem*, AuxGeometryBox::Ptr> list_item_to_box;
 
     const std::string auto_save_file_name = "autosave.gmb";
 

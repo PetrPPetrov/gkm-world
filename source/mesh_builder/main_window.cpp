@@ -12,6 +12,7 @@
 #include <QSpinBox>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDoubleSpinBox>
 #include <QHeaderView>
 #include <QPushButton>
 #include <QFileDialog>
@@ -72,10 +73,28 @@ MainWindow::MainWindow()
     connect(remove_photo_act, &QAction::triggered, this, &MainWindow::onRemovePhoto);
     photo_menu->addAction(remove_photo_act);
 
+    QMenu* aux_geom_menu = menuBar()->addMenu("Aux Geom");
+
+    add_aux_box_act = new QAction("Add aux box", this);
+    add_aux_box_act->setStatusTip("Add new auxiliary box");
+    connect(add_aux_box_act, &QAction::triggered, this, &MainWindow::onAddAuxBox);
+    aux_geom_menu->addAction(add_aux_box_act);
+
+    remove_aux_geom_act = new QAction("Remove", this);
+    remove_aux_geom_act->setStatusTip("Remove aux geometry");
+    remove_aux_geom_act->setEnabled(false);
+    connect(remove_aux_geom_act, &QAction::triggered, this, &MainWindow::onRemoveAuxGeom);
+    aux_geom_menu->addAction(remove_aux_geom_act);
+
     photo_list_widget = new QListWidget(main_window.centralwidget);
-    connect(photo_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onPhotoChanged);
+    connect(photo_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onPhotoSelected);
     photo_list_window = main_window.centralwidget->addSubWindow(photo_list_widget);
     photo_list_window->setWindowTitle("Photos List");
+
+    aux_geometry_list_widget = new QListWidget(main_window.centralwidget);
+    connect(aux_geometry_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onAuxGeometrySelected);
+    aux_geometry_list_window = main_window.centralwidget->addSubWindow(aux_geometry_list_widget);
+    aux_geometry_list_window->setWindowTitle("Auxiliary Geometry List");
 
     log_widget = new QPlainTextEdit(main_window.centralwidget);
     log_widget->setReadOnly(true);
@@ -121,6 +140,9 @@ void MainWindow::showEvent(QShowEvent* event)
         photo_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 2));
         photo_list_window->move(0, 0);
 
+        aux_geometry_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 4));
+        aux_geometry_list_window->move(0, main_window.centralwidget->height() / 2);
+
         log_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 4));
         log_window->move(0, main_window.centralwidget->height() * 3 / 4);
 
@@ -133,6 +155,12 @@ void MainWindow::showEvent(QShowEvent* event)
             onNewProject();
         //}
     }
+}
+
+void MainWindow::dirtyProject()
+{
+    mesh_project->dirty = true;
+    updateWindowTitle();
 }
 
 void MainWindow::addPhoto(const char* filename)
@@ -148,11 +176,32 @@ void MainWindow::addPhoto(const char* filename)
     addPhotoListWidgetItem(new_camera_info);
 }
 
+void MainWindow::addAuxBox()
+{
+    std::unordered_set<int> used_id;
+    for (auto aux_box : mesh_project->aux_geometry->boxes)
+    {
+        used_id.emplace(aux_box->id);
+    }
+    int new_id = 0;
+    while (used_id.find(new_id) != used_id.end())
+    {
+        ++new_id;
+    }
+    AuxGeometryBox::Ptr new_box = std::make_shared<AuxGeometryBox>();
+    new_box->id = new_id;
+    new_box->size = QVector3D(1, 1, 1);
+    mesh_project->aux_geometry->boxes.push_back(new_box);
+    addAuxGeometryListWidgetItem(new_box);
+    dirtyProject();
+}
+
 void MainWindow::loadProject(const char* filename)
 {
     loadMeshProject(mesh_project, filename);
     mesh_project->file_name = filename;
     fillPhotoListWidget();
+    fillAuxGeometryListWidget();
     loadPhotos();
     if (mesh_project->build_info->cameras_info.size() > 0)
     {
@@ -194,6 +243,16 @@ void MainWindow::fillPhotoListWidget()
     }
 }
 
+void MainWindow::fillAuxGeometryListWidget()
+{
+    aux_geometry_list_widget->clear();
+    list_item_to_box.clear();
+    for (auto aux_box : mesh_project->aux_geometry->boxes)
+    {
+        addAuxGeometryListWidgetItem(aux_box);
+    }
+}
+
 void MainWindow::addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info)
 {
     QWidget* widget = new QWidget(photo_list_widget);
@@ -201,7 +260,6 @@ void MainWindow::addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info)
 
     QCheckBox* locked = new QCheckBox("locked", photo_list_widget);
     locked->setChecked(camera_info->locked);
-    locked->setEnabled(false);
     connect(locked, &QCheckBox::stateChanged, this, &MainWindow::onLockedChanged);
 
     QComboBox* rotation = new QComboBox(photo_list_widget);
@@ -209,7 +267,6 @@ void MainWindow::addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info)
     rotation->addItem("90 degree");
     rotation->addItem("180 degree");
     rotation->addItem("270 degree");
-    rotation->setEnabled(false);
     switch (camera_info->rotation)
     {
     default:
@@ -235,11 +292,85 @@ void MainWindow::addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info)
     layout->addStretch();
     layout->setSizeConstraint(QLayout::SetFixedSize);
     widget->setLayout(layout);
+    widget->setEnabled(false);
 
     QListWidgetItem* item = new QListWidgetItem(photo_list_widget);
     item->setSizeHint(widget->sizeHint());
     photo_list_widget->addItem(item);
     photo_list_widget->setItemWidget(item, widget);
+}
+
+void MainWindow::addAuxGeometryListWidgetItem(const AuxGeometryBox::Ptr& aux_box)
+{
+    QWidget* widget = new QWidget(aux_geometry_list_widget);
+    QLabel* label = new QLabel(QString("Box #%1").arg(aux_box->id), aux_geometry_list_widget);
+
+    QLabel* posx_label = new QLabel("Pos.X", aux_geometry_list_widget);
+    QDoubleSpinBox* posx = new QDoubleSpinBox(aux_geometry_list_widget);
+    connect(posx, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxPosXChanged);
+    posx->setRange(-1000, 1000);
+    posx->setSingleStep(0.01);
+    posx->setValue(aux_box->position.x());
+
+    QLabel* posy_label = new QLabel("Pos.Y", aux_geometry_list_widget);
+    QDoubleSpinBox* posy = new QDoubleSpinBox(aux_geometry_list_widget);
+    connect(posy, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxPosYChanged);
+    posy->setRange(-1000, 1000);
+    posy->setSingleStep(0.01);
+    posy->setValue(aux_box->position.y());
+
+    QLabel* posz_label = new QLabel("Pos.Z", aux_geometry_list_widget);
+    QDoubleSpinBox* posz = new QDoubleSpinBox(aux_geometry_list_widget);
+    connect(posz, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxPosZChanged);
+    posz->setRange(-1000, 1000);
+    posz->setSingleStep(0.01);
+    posz->setValue(aux_box->position.z());
+
+    QLabel* sizex_label = new QLabel("Size.X", aux_geometry_list_widget);
+    QDoubleSpinBox* sizex = new QDoubleSpinBox(aux_geometry_list_widget);
+    connect(sizex, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxSizeXChanged);
+    sizex->setRange(-1000, 1000);
+    sizex->setSingleStep(0.01);
+    sizex->setValue(aux_box->size.x());
+
+    QLabel* sizey_label = new QLabel("Size.Y", aux_geometry_list_widget);
+    QDoubleSpinBox* sizey = new QDoubleSpinBox(aux_geometry_list_widget);
+    connect(sizey, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxSizeYChanged);
+    sizey->setRange(-1000, 1000);
+    sizey->setSingleStep(0.01);
+    sizey->setValue(aux_box->size.y());
+
+    QLabel* sizez_label = new QLabel("Size.Z", aux_geometry_list_widget);
+    QDoubleSpinBox* sizez = new QDoubleSpinBox(aux_geometry_list_widget);
+    connect(sizez, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxSizeZChanged);
+    sizez->setRange(-1000, 1000);
+    sizez->setSingleStep(0.01);
+    sizez->setValue(aux_box->size.z());
+
+    QGridLayout* layout = new QGridLayout(aux_geometry_list_widget);
+    layout->addWidget(label, 0, 0);
+    layout->addWidget(posx_label, 1, 0);
+    layout->addWidget(posx, 1, 1);
+    layout->addWidget(posy_label, 1, 2);
+    layout->addWidget(posy, 1, 3);
+    layout->addWidget(posz_label, 1, 4);
+    layout->addWidget(posz, 1, 5);
+    layout->addWidget(sizex_label, 2, 0);
+    layout->addWidget(sizex, 2, 1);
+    layout->addWidget(sizey_label, 2, 2);
+    layout->addWidget(sizey, 2, 3);
+    layout->addWidget(sizez_label, 2, 4);
+    layout->addWidget(sizez, 2, 5);
+    layout->setSizeConstraint(QLayout::SetFixedSize);
+    widget->setLayout(layout);
+    widget->setEnabled(false);
+
+    QListWidgetItem* item = new QListWidgetItem(aux_geometry_list_widget);
+    item->setSizeHint(widget->sizeHint());
+    aux_geometry_list_widget->addItem(item);
+    aux_geometry_list_widget->setItemWidget(item, widget);
+
+    list_item_to_box.emplace(item, aux_box);
 }
 
 void MainWindow::updateCameraWidgetSize(const CameraInfo::Ptr& camera_info)
@@ -261,7 +392,7 @@ void MainWindow::updateCameraWidgetSize(const CameraInfo::Ptr& camera_info)
     camera_orientation_widget->update();
 }
 
-void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelection& deselected)
+void MainWindow::onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
     if (photo_list_widget->selectedItems().size() > 0)
     {
@@ -269,8 +400,7 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
         if (index >= 0 && static_cast<size_t>(index) < mesh_project->build_info->cameras_info.size())
         {
             remove_photo_act->setEnabled(true);
-            photo_list_widget->itemWidget(photo_list_widget->item(index))->layout()->itemAt(1)->widget()->setEnabled(true);
-            photo_list_widget->itemWidget(photo_list_widget->item(index))->layout()->itemAt(2)->widget()->setEnabled(true);
+            photo_list_widget->itemWidget(photo_list_widget->item(index))->setEnabled(true);
             int prev_index = -1;
             if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
             {
@@ -278,8 +408,7 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
             }
             if (prev_index >= 0)
             {
-                photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->layout()->itemAt(1)->widget()->setEnabled(false);
-                photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->layout()->itemAt(2)->widget()->setEnabled(false);
+                photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->setEnabled(false);
             }
             auto camera_info = mesh_project->build_info->cameras_info[index];
             updateCameraWidgetSize(camera_info);
@@ -293,6 +422,29 @@ void MainWindow::onPhotoChanged(const QItemSelection& selected, const QItemSelec
     }
     camera_orientation_widget->updatePhotoTexture();
     camera_orientation_widget->update();
+}
+
+void MainWindow::onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    if (aux_geometry_list_widget->selectedItems().size() > 0)
+    {
+        remove_aux_geom_act->setEnabled(true);
+        int index = aux_geometry_list_widget->currentIndex().row();
+        aux_geometry_list_widget->itemWidget(aux_geometry_list_widget->item(index))->setEnabled(true);
+        int prev_index = -1;
+        if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
+        {
+            prev_index = deselected.front().indexes().front().row();
+        }
+        if (prev_index >= 0)
+        {
+            aux_geometry_list_widget->itemWidget(aux_geometry_list_widget->item(prev_index))->setEnabled(false);
+        }
+    }
+    else
+    {
+        remove_aux_geom_act->setEnabled(false);
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
@@ -342,11 +494,10 @@ void MainWindow::onNewProject()
 {
     mesh_project = std::make_shared<MeshProject>();
 
-    auto new_box = std::make_shared<AuxGeometryBox>();
-    new_box->size = QVector3D(1, 1, 1);
-    mesh_project->aux_geometry->boxes.push_back(new_box);
-
+    addAuxBox();
+    mesh_project->dirty = false;
     fillPhotoListWidget();
+    fillAuxGeometryListWidget();
     updateProject();
 }
 
@@ -399,7 +550,7 @@ void MainWindow::onAddPhoto()
     {
         addPhoto(filename.toStdString().c_str());
         loadPhotos();
-        mesh_project->dirty = true;
+        dirtyProject();
         updateProject();
     }
 }
@@ -426,13 +577,40 @@ void MainWindow::onRemovePhoto()
         else
         {
             photo_list_widget->clearSelection();
-            mesh_project->file_name = "";
-            mesh_project->dirty = false;
         }
         mesh_project->build_info->cameras_info.erase(mesh_project->build_info->cameras_info.begin() + index);
         qDeleteAll(selected_items);
         updateProject();
     }
+}
+
+void MainWindow::onAddAuxBox()
+{
+    addAuxBox();
+}
+
+void MainWindow::onRemoveAuxGeom()
+{
+    dirtyProject();
+    const int index = aux_geometry_list_widget->currentRow();
+    auto fit = list_item_to_box.find(aux_geometry_list_widget->item(index));
+    auto& boxes = mesh_project->aux_geometry->boxes;
+    for (auto it = boxes.begin(); it != boxes.end(); ++it)
+    {
+        if (*it == fit->second)
+        {
+            mesh_project->aux_geometry->boxes.erase(it);
+            break;
+        }
+    }
+    list_item_to_box.erase(fit);
+
+    auto selected_items = aux_geometry_list_widget->selectedItems();
+    remove_aux_geom_act->setEnabled(false);
+    aux_geometry_list_widget->clearSelection();
+    qDeleteAll(selected_items);
+    camera_orientation_widget->updateAuxGeometry();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onLockedChanged(int state)
@@ -441,8 +619,7 @@ void MainWindow::onLockedChanged(int state)
     if (index >= 0 && index < mesh_project->build_info->cameras_info.size())
     {
         mesh_project->build_info->cameras_info[index]->locked = state == Qt::Checked;
-        mesh_project->dirty = true;
-        updateWindowTitle();
+        dirtyProject();
     }
 }
 
@@ -470,8 +647,97 @@ void MainWindow::onRotationChanged(int rotation_index)
         }
         auto camera_info = mesh_project->build_info->cameras_info[index];
         camera_info->rotation = new_rotation;
-        mesh_project->dirty = true;
-        updateWindowTitle();
+        dirtyProject();
         updateCameraWidgetSize(camera_info);
+    }
+}
+
+void MainWindow::onAuxBoxPosXChanged(double value)
+{
+    int index = aux_geometry_list_widget->currentRow();
+    if (index >= 0)
+    {
+        auto fit = list_item_to_box.find(aux_geometry_list_widget->item(index));
+        if (fit != list_item_to_box.end())
+        {
+            fit->second->position.setX(value);
+            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->update();
+        }
+    }
+}
+
+void MainWindow::onAuxBoxPosYChanged(double value)
+{
+    int index = aux_geometry_list_widget->currentRow();
+    if (index >= 0)
+    {
+        auto fit = list_item_to_box.find(aux_geometry_list_widget->item(index));
+        if (fit != list_item_to_box.end())
+        {
+            fit->second->position.setY(value);
+            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->update();
+        }
+    }
+}
+
+void MainWindow::onAuxBoxPosZChanged(double value)
+{
+    int index = aux_geometry_list_widget->currentRow();
+    if (index >= 0)
+    {
+        auto fit = list_item_to_box.find(aux_geometry_list_widget->item(index));
+        if (fit != list_item_to_box.end())
+        {
+            fit->second->position.setZ(value);
+            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->update();
+        }
+    }
+}
+
+void MainWindow::onAuxBoxSizeXChanged(double value)
+{
+    int index = aux_geometry_list_widget->currentRow();
+    if (index >= 0)
+    {
+        auto fit = list_item_to_box.find(aux_geometry_list_widget->item(index));
+        if (fit != list_item_to_box.end())
+        {
+            fit->second->size.setX(value);
+            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->update();
+        }
+    }
+}
+
+void MainWindow::onAuxBoxSizeYChanged(double value)
+{
+    int index = aux_geometry_list_widget->currentRow();
+    if (index >= 0)
+    {
+        auto fit = list_item_to_box.find(aux_geometry_list_widget->item(index));
+        if (fit != list_item_to_box.end())
+        {
+            fit->second->size.setY(value);
+            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->update();
+        }
+    }
+}
+
+void MainWindow::onAuxBoxSizeZChanged(double value)
+{
+    int index = aux_geometry_list_widget->currentRow();
+    if (index >= 0)
+    {
+        auto fit = list_item_to_box.find(aux_geometry_list_widget->item(index));
+        if (fit != list_item_to_box.end())
+        {
+            fit->second->size.setZ(value);
+            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->update();
+        }
     }
 }
