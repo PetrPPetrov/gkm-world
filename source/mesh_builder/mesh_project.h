@@ -42,6 +42,12 @@ inline void loadMeshProject(MeshProject::Ptr& project, const std::string& file_n
             loadAuxGeometryBox(new_aux_geometry_box, file_in);
             project->aux_geometry->boxes.push_back(new_aux_geometry_box);
         }
+        else if (next_token == "vertex")
+        {
+            auto new_vertex = std::make_shared<Vertex>();
+            loadVertex(new_vertex, file_in);
+            project->build_info->vertices.push_back(new_vertex);
+        }
     }
 }
 
@@ -56,5 +62,9 @@ inline void saveMeshProject(const MeshProject::Ptr& project, const std::string& 
     for (auto box : project->aux_geometry->boxes)
     {
         saveAuxGeometryBox(box, file_out);
+    }
+    for (auto vertex : project->build_info->vertices)
+    {
+        saveVertex(vertex, file_out);
     }
 }

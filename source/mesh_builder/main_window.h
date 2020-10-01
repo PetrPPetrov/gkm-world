@@ -38,19 +38,27 @@ protected:
 
 private:
     void dirtyProject();
+
     void addPhoto(const char* filename);
     void addAuxBox();
+
     void loadProject(const char* filename);
     void loadPhotos();
     void updateProject();
-    void fillPhotoListWidget();
-    void fillAuxGeometryListWidget();
-    void addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info);
-    void addAuxGeometryListWidgetItem(const AuxGeometryBox::Ptr& aux_box);
     void updateCameraWidgetSize(const CameraInfo::Ptr& camera_info);
+
+    void fillPhotoListWidget();
+    void addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info);
+    void fillAuxGeometryListWidget();
+    void addAuxGeometryListWidgetItem(const AuxGeometryBox::Ptr& aux_box);
+    void fillVertexListWidget();
+    void addVertexListWidgetItem(const Vertex::Ptr& vertex);
 
     void onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected);
     void onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected);
+    void onVertexSelected(const QItemSelection& selected, const QItemSelection& deselected);
+    void onVertexPositionSelected(const QItemSelection& selected, const QItemSelection& deselected);
+
     void closeEvent(QCloseEvent* event);
     void resizeEvent(QResizeEvent* event);
 
@@ -65,6 +73,10 @@ private:
 
     void onAddAuxBox();
     void onRemoveAuxGeom();
+
+    void onAddVertex();
+    void onRemoveVertex();
+    void onRemoveVertexPosition();
 
     void onLockedChanged(int state);
     void onRotationChanged(int index);
@@ -94,6 +106,10 @@ private:
     QAction* add_aux_box_act = nullptr;
     QAction* remove_aux_geom_act = nullptr;
 
+    QAction* add_vertex_act = nullptr;
+    QAction* remove_vertex_act = nullptr;
+    QAction* remove_vertex_position_on_photo_act = nullptr;
+
     MeshBuilderWidget* camera_orientation_widget = nullptr;
     QMdiSubWindow* camera_orientation_window = nullptr;
     int initial_camera_available_width = 300;
@@ -109,7 +125,14 @@ private:
 
     QListWidget* aux_geometry_list_widget = nullptr;
     QMdiSubWindow* aux_geometry_list_window = nullptr;
-    std::unordered_map<QListWidgetItem*, AuxGeometryBox::Ptr> list_item_to_box;
+    std::unordered_map<QListWidgetItem*, AuxGeometryBox::Ptr> aux_geom_list_item_to_box;
+
+    QListWidget* vertex_list_widget = nullptr;
+    QMdiSubWindow* vertex_list_window = nullptr;
+    std::unordered_map<QListWidgetItem*, unsigned> vertex_list_item_to_vertex_id;
+
+    QListWidget* vertex_position_on_photo_list_widget = nullptr;
+    QMdiSubWindow* vertex_position_on_photo_list_window = nullptr;
 
     const std::string auto_save_file_name = "autosave.gmb";
 
