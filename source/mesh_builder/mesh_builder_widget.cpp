@@ -412,6 +412,7 @@ void MeshBuilderWidget::mousePressEvent(QMouseEvent* event)
     if (camera_info && camera_info->locked)
     {
         resetNavigation();
+        g_main_window->setVertexPosition(event->localPos());
         return;
     }
 

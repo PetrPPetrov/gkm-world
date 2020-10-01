@@ -32,6 +32,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow();
     void updateWindowTitle();
+    void setVertexPosition(QPointF position);
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -53,6 +54,8 @@ private:
     void addAuxGeometryListWidgetItem(const AuxGeometryBox::Ptr& aux_box);
     void fillVertexListWidget();
     void addVertexListWidgetItem(const Vertex::Ptr& vertex);
+    void fillVertexPositionInfoWidget();
+    void addVertexPositionInfoWidgetItem(unsigned vertex_id, const VertexPositionInfo& vertex_position);
 
     void onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected);
     void onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected);

@@ -147,6 +147,39 @@ void MainWindow::updateWindowTitle()
     setWindowTitle(dirty_flag + file_name + QString(" - Gkm-World Mesh-Builder"));
 }
 
+void MainWindow::setVertexPosition(QPointF position)
+{
+    const int camera_index = photo_list_widget->currentRow();
+    const int vertex_index = vertex_list_widget->currentRow();
+    if (camera_index >= 0 && vertex_index >= 0)
+    {
+        auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(vertex_index));
+        if (fit != vertex_list_item_to_vertex_id.end())
+        {
+            bool found = false;
+            for (auto& vertex_position : mesh_project->build_info->vertices[fit->second]->positions)
+            {
+                if (vertex_position.camera_index == camera_index)
+                {
+                    vertex_position.x = position.x();
+                    vertex_position.y = position.y();
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                VertexPositionInfo new_vertex_position_info;
+                new_vertex_position_info.camera_index = camera_index;
+                new_vertex_position_info.x = position.x();
+                new_vertex_position_info.y = position.y();
+                mesh_project->build_info->vertices[fit->second]->positions.push_back(new_vertex_position_info);
+            }
+            fillVertexPositionInfoWidget();
+        }
+    }
+}
+
 void MainWindow::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
@@ -454,6 +487,45 @@ void MainWindow::addVertexListWidgetItem(const Vertex::Ptr& vertex)
     }
 }
 
+void MainWindow::fillVertexPositionInfoWidget()
+{
+    vertex_position_on_photo_list_widget->clear();
+    const int vertex_index = vertex_list_widget->currentRow();
+    if (vertex_index >= 0)
+    {
+        auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(vertex_index));
+        if (fit != vertex_list_item_to_vertex_id.end())
+        {
+            for (auto& vertex_position : mesh_project->build_info->vertices[fit->second]->positions)
+            {
+                addVertexPositionInfoWidgetItem(fit->second, vertex_position);
+            }
+        }
+    }
+}
+
+void MainWindow::addVertexPositionInfoWidgetItem(unsigned vertex_id, const VertexPositionInfo& vertex_position)
+{
+    QWidget* widget = new QWidget(vertex_position_on_photo_list_widget);
+    QLabel* label0 = new QLabel(QString("Vertex #%1").arg(vertex_id), vertex_position_on_photo_list_widget);
+    QLabel* label1 = new QLabel(QString("Camera #%1").arg(vertex_position.camera_index), vertex_position_on_photo_list_widget);
+    QLabel* label2 = new QLabel(QString("X %1").arg(vertex_position.x), vertex_position_on_photo_list_widget);
+    QLabel* label3 = new QLabel(QString("Y %1").arg(vertex_position.y), vertex_position_on_photo_list_widget);
+
+    QGridLayout* layout = new QGridLayout(vertex_position_on_photo_list_widget);
+    layout->addWidget(label0, 0, 0);
+    layout->addWidget(label1, 0, 1);
+    layout->addWidget(label2, 1, 0);
+    layout->addWidget(label3, 1, 1);
+    layout->setSizeConstraint(QLayout::SetFixedSize);
+    widget->setLayout(layout);
+
+    QListWidgetItem* item = new QListWidgetItem(vertex_position_on_photo_list_widget);
+    item->setSizeHint(widget->sizeHint());
+    vertex_position_on_photo_list_widget->addItem(item);
+    vertex_position_on_photo_list_widget->setItemWidget(item, widget);
+}
+
 void MainWindow::onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
     if (photo_list_widget->selectedItems().size() > 0)
@@ -514,7 +586,7 @@ void MainWindow::onVertexSelected(const QItemSelection& selected, const QItemSel
     if (vertex_list_widget->selectedItems().size() > 0)
     {
         remove_vertex_act->setEnabled(true);
-        int index = vertex_list_widget->currentIndex().row();
+        fillVertexPositionInfoWidget();
     }
     else
     {
