@@ -596,6 +596,14 @@ void MainWindow::onVertexSelected(const QItemSelection& selected, const QItemSel
 
 void MainWindow::onVertexPositionSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
+    if (vertex_position_on_photo_list_widget->selectedItems().size() > 0)
+    {
+        remove_vertex_position_on_photo_act->setEnabled(true);
+    }
+    else
+    {
+        remove_vertex_position_on_photo_act->setEnabled(false);
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
@@ -730,8 +738,25 @@ void MainWindow::onRemovePhoto()
             photo_list_widget->clearSelection();
         }
         mesh_project->build_info->cameras_info.erase(mesh_project->build_info->cameras_info.begin() + index);
+        for (auto vertex : mesh_project->build_info->vertices)
+        {
+            auto vertex_position_it = vertex->positions.begin();
+            while (vertex_position_it != vertex->positions.end())
+            {
+                if (vertex_position_it->camera_index == index)
+                {
+                    vertex->positions.erase(vertex_position_it);
+                    vertex_position_it = vertex->positions.begin();
+                }
+                else
+                {
+                    ++vertex_position_it;
+                }
+            }
+        }
         qDeleteAll(selected_items);
         updateProject();
+        fillVertexPositionInfoWidget();
     }
 }
 
@@ -819,6 +844,19 @@ void MainWindow::onRemoveVertex()
 
 void MainWindow::onRemoveVertexPosition()
 {
+    dirtyProject();
+    const int index = vertex_list_widget->currentRow();
+    auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(index));
+    if (fit != vertex_list_item_to_vertex_id.end())
+    {
+        const int vertex_position_index = vertex_position_on_photo_list_widget->currentRow();
+        if (vertex_position_index >= 0)
+        {
+            auto& positions = mesh_project->build_info->vertices.at(fit->second)->positions;
+            positions.erase(positions.begin() + vertex_position_index);
+            fillVertexPositionInfoWidget();
+        }
+    }
 }
 
 void MainWindow::onLockedChanged(int state)
