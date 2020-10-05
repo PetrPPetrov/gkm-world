@@ -23,7 +23,7 @@ class MeshBuilderWidget : public QOpenGLWidget, protected QOpenGLFunctions
 public:
     MeshBuilderWidget(QWidget *parent);
     void setMeshProject(const MeshProject::Ptr& mesh_project);
-    void updateAuxGeometry();
+    void updateLineSetGeometry();
     void setPhoto(const CameraInfo::Ptr& camera_info);
     void updatePhotoTexture();
 
@@ -46,11 +46,11 @@ private:
     MeshProject::Ptr mesh_project;
     CameraInfo::Ptr camera_info;
 
-    std::unique_ptr<QOpenGLShaderProgram> aux_geom_line_set_program;
-    std::unique_ptr<QOpenGLVertexArrayObject> aux_geom_line_set_vao;
-    std::unique_ptr<QOpenGLBuffer> aux_geom_line_set_vbo;
+    std::unique_ptr<QOpenGLShaderProgram> line_set_program;
+    std::unique_ptr<QOpenGLVertexArrayObject> line_set_vao;
+    std::unique_ptr<QOpenGLBuffer> line_set_vbo;
+    int line_set_matrix_location;
     int aux_geom_line_set_vbo_size;
-    int aux_geom_line_set_matrix_location;
 
     std::unique_ptr<QOpenGLShaderProgram> photo_program;
     std::unique_ptr<QOpenGLVertexArrayObject> photo_vao;

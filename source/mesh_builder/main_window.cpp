@@ -292,7 +292,7 @@ void MainWindow::loadPhotos()
 void MainWindow::updateProject()
 {
     camera_orientation_widget->setMeshProject(mesh_project);
-    camera_orientation_widget->updateAuxGeometry();
+    camera_orientation_widget->updateLineSetGeometry();
     camera_orientation_widget->updatePhotoTexture();
     updateWindowTitle();
     camera_orientation_widget->update();
@@ -763,7 +763,7 @@ void MainWindow::onRemovePhoto()
 void MainWindow::onAddAuxBox()
 {
     addAuxBox();
-    camera_orientation_widget->updateAuxGeometry();
+    camera_orientation_widget->updateLineSetGeometry();
     camera_orientation_widget->update();
 }
 
@@ -787,7 +787,7 @@ void MainWindow::onRemoveAuxGeom()
     remove_aux_geom_act->setEnabled(false);
     aux_geometry_list_widget->clearSelection();
     qDeleteAll(selected_items);
-    camera_orientation_widget->updateAuxGeometry();
+    camera_orientation_widget->updateLineSetGeometry();
     camera_orientation_widget->update();
 }
 
@@ -919,7 +919,7 @@ void MainWindow::onAuxBoxPosXChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->position.setX(value);
-            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
     }
@@ -934,7 +934,7 @@ void MainWindow::onAuxBoxPosYChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->position.setY(value);
-            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
     }
@@ -949,7 +949,7 @@ void MainWindow::onAuxBoxPosZChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->position.setZ(value);
-            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
     }
@@ -964,7 +964,7 @@ void MainWindow::onAuxBoxSizeXChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->size.setX(value);
-            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
     }
@@ -979,7 +979,7 @@ void MainWindow::onAuxBoxSizeYChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->size.setY(value);
-            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
     }
@@ -994,7 +994,7 @@ void MainWindow::onAuxBoxSizeZChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->size.setZ(value);
-            camera_orientation_widget->updateAuxGeometry();
+            camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
     }

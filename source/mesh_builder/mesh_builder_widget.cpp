@@ -43,7 +43,7 @@ void MeshBuilderWidget::setMeshProject(const MeshProject::Ptr& project)
     mesh_project = project;
 }
 
-void MeshBuilderWidget::updateAuxGeometry()
+void MeshBuilderWidget::updateLineSetGeometry()
 {
     if (!mesh_project || !mesh_project->aux_geometry)
     {
@@ -101,8 +101,8 @@ void MeshBuilderWidget::updateAuxGeometry()
 
     if (vertex_count > 0)
     {
-        aux_geom_line_set_vbo->bind();
-        aux_geom_line_set_vbo->write(0, &vertex_buffer[0], static_cast<int>(vertex_count * sizeof(VertexPositionColor)));
+        line_set_vbo->bind();
+        line_set_vbo->write(0, &vertex_buffer[0], static_cast<int>(vertex_count * sizeof(VertexPositionColor)));
     }
 
     aux_geom_line_set_vbo_size = static_cast<int>(vertex_count);
@@ -230,20 +230,20 @@ void MeshBuilderWidget::initializeGL()
 
 void MeshBuilderWidget::initializeAuxGeomLineSet()
 {
-    aux_geom_line_set_vao = std::make_unique<QOpenGLVertexArrayObject>();
-    aux_geom_line_set_vao->create();
-    aux_geom_line_set_vao->bind();
+    line_set_vao = std::make_unique<QOpenGLVertexArrayObject>();
+    line_set_vao->create();
+    line_set_vao->bind();
 
-    aux_geom_line_set_vbo = std::make_unique<QOpenGLBuffer>();
-    aux_geom_line_set_vbo->setUsagePattern(QOpenGLBuffer::DynamicDraw);
-    aux_geom_line_set_vbo->create();
-    aux_geom_line_set_vbo->bind();
-    aux_geom_line_set_vbo->allocate(AUX_GEOM_VBO_MAX_VERTEX_COUNT * sizeof(VertexPositionColor));
+    line_set_vbo = std::make_unique<QOpenGLBuffer>();
+    line_set_vbo->setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    line_set_vbo->create();
+    line_set_vbo->bind();
+    line_set_vbo->allocate(AUX_GEOM_VBO_MAX_VERTEX_COUNT * sizeof(VertexPositionColor));
 
-    updateAuxGeometry();
+    updateLineSetGeometry();
 
-    aux_geom_line_set_program = std::make_unique<QOpenGLShaderProgram>();
-    aux_geom_line_set_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+    line_set_program = std::make_unique<QOpenGLShaderProgram>();
+    line_set_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
         "attribute highp vec4 vertex;\n"
         "attribute lowp vec4 color;\n"
         "varying lowp vec4 vcolor;\n"
@@ -254,22 +254,22 @@ void MeshBuilderWidget::initializeAuxGeomLineSet()
         "    vcolor = color;\n"
         "}\n");
 
-    aux_geom_line_set_program->addShaderFromSourceCode(QOpenGLShader::Fragment,
+    line_set_program->addShaderFromSourceCode(QOpenGLShader::Fragment,
         "varying lowp vec4 vcolor;\n"
         "void main(void)\n"
         "{\n"
         "    gl_FragColor = vcolor;\n"
         "}\n");
-    aux_geom_line_set_program->link();
+    line_set_program->link();
 
-    const int vertex_location = aux_geom_line_set_program->attributeLocation("vertex");
-    const int color_location = aux_geom_line_set_program->attributeLocation("color");
-    aux_geom_line_set_matrix_location = aux_geom_line_set_program->uniformLocation("matrix");
+    const int vertex_location = line_set_program->attributeLocation("vertex");
+    const int color_location = line_set_program->attributeLocation("color");
+    line_set_matrix_location = line_set_program->uniformLocation("matrix");
 
-    aux_geom_line_set_program->enableAttributeArray(vertex_location);
-    aux_geom_line_set_program->enableAttributeArray(color_location);
-    aux_geom_line_set_program->setAttributeBuffer(vertex_location, GL_FLOAT, 0, 3, sizeof(VertexPositionColor));
-    aux_geom_line_set_program->setAttributeBuffer(color_location, GL_UNSIGNED_BYTE, 3 * sizeof(float), 4, sizeof(VertexPositionColor));
+    line_set_program->enableAttributeArray(vertex_location);
+    line_set_program->enableAttributeArray(color_location);
+    line_set_program->setAttributeBuffer(vertex_location, GL_FLOAT, 0, 3, sizeof(VertexPositionColor));
+    line_set_program->setAttributeBuffer(color_location, GL_UNSIGNED_BYTE, 3 * sizeof(float), 4, sizeof(VertexPositionColor));
 }
 
 void MeshBuilderWidget::initializePhoto()
@@ -349,9 +349,9 @@ void MeshBuilderWidget::paintGL()
     if (aux_geom_line_set_vbo_size > 0)
     {
         glDisable(GL_DEPTH_TEST);
-        aux_geom_line_set_vao->bind();
-        aux_geom_line_set_program->bind();
-        aux_geom_line_set_program->setUniformValue(aux_geom_line_set_matrix_location, mvp_matrix);
+        line_set_vao->bind();
+        line_set_program->bind();
+        line_set_program->setUniformValue(line_set_matrix_location, mvp_matrix);
         glDrawArrays(GL_LINES, 0, aux_geom_line_set_vbo_size);
     }
 }
