@@ -16,21 +16,7 @@
 #include <QOpenGLShader>
 #include "main_window.h"
 #include "mesh_builder_widget.h"
-
-constexpr static int AUX_GEOM_VBO_MAX_VERTEX_COUNT = 16 * 1024;
-constexpr static int PHOTO_MAX_VERTEX_COUNT = 6;
-
-struct VertexPositionColor
-{
-    float x, y, z;
-    std::uint32_t abgr;
-};
-
-struct VertexPositionTexCoord
-{
-    float x, y, z;
-    float u, v;
-};
+#include "vbo.h"
 
 MeshBuilderWidget::MeshBuilderWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
@@ -79,7 +65,7 @@ void MeshBuilderWidget::updateLineSetGeometry()
         { 1.0f, 1.0f, 1.0f, 0xffffffff }
     };
     const size_t box_vertex_buffer_size = sizeof(box_vertex_buffer) / sizeof(box_vertex_buffer[0]);
-    const size_t vertex_count = std::min(box_vertex_buffer_size * mesh_project->aux_geometry->boxes.size(), static_cast<size_t>(AUX_GEOM_VBO_MAX_VERTEX_COUNT));
+    const size_t vertex_count = std::min(box_vertex_buffer_size * mesh_project->aux_geometry->boxes.size(), static_cast<size_t>(LINE_SET_VBO_MAX_VERTEX_COUNT));
 
     std::vector<VertexPositionColor> vertex_buffer;
     vertex_buffer.reserve(vertex_count);
@@ -238,7 +224,7 @@ void MeshBuilderWidget::initializeAuxGeomLineSet()
     line_set_vbo->setUsagePattern(QOpenGLBuffer::DynamicDraw);
     line_set_vbo->create();
     line_set_vbo->bind();
-    line_set_vbo->allocate(AUX_GEOM_VBO_MAX_VERTEX_COUNT * sizeof(VertexPositionColor));
+    line_set_vbo->allocate(LINE_SET_VBO_MAX_VERTEX_COUNT * sizeof(VertexPositionColor));
 
     updateLineSetGeometry();
 
