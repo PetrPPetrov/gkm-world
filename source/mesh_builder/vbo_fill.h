@@ -11,5 +11,6 @@ void fillLineSet(
     const MeshProject::Ptr& mesh_project,
     const CameraInfo::Ptr cur_camera,
     int& aux_geom_line_set_vbo_size,
-    int& hub_points_line_set_vbo_size
+    int& hub_points_line_set_vbo_size,
+    int photo_x_low, int photo_y_low
 );

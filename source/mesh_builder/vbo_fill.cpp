@@ -95,7 +95,8 @@ static void fillHubPoints(
     std::vector<VertexPositionColor>& vbo,
     const MeshProject::Ptr& mesh_project,
     const CameraInfo::Ptr cur_camera,
-    int& hub_points_line_set_vbo_size)
+    int& hub_points_line_set_vbo_size,
+    int photo_x_low, int photo_y_low)
 {
     const size_t previous_vbo_size = vbo.size();
     if (mesh_project->build_info)
@@ -125,8 +126,9 @@ static void fillHubPoints(
             for (size_t i = 0; i < g_hud_point_vbo_size; ++i)
             {
                 VertexPositionColor cur_vertex = g_hud_point_vbo[i];
-                cur_vertex.x += vertex.x;
-                cur_vertex.y += vertex.y; // TODO: Change color
+                cur_vertex.x += vertex.x - photo_x_low;
+                cur_vertex.y += vertex.y - photo_y_low; // TODO: Change color
+                cur_vertex.abgr = 0xff0000ff;
                 vbo.push_back(cur_vertex);
             }
         }
@@ -139,7 +141,8 @@ void fillLineSet(
     const MeshProject::Ptr& mesh_project,
     const CameraInfo::Ptr cur_camera,
     int& aux_geom_line_set_vbo_size,
-    int& hub_points_line_set_vbo_size)
+    int& hub_points_line_set_vbo_size,
+    int photo_x_low, int photo_y_low)
 {
     vbo.clear();
 
@@ -151,7 +154,7 @@ void fillLineSet(
     }
 
     fillAuxGeometry(vbo, mesh_project->aux_geometry, aux_geom_line_set_vbo_size);
-    fillHubPoints(vbo, mesh_project, cur_camera, hub_points_line_set_vbo_size);
+    fillHubPoints(vbo, mesh_project, cur_camera, hub_points_line_set_vbo_size, photo_x_low, photo_y_low);
 
     if (aux_geom_line_set_vbo_size + hub_points_line_set_vbo_size > LINE_SET_VBO_MAX_VERTEX_COUNT)
     {
@@ -161,5 +164,10 @@ void fillLineSet(
     {
         aux_geom_line_set_vbo_size = LINE_SET_VBO_MAX_VERTEX_COUNT;
         hub_points_line_set_vbo_size = 0;
+    }
+
+    if (vbo.size() > LINE_SET_VBO_MAX_VERTEX_COUNT)
+    {
+        vbo.resize(LINE_SET_VBO_MAX_VERTEX_COUNT);
     }
 }

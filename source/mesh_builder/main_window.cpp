@@ -161,8 +161,8 @@ void MainWindow::setVertexPosition(QPointF position)
             {
                 if (vertex_position.camera_index == camera_index)
                 {
-                    vertex_position.x = position.x();
-                    vertex_position.y = position.y();
+                    vertex_position.x = position.x() * camera_scale_x;
+                    vertex_position.y = position.y() * camera_scale_y;
                     found = true;
                     break;
                 }
@@ -315,6 +315,9 @@ void MainWindow::updateCameraWidgetSize(const CameraInfo::Ptr& camera_info)
     }
     camera_orientation_widget->updatePhotoTexture();
     camera_orientation_widget->update();
+
+    camera_scale_x = static_cast<double>(photo_width) / camera_orientation_window->width();
+    camera_scale_y = static_cast<double>(photo_height) / camera_orientation_window->height();
 }
 
 void MainWindow::fillPhotoListWidget()
@@ -919,6 +922,7 @@ void MainWindow::onAuxBoxPosXChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->position.setX(value);
+            dirtyProject();
             camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
@@ -934,6 +938,7 @@ void MainWindow::onAuxBoxPosYChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->position.setY(value);
+            dirtyProject();
             camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
@@ -949,6 +954,7 @@ void MainWindow::onAuxBoxPosZChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->position.setZ(value);
+            dirtyProject();
             camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
@@ -964,6 +970,7 @@ void MainWindow::onAuxBoxSizeXChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->size.setX(value);
+            dirtyProject();
             camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
@@ -979,6 +986,7 @@ void MainWindow::onAuxBoxSizeYChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->size.setY(value);
+            dirtyProject();
             camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }
@@ -994,6 +1002,7 @@ void MainWindow::onAuxBoxSizeZChanged(double value)
         if (fit != aux_geom_list_item_to_box.end())
         {
             fit->second->size.setZ(value);
+            dirtyProject();
             camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
         }

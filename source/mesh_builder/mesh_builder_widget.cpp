@@ -17,6 +17,7 @@
 #include "main_window.h"
 #include "mesh_builder_widget.h"
 #include "vbo.h"
+#include "vbo_fill.h"
 
 MeshBuilderWidget::MeshBuilderWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
@@ -31,67 +32,22 @@ void MeshBuilderWidget::setMeshProject(const MeshProject::Ptr& project)
 
 void MeshBuilderWidget::updateLineSetGeometry()
 {
-    if (!mesh_project || !mesh_project->aux_geometry)
-    {
-        aux_geom_line_set_vbo_size = 0;
-        return;
-    }
-
-    const static VertexPositionColor box_vertex_buffer[] =
-    {
-        { 0.0f, 0.0f, 0.0f, 0xff0000ff },
-        { 1.0f, 0.0f, 0.0f, 0xff0000ff },
-        { 0.0f, 0.0f, 0.0f, 0xff00ff00 },
-        { 0.0f, 1.0f, 0.0f, 0xff00ff00 },
-        { 0.0f, 0.0f, 0.0f, 0xffff0000 },
-        { 0.0f, 0.0f, 1.0f, 0xffff0000 },
-        { 1.0f, 0.0f, 0.0f, 0xffffffff },
-        { 1.0f, 1.0f, 0.0f, 0xffffffff },
-        { 1.0f, 1.0f, 0.0f, 0xffffffff },
-        { 0.0f, 1.0f, 0.0f, 0xffffffff },
-        { 0.0f, 0.0f, 1.0f, 0xffffffff },
-        { 1.0f, 0.0f, 1.0f, 0xffffffff },
-        { 0.0f, 0.0f, 1.0f, 0xffffffff },
-        { 0.0f, 1.0f, 1.0f, 0xffffffff },
-        { 1.0f, 0.0f, 1.0f, 0xffffffff },
-        { 1.0f, 1.0f, 1.0f, 0xffffffff },
-        { 1.0f, 1.0f, 1.0f, 0xffffffff },
-        { 0.0f, 1.0f, 1.0f, 0xffffffff },
-        { 1.0f, 0.0f, 0.0f, 0xffffffff },
-        { 1.0f, 0.0f, 1.0f, 0xffffffff },
-        { 0.0f, 1.0f, 0.0f, 0xffffffff },
-        { 0.0f, 1.0f, 1.0f, 0xffffffff },
-        { 1.0f, 1.0f, 0.0f, 0xffffffff },
-        { 1.0f, 1.0f, 1.0f, 0xffffffff }
-    };
-    const size_t box_vertex_buffer_size = sizeof(box_vertex_buffer) / sizeof(box_vertex_buffer[0]);
-    const size_t vertex_count = std::min(box_vertex_buffer_size * mesh_project->aux_geometry->boxes.size(), static_cast<size_t>(LINE_SET_VBO_MAX_VERTEX_COUNT));
-
     std::vector<VertexPositionColor> vertex_buffer;
-    vertex_buffer.reserve(vertex_count);
+    fillLineSet(
+        vertex_buffer,
+        mesh_project,
+        camera_info,
+        aux_geom_line_set_vbo_size,
+        hub_points_line_set_vbo_size,
+        photo_x_low, photo_y_low
+    );
 
-    for (auto box : mesh_project->aux_geometry->boxes)
-    {
-        for (size_t i = 0; i < box_vertex_buffer_size; ++i)
-        {
-            VertexPositionColor cur_vertex = box_vertex_buffer[i];
-            cur_vertex.x = box->position.x() + cur_vertex.x * box->size.x();
-            cur_vertex.y = box->position.y() + cur_vertex.y * box->size.y();
-            cur_vertex.z = box->position.z() + cur_vertex.z * box->size.z();
-            if (vertex_buffer.size() < vertex_count)
-            {
-                vertex_buffer.push_back(cur_vertex);
-            }
-        }
-    }
-
-    if (vertex_count > 0)
+    const size_t vbo_size = vertex_buffer.size();
+    if (vbo_size > 0)
     {
         line_set_vbo->bind();
-        line_set_vbo->write(0, &vertex_buffer[0], static_cast<int>(vertex_count * sizeof(VertexPositionColor)));
+        line_set_vbo->write(0, &vertex_buffer[0], static_cast<int>(vbo_size * sizeof(VertexPositionColor)));
     }
-
-    aux_geom_line_set_vbo_size = static_cast<int>(vertex_count);
 }
 
 void MeshBuilderWidget::setPhoto(const CameraInfo::Ptr& camera_info_)
@@ -138,12 +94,12 @@ void MeshBuilderWidget::updatePhotoTexture()
 
     VertexPositionTexCoord vertex_buffer[] =
     {
-        { photo_x_low, photo_y_low, -1.0f, 0.0f, 1.0f },
-        { photo_x_high, photo_y_low, -1.0f, 1.0f, 1.0f },
-        { photo_x_high, photo_y_high, -1.0f, 1.0f, 0.0f },
-        { photo_x_high, photo_y_high, -1.0f, 1.0f, 0.0f },
-        { photo_x_low, photo_y_high, -1.0f, 0.0f, 0.0f },
-        { photo_x_low, photo_y_low, -1.0f, 0.0f, 1.0f }
+        { static_cast<float>(photo_x_low), static_cast<float>(photo_y_low), -1.0f, 0.0f, 1.0f },
+        { static_cast<float>(photo_x_high), static_cast<float>(photo_y_low), -1.0f, 1.0f, 1.0f },
+        { static_cast<float>(photo_x_high), static_cast<float>(photo_y_high), -1.0f, 1.0f, 0.0f },
+        { static_cast<float>(photo_x_high), static_cast<float>(photo_y_high), -1.0f, 1.0f, 0.0f },
+        { static_cast<float>(photo_x_low), static_cast<float>(photo_y_high), -1.0f, 0.0f, 0.0f },
+        { static_cast<float>(photo_x_low), static_cast<float>(photo_y_low), -1.0f, 0.0f, 1.0f }
     };
     switch (rotation)
     {
@@ -325,6 +281,14 @@ void MeshBuilderWidget::paintGL()
     photo_program->setUniformValue(photo_matrix_location, ortho_projection);
     photo_texture->bind();
     glDrawArrays(GL_TRIANGLES, 0, PHOTO_MAX_VERTEX_COUNT);
+
+    if (hub_points_line_set_vbo_size > 0)
+    {
+        line_set_vao->bind();
+        line_set_program->bind();
+        line_set_program->setUniformValue(line_set_matrix_location, ortho_projection);
+        glDrawArrays(GL_LINES, aux_geom_line_set_vbo_size, hub_points_line_set_vbo_size);
+    }
 
     QMatrix4x4 projection_matrix;
     projection_matrix.perspective(fov, viewport_aspect, 0.125f, 1024.0f);
