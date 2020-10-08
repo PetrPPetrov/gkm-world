@@ -156,13 +156,16 @@ void MainWindow::setVertexPosition(QPointF position)
         auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(vertex_index));
         if (fit != vertex_list_item_to_vertex_id.end())
         {
+            int photo_width = camera_info->width();
+            int photo_height = camera_info->height();
+
             bool found = false;
             for (auto& vertex_position : mesh_project->build_info->vertices[fit->second]->positions)
             {
                 if (vertex_position.camera_index == camera_index)
                 {
                     vertex_position.x = position.x() * camera_scale_x;
-                    vertex_position.y = position.y() * camera_scale_y;
+                    vertex_position.y = photo_height - position.y() * camera_scale_y;
                     found = true;
                     break;
                 }
@@ -171,11 +174,13 @@ void MainWindow::setVertexPosition(QPointF position)
             {
                 VertexPositionInfo new_vertex_position_info;
                 new_vertex_position_info.camera_index = camera_index;
-                new_vertex_position_info.x = position.x();
-                new_vertex_position_info.y = position.y();
+                new_vertex_position_info.x = position.x() * camera_scale_x;
+                new_vertex_position_info.y = photo_height - position.y() * camera_scale_y;
                 mesh_project->build_info->vertices[fit->second]->positions.push_back(new_vertex_position_info);
             }
             fillVertexPositionInfoWidget();
+            camera_orientation_widget->updateLineSetGeometry();
+            camera_orientation_widget->update();
         }
     }
 }
@@ -298,7 +303,7 @@ void MainWindow::updateProject()
     camera_orientation_widget->update();
 }
 
-void MainWindow::updateCameraWidgetSize(const CameraInfo::Ptr& camera_info)
+void MainWindow::updateCameraWidgetSize()
 {
     camera_orientation_widget->setPhoto(camera_info);
     int photo_width = camera_info->width();
@@ -547,12 +552,13 @@ void MainWindow::onPhotoSelected(const QItemSelection& selected, const QItemSele
             {
                 photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->setEnabled(false);
             }
-            auto camera_info = mesh_project->build_info->cameras_info[index];
-            updateCameraWidgetSize(camera_info);
+            camera_info = mesh_project->build_info->cameras_info[index];
+            updateCameraWidgetSize();
         }
     }
     else
     {
+        camera_info = nullptr;
         camera_orientation_widget->setPhoto(nullptr);
         remove_photo_act->setEnabled(false);
         camera_orientation_window->setFixedSize(QSize(camera_available_width, camera_available_height));
@@ -874,43 +880,33 @@ void MainWindow::onLockedChanged(int state)
 
 void MainWindow::onRotationChanged(int rotation_index)
 {
-    int index = photo_list_widget->currentRow();
-    if (index >= 0 && index < mesh_project->build_info->cameras_info.size())
+    int new_rotation = 0;
+    switch (rotation_index)
     {
-        int new_rotation = 0;
-        switch (rotation_index)
-        {
-        default:
-        case 0:
-            new_rotation = 0;
-            break;
-        case 1:
-            new_rotation = 90;
-            break;
-        case 2:
-            new_rotation = 180;
-            break;
-        case 3:
-            new_rotation = 270;
-            break;
-        }
-        auto camera_info = mesh_project->build_info->cameras_info[index];
-        camera_info->rotation = new_rotation;
-        dirtyProject();
-        updateCameraWidgetSize(camera_info);
+    default:
+    case 0:
+        new_rotation = 0;
+        break;
+    case 1:
+        new_rotation = 90;
+        break;
+    case 2:
+        new_rotation = 180;
+        break;
+    case 3:
+        new_rotation = 270;
+        break;
     }
+    camera_info->rotation = new_rotation;
+    dirtyProject();
+    updateCameraWidgetSize();
 }
 
 void MainWindow::onFovChanged(double value)
 {
-    int index = photo_list_widget->currentRow();
-    if (index >= 0 && index < mesh_project->build_info->cameras_info.size())
-    {
-        auto camera_info = mesh_project->build_info->cameras_info[index];
-        camera_info->fov = value;
-        dirtyProject();
-        camera_orientation_widget->update();
-    }
+    camera_info->fov = value;
+    dirtyProject();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onAuxBoxPosXChanged(double value)

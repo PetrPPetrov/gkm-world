@@ -46,7 +46,7 @@ private:
     void loadProject(const char* filename);
     void loadPhotos();
     void updateProject();
-    void updateCameraWidgetSize(const CameraInfo::Ptr& camera_info);
+    void updateCameraWidgetSize();
 
     void fillPhotoListWidget();
     void addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info);
@@ -142,6 +142,7 @@ private:
     const std::string auto_save_file_name = "autosave.gmb";
 
     MeshProject::Ptr mesh_project;
+    CameraInfo::Ptr camera_info;
 };
 
 extern MainWindow* g_main_window;

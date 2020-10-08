@@ -126,8 +126,9 @@ static void fillHubPoints(
             for (size_t i = 0; i < g_hud_point_vbo_size; ++i)
             {
                 VertexPositionColor cur_vertex = g_hud_point_vbo[i];
-                cur_vertex.x += vertex.x - photo_x_low;
-                cur_vertex.y += vertex.y - photo_y_low; // TODO: Change color
+                cur_vertex.x += photo_x_low + vertex.x;
+                cur_vertex.y += photo_y_low + vertex.y; // TODO: Change color
+                cur_vertex.z = -1.0f;
                 cur_vertex.abgr = 0xff0000ff;
                 vbo.push_back(cur_vertex);
             }

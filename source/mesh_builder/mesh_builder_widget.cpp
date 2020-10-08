@@ -284,6 +284,7 @@ void MeshBuilderWidget::paintGL()
 
     if (hub_points_line_set_vbo_size > 0)
     {
+        glDisable(GL_DEPTH_TEST);
         line_set_vao->bind();
         line_set_program->bind();
         line_set_program->setUniformValue(line_set_matrix_location, ortho_projection);
@@ -362,7 +363,7 @@ void MeshBuilderWidget::mousePressEvent(QMouseEvent* event)
     if (camera_info && camera_info->locked)
     {
         resetNavigation();
-        g_main_window->setVertexPosition(event->localPos());
+        g_main_window->setVertexPosition(event->pos());
         return;
     }
 
