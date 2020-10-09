@@ -83,8 +83,8 @@ void MeshBuilderWidget::updatePhotoTexture()
         photo_texture = std::make_unique<QOpenGLTexture>(dummy_image);
     }
 
-    photo_width = photo_texture->width();
-    photo_height = photo_texture->height();
+    photo_width = camera_info ? camera_info->width() : photo_texture->width();
+    photo_height = camera_info ? camera_info->height() : photo_texture->height();;
     photo_aspect = static_cast<float>(photo_width) / photo_height;
 
     photo_x_low = -photo_width / 2;
@@ -363,7 +363,7 @@ void MeshBuilderWidget::mousePressEvent(QMouseEvent* event)
     if (camera_info && camera_info->locked)
     {
         resetNavigation();
-        g_main_window->setVertexPosition(event->pos());
+        g_main_window->setVertexPosition(event->localPos());
         return;
     }
 

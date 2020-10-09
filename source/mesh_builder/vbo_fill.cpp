@@ -73,14 +73,10 @@ static void fillAuxGeometry(
 
 constexpr static VertexPositionColor g_hud_point_vbo[] =
 {
-    { -10.0f,   0.0f, 0.0f, 0xff0000ff },
-    {  10.0f,   0.0f, 0.0f, 0xff0000ff },
-    {   0.0f, -10.0f, 0.0f, 0xff0000ff },
-    {   0.0f,  10.0f, 0.0f, 0xff0000ff },
-    { -10.0f, -10.0f, 0.0f, 0xff0000ff },
-    {  10.0f,  10.0f, 0.0f, 0xff0000ff },
-    {  10.0f, -10.0f, 0.0f, 0xff0000ff },
-    { -10.0f,  10.0f, 0.0f, 0xff0000ff }
+    { -30.0f,   0.0f, 0.0f, 0xff0000ff },
+    {  30.0f,   0.0f, 0.0f, 0xff0000ff },
+    {   0.0f, -30.0f, 0.0f, 0xff0000ff },
+    {   0.0f,  30.0f, 0.0f, 0xff0000ff }
 };
 constexpr size_t g_hud_point_vbo_size = sizeof(g_hud_point_vbo) / sizeof(g_hud_point_vbo[0]);
 

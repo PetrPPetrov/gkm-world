@@ -194,9 +194,9 @@ void MainWindow::showEvent(QShowEvent* event)
         first_show = false;
 
         initial_camera_available_width = camera_available_width = main_window.centralwidget->width() * 2 / 3 - main_window.centralwidget->width() / 5;
-        initial_camera_available_height = camera_available_height = main_window.centralwidget->height();
+        initial_camera_available_height = camera_available_height = main_window.centralwidget->height() * 9 / 10;
 
-        camera_orientation_window->setFixedSize(QSize(camera_available_width, camera_available_height));
+        camera_orientation_window->resize(QSize(camera_available_width, camera_available_height));
         camera_orientation_window->move(main_window.centralwidget->width() / 3, 0);
 
         photo_list_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 2));
@@ -214,14 +214,7 @@ void MainWindow::showEvent(QShowEvent* event)
         log_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 4));
         log_window->move(0, main_window.centralwidget->height() * 3 / 4);
 
-        //if (fileExists(auto_save_file_name))
-        //{
-        //    loadProject(auto_save_file_name);
-        //}
-        //else
-        //{
-            onNewProject();
-        //}
+        onNewProject();
     }
 }
 
@@ -312,17 +305,18 @@ void MainWindow::updateCameraWidgetSize()
     double available_aspect = static_cast<double>(camera_available_width) / camera_available_height;
     if (available_aspect > photo_aspect)
     {
-        camera_orientation_window->setFixedSize(QSize(static_cast<int>(camera_available_height * photo_aspect), camera_available_height));
+        camera_orientation_widget->setFixedSize(QSize(static_cast<int>(camera_available_height * photo_aspect), camera_available_height));
     }
     else
     {
-        camera_orientation_window->setFixedSize(QSize(camera_available_width, static_cast<int>(camera_available_width / photo_aspect)));
+        camera_orientation_widget->setFixedSize(QSize(camera_available_width, static_cast<int>(camera_available_width / photo_aspect)));
     }
+    camera_orientation_window->adjustSize();
     camera_orientation_widget->updatePhotoTexture();
     camera_orientation_widget->update();
 
-    camera_scale_x = static_cast<double>(photo_width) / camera_orientation_window->width();
-    camera_scale_y = static_cast<double>(photo_height) / camera_orientation_window->height();
+    camera_scale_x = static_cast<double>(photo_width) / camera_orientation_widget->width();
+    camera_scale_y = static_cast<double>(photo_height) / camera_orientation_widget->height();
 }
 
 void MainWindow::fillPhotoListWidget()
@@ -644,7 +638,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 void MainWindow::resizeEvent(QResizeEvent* event)
 {
     int new_camera_available_width = main_window.centralwidget->width() * 2 / 3 - main_window.centralwidget->width() / 5;
-    int new_camera_available_height = main_window.centralwidget->height();
+    int new_camera_available_height = main_window.centralwidget->height() * 9 / 10;
     if (new_camera_available_width > initial_camera_available_width && new_camera_available_height > initial_camera_available_height)
     {
         camera_available_width = new_camera_available_width;
