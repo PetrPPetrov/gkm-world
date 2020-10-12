@@ -181,6 +181,7 @@ void MainWindow::setVertexPosition(QPointF position)
             fillVertexPositionInfoWidget();
             camera_orientation_widget->updateLineSetGeometry();
             camera_orientation_widget->update();
+            dirtyProject();
         }
     }
 }
@@ -290,8 +291,8 @@ void MainWindow::loadPhotos()
 void MainWindow::updateProject()
 {
     camera_orientation_widget->setMeshProject(mesh_project);
-    camera_orientation_widget->updateLineSetGeometry();
     camera_orientation_widget->updatePhotoTexture();
+    camera_orientation_widget->updateLineSetGeometry();
     updateWindowTitle();
     camera_orientation_widget->update();
 }
@@ -558,6 +559,7 @@ void MainWindow::onPhotoSelected(const QItemSelection& selected, const QItemSele
         camera_orientation_window->setFixedSize(QSize(camera_available_width, camera_available_height));
     }
     camera_orientation_widget->updatePhotoTexture();
+    camera_orientation_widget->updateLineSetGeometry();
     camera_orientation_widget->update();
 }
 
