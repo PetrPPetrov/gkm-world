@@ -2,6 +2,7 @@
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #include "vbo_fill.h"
+#include "color_hasher.h"
 
 constexpr static VertexPositionColor g_box_vbo[] =
 {
@@ -125,7 +126,7 @@ static void fillHubPoints(
                 cur_vertex.x += photo_x_low + vertex.x;
                 cur_vertex.y += photo_y_low + vertex.y; // TODO: Change color
                 cur_vertex.z = -1.0f;
-                cur_vertex.abgr = 0xff0000ff;
+                cur_vertex.abgr = ColorHasher::getColor(vertex.id);
                 vbo.push_back(cur_vertex);
             }
         }

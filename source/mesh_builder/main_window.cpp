@@ -17,6 +17,7 @@
 #include <QPushButton>
 #include <QFileDialog>
 #include "main_window.h"
+#include "color_hasher.h"
 
 extern MainWindow* g_main_window = nullptr;
 
@@ -482,7 +483,11 @@ void MainWindow::addVertexListWidgetItem(const Vertex::Ptr& vertex)
 {
     if (vertex->id != -1)
     {
-        QLabel* label = new QLabel(QString("Vertex #%1").arg(vertex->id), vertex_list_widget);
+        using namespace ColorHasher;
+
+        QColor color(ColorHasher::getRed(vertex->id), ColorHasher::getGreen(vertex->id), ColorHasher::getBlue(vertex->id));
+        QLabel* label = new QLabel(vertex_list_widget);
+        label->setText(QString("Vertex #%1").arg(vertex->id) + QString(" [<font color=") + color.name() + QString(">+</font>]"));
         QListWidgetItem* item = new QListWidgetItem(vertex_list_widget);
         vertex_list_widget->addItem(item);
         vertex_list_widget->setItemWidget(item, label);
