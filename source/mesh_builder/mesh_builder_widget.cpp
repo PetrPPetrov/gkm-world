@@ -37,8 +37,12 @@ void MeshBuilderWidget::updateLineSetGeometry()
         vertex_buffer,
         mesh_project,
         camera_info,
+        aux_geom_line_set_vbo_start,
         aux_geom_line_set_vbo_size,
+        hub_points_line_set_vbo_start,
         hub_points_line_set_vbo_size,
+        vertices_line_set_vbo_start,
+        vertices_line_set_vbo_size,
         photo_x_low, photo_y_low
     );
 

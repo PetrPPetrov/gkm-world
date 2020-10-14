@@ -3,6 +3,7 @@
 
 #include "vbo_fill.h"
 #include "color_hasher.h"
+#include "global_parameters.h"
 
 constexpr static VertexPositionColor g_box_vbo[] =
 {
@@ -62,14 +63,16 @@ static void fillAuxGeometryBoxes(
 static void fillAuxGeometry(
     std::vector<VertexPositionColor>& vbo,
     const AuxGeometry::Ptr& aux_geometry,
+    int& aux_geom_line_set_vbo_start,
     int& aux_geom_line_set_vbo_size)
 {
-    const size_t previous_vbo_size = vbo.size();
+    aux_geom_line_set_vbo_start = static_cast<int>(vbo.size());
     if (aux_geometry)
     {
         fillAuxGeometryBoxes(vbo, aux_geometry->boxes);
     }
-    aux_geom_line_set_vbo_size = static_cast<int>(vbo.size() - previous_vbo_size);
+
+    aux_geom_line_set_vbo_size = static_cast<int>(vbo.size()) - aux_geom_line_set_vbo_start;
 }
 
 constexpr static VertexPositionColor g_hud_point_vbo[] =
@@ -92,10 +95,11 @@ static void fillHubPoints(
     std::vector<VertexPositionColor>& vbo,
     const MeshProject::Ptr& mesh_project,
     const CameraInfo::Ptr cur_camera,
+    int& hub_points_line_set_vbo_start,
     int& hub_points_line_set_vbo_size,
     int photo_x_low, int photo_y_low)
 {
-    const size_t previous_vbo_size = vbo.size();
+    hub_points_line_set_vbo_start = static_cast<int>(vbo.size());
     if (mesh_project->build_info)
     {
         std::list<VertexInfo> vertices;
@@ -131,15 +135,80 @@ static void fillHubPoints(
             }
         }
     }
-    hub_points_line_set_vbo_size = static_cast<int>(vbo.size() - previous_vbo_size);
+    hub_points_line_set_vbo_size = static_cast<int>(vbo.size()) - hub_points_line_set_vbo_start;
+}
+
+struct VertexProjectionInfo
+{
+    CameraInfo::Ptr camera = nullptr;
+    int id;
+    int x = 0;
+    int y = 0;
+};
+
+static void fillVertices(
+    std::vector<VertexPositionColor>& vbo,
+    const MeshProject::Ptr& mesh_project,
+    const CameraInfo::Ptr cur_camera,
+    int& vertices_line_set_vbo_start,
+    int& vertices_line_set_vbo_size,
+    int photo_x_low, int photo_y_low)
+{
+    vertices_line_set_vbo_start = static_cast<int>(vbo.size());
+    if (mesh_project->build_info)
+    {
+        std::list<VertexProjectionInfo> vertices;
+        auto& cameras = mesh_project->build_info->cameras_info;
+        const int camera_count = static_cast<int>(cameras.size());
+        for (auto& vertex : mesh_project->build_info->vertices)
+        {
+            for (auto& position : vertex->positions)
+            {
+                CameraInfo::Ptr used_camera = nullptr;
+                if (position.camera_index >= 0 && position.camera_index < camera_count)
+                {
+                    used_camera = cameras[position.camera_index];
+                }
+                if (used_camera)
+                {
+                    vertices.push_back({ used_camera, vertex->id, position.x, position.y });
+                }
+            }
+        }
+        vbo.reserve(vbo.size() + vertices.size() * 2);
+        for (auto& vertex : vertices)
+        {
+            const double camera_aspect = static_cast<double>(vertex.camera->width()) / vertex.camera->height();
+            const double forward_offset = 16.0;
+            const double full_offset_y = forward_offset * tan(GRAD_TO_RAD * vertex.camera->fov / 2.0);
+            const double full_offset_x = full_offset_y * camera_aspect;
+            Eigen::Vector3d forward = (vertex.camera->viewer_target - vertex.camera->viewer_pos).normalized();
+            Eigen::Vector3d up = vertex.camera->viewer_up.normalized();
+            //for (size_t i = 0; i < g_hud_point_vbo_size; ++i)
+            //{
+            //    VertexPositionColor cur_vertex = g_hud_point_vbo[i];
+            //    cur_vertex.x += photo_x_low + vertex.x;
+            //    cur_vertex.y += photo_y_low + vertex.y; // TODO: Change color
+            //    cur_vertex.z = -1.0f;
+            //    cur_vertex.abgr = ColorHasher::getColor(vertex.id);
+            //    vbo.push_back(cur_vertex);
+            //}
+        }
+    }
+
+    vertices_line_set_vbo_size = static_cast<int>(vbo.size()) - vertices_line_set_vbo_start;
 }
 
 void fillLineSet(
     std::vector<VertexPositionColor>& vbo,
     const MeshProject::Ptr& mesh_project,
     const CameraInfo::Ptr cur_camera,
+    int& aux_geom_line_set_vbo_start,
     int& aux_geom_line_set_vbo_size,
+    int& hub_points_line_set_vbo_start,
     int& hub_points_line_set_vbo_size,
+    int& vertices_line_set_vbo_start,
+    int& vertices_line_set_vbo_size,
     int photo_x_low, int photo_y_low)
 {
     vbo.clear();
@@ -151,8 +220,8 @@ void fillLineSet(
         return;
     }
 
-    fillAuxGeometry(vbo, mesh_project->aux_geometry, aux_geom_line_set_vbo_size);
-    fillHubPoints(vbo, mesh_project, cur_camera, hub_points_line_set_vbo_size, photo_x_low, photo_y_low);
+    fillAuxGeometry(vbo, mesh_project->aux_geometry, aux_geom_line_set_vbo_start, aux_geom_line_set_vbo_size);
+    fillHubPoints(vbo, mesh_project, cur_camera, hub_points_line_set_vbo_start, hub_points_line_set_vbo_size, photo_x_low, photo_y_low);
 
     if (aux_geom_line_set_vbo_size + hub_points_line_set_vbo_size > LINE_SET_VBO_MAX_VERTEX_COUNT)
     {

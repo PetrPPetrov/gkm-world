@@ -50,8 +50,12 @@ private:
     std::unique_ptr<QOpenGLVertexArrayObject> line_set_vao;
     std::unique_ptr<QOpenGLBuffer> line_set_vbo;
     int line_set_matrix_location;
+    int aux_geom_line_set_vbo_start;
     int aux_geom_line_set_vbo_size;
+    int hub_points_line_set_vbo_start;
     int hub_points_line_set_vbo_size;
+    int vertices_line_set_vbo_start;
+    int vertices_line_set_vbo_size;
 
     std::unique_ptr<QOpenGLShaderProgram> photo_program;
     std::unique_ptr<QOpenGLVertexArrayObject> photo_vao;
