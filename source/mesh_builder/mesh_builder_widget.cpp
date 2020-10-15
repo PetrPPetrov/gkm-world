@@ -292,7 +292,7 @@ void MeshBuilderWidget::paintGL()
         line_set_vao->bind();
         line_set_program->bind();
         line_set_program->setUniformValue(line_set_matrix_location, ortho_projection);
-        glDrawArrays(GL_LINES, aux_geom_line_set_vbo_size, hub_points_line_set_vbo_size);
+        glDrawArrays(GL_LINES, hub_points_line_set_vbo_start, hub_points_line_set_vbo_size);
     }
 
     QMatrix4x4 projection_matrix;
@@ -307,7 +307,16 @@ void MeshBuilderWidget::paintGL()
         line_set_vao->bind();
         line_set_program->bind();
         line_set_program->setUniformValue(line_set_matrix_location, mvp_matrix);
-        glDrawArrays(GL_LINES, 0, aux_geom_line_set_vbo_size);
+        glDrawArrays(GL_LINES, aux_geom_line_set_vbo_start, aux_geom_line_set_vbo_size);
+    }
+
+    if (vertices_line_set_vbo_size > 0)
+    {
+        glDisable(GL_DEPTH_TEST);
+        line_set_vao->bind();
+        line_set_program->bind();
+        line_set_program->setUniformValue(line_set_matrix_location, mvp_matrix);
+        glDrawArrays(GL_LINES, vertices_line_set_vbo_start, vertices_line_set_vbo_size);
     }
 }
 

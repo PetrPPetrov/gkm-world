@@ -182,21 +182,46 @@ static void fillVertices(
             const double forward_offset = 16.0;
             const double full_offset_y = forward_offset * tan(GRAD_TO_RAD * vertex.camera->fov / 2.0);
             const double full_offset_x = full_offset_y * camera_aspect;
-            Eigen::Vector3d forward = (vertex.camera->viewer_target - vertex.camera->viewer_pos).normalized();
+            Eigen::Vector3d pos = vertex.camera->viewer_pos;
+            Eigen::Vector3d forward = (vertex.camera->viewer_target - pos).normalized();
             Eigen::Vector3d up = vertex.camera->viewer_up.normalized();
-            //for (size_t i = 0; i < g_hud_point_vbo_size; ++i)
-            //{
-            //    VertexPositionColor cur_vertex = g_hud_point_vbo[i];
-            //    cur_vertex.x += photo_x_low + vertex.x;
-            //    cur_vertex.y += photo_y_low + vertex.y; // TODO: Change color
-            //    cur_vertex.z = -1.0f;
-            //    cur_vertex.abgr = ColorHasher::getColor(vertex.id);
-            //    vbo.push_back(cur_vertex);
-            //}
+            Eigen::Vector3d right = forward.cross(up).normalized();
+            const double rel_x = static_cast<double>(vertex.x) / vertex.camera->width();
+            const double rel_y = static_cast<double>(vertex.y) / vertex.camera->height();
+            Eigen::Vector3d vertex_direction = forward * forward_offset + right * (vertex.x - photo_x_low) + up * (vertex.y - photo_y_low);
+            Eigen::Vector3d vertex_dir = vertex_direction.normalized() * 2048.0;
+            Eigen::Vector3d end_vertex_line = pos + vertex_dir;
+
+            VertexPositionColor first_vertex;
+            first_vertex.x = static_cast<float>(vertex.camera->viewer_pos.x());
+            first_vertex.y = static_cast<float>(vertex.camera->viewer_pos.y());
+            first_vertex.z = static_cast<float>(vertex.camera->viewer_pos.z());
+            first_vertex.abgr = ColorHasher::getColor(vertex.id);
+            vbo.push_back(first_vertex);
+
+            VertexPositionColor second_vertex;
+            second_vertex.x = static_cast<float>(end_vertex_line.x());
+            second_vertex.y = static_cast<float>(end_vertex_line.y());
+            second_vertex.z = static_cast<float>(end_vertex_line.z());
+            second_vertex.abgr = ColorHasher::getColor(vertex.id);
+            vbo.push_back(second_vertex);
         }
     }
 
     vertices_line_set_vbo_size = static_cast<int>(vbo.size()) - vertices_line_set_vbo_start;
+}
+
+static void correctOffsets(int& start, int& size)
+{
+    if (start >= LINE_SET_VBO_MAX_VERTEX_COUNT)
+    {
+        start = LINE_SET_VBO_MAX_VERTEX_COUNT;
+        size = 0;
+    }
+    else if (start + size >= LINE_SET_VBO_MAX_VERTEX_COUNT)
+    {
+        size = LINE_SET_VBO_MAX_VERTEX_COUNT - start;
+    }
 }
 
 void fillLineSet(
@@ -215,26 +240,17 @@ void fillLineSet(
 
     if (!mesh_project)
     {
-        aux_geom_line_set_vbo_size = 0;
-        hub_points_line_set_vbo_size = 0;
+        aux_geom_line_set_vbo_start = aux_geom_line_set_vbo_size = 0;
+        vertices_line_set_vbo_start = vertices_line_set_vbo_size = 0;
+        hub_points_line_set_vbo_start = hub_points_line_set_vbo_size = 0;
         return;
     }
 
     fillAuxGeometry(vbo, mesh_project->aux_geometry, aux_geom_line_set_vbo_start, aux_geom_line_set_vbo_size);
+    fillVertices(vbo, mesh_project, cur_camera, vertices_line_set_vbo_start, vertices_line_set_vbo_size, photo_x_low, photo_y_low);
     fillHubPoints(vbo, mesh_project, cur_camera, hub_points_line_set_vbo_start, hub_points_line_set_vbo_size, photo_x_low, photo_y_low);
 
-    if (aux_geom_line_set_vbo_size + hub_points_line_set_vbo_size > LINE_SET_VBO_MAX_VERTEX_COUNT)
-    {
-        hub_points_line_set_vbo_size = LINE_SET_VBO_MAX_VERTEX_COUNT - aux_geom_line_set_vbo_size;
-    }
-    if (aux_geom_line_set_vbo_size > LINE_SET_VBO_MAX_VERTEX_COUNT)
-    {
-        aux_geom_line_set_vbo_size = LINE_SET_VBO_MAX_VERTEX_COUNT;
-        hub_points_line_set_vbo_size = 0;
-    }
-
-    if (vbo.size() > LINE_SET_VBO_MAX_VERTEX_COUNT)
-    {
-        vbo.resize(LINE_SET_VBO_MAX_VERTEX_COUNT);
-    }
+    correctOffsets(aux_geom_line_set_vbo_start, aux_geom_line_set_vbo_size);
+    correctOffsets(vertices_line_set_vbo_start, vertices_line_set_vbo_size);
+    correctOffsets(hub_points_line_set_vbo_start, hub_points_line_set_vbo_size);
 }
