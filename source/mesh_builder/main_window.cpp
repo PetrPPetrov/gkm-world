@@ -17,6 +17,7 @@
 #include <QPushButton>
 #include <QFileDialog>
 #include "main_window.h"
+#include "build_mesh.h"
 #include "color_hasher.h"
 
 extern MainWindow* g_main_window = nullptr;
@@ -101,6 +102,19 @@ MainWindow::MainWindow()
     connect(remove_vertex_position_on_photo_act, &QAction::triggered, this, &MainWindow::onRemoveVertexPosition);
     vertex_menu->addAction(remove_vertex_position_on_photo_act);
 
+    QMenu* build_menu = menuBar()->addMenu("Build");
+
+    build_mesh_act = new QAction("Build Mesh", this);
+    build_mesh_act->setEnabled(true);
+    connect(build_mesh_act, &QAction::triggered, this, &MainWindow::onBuildMesh);
+    build_menu->addAction(build_mesh_act);
+
+    build_menu->addSeparator();
+    set_output_file_act = new QAction("Set Output File", this);
+    set_output_file_act->setEnabled(true);
+    connect(set_output_file_act, &QAction::triggered, this, &MainWindow::onSetOutputFile);
+    build_menu->addAction(set_output_file_act);
+
     photo_list_widget = new QListWidget(main_window.centralwidget);
     connect(photo_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onPhotoSelected);
     photo_list_window = main_window.centralwidget->addSubWindow(photo_list_widget);
@@ -173,11 +187,18 @@ void MainWindow::setVertexPosition(QPointF position)
             }
             if (!found)
             {
-                VertexPositionInfo new_vertex_position_info;
-                new_vertex_position_info.camera_index = camera_index;
-                new_vertex_position_info.x = position.x() * camera_scale_x;
-                new_vertex_position_info.y = photo_height - position.y() * camera_scale_y;
-                mesh_project->build_info->vertices[fit->second]->positions.push_back(new_vertex_position_info);
+                if (mesh_project->build_info->vertices[fit->second]->positions.size() < 2)
+                {
+                    VertexPositionInfo new_vertex_position_info;
+                    new_vertex_position_info.camera_index = camera_index;
+                    new_vertex_position_info.x = position.x() * camera_scale_x;
+                    new_vertex_position_info.y = photo_height - position.y() * camera_scale_y;
+                    mesh_project->build_info->vertices[fit->second]->positions.push_back(new_vertex_position_info);
+                }
+                else
+                {
+                    log_widget->appendPlainText(QString("Vertex #%1 has 2 binding positions").arg(fit->second));
+                }
             }
             fillVertexPositionInfoWidget();
             camera_orientation_widget->updateLineSetGeometry();
@@ -866,6 +887,32 @@ void MainWindow::onRemoveVertexPosition()
             positions.erase(positions.begin() + vertex_position_index);
             fillVertexPositionInfoWidget();
         }
+    }
+}
+
+void MainWindow::onBuildMesh()
+{
+    if (mesh_project->output_file_name.empty())
+    {
+        onSetOutputFile();
+    }
+
+    if (mesh_project->output_file_name.empty())
+    {
+        log_widget->appendPlainText("Output file is empty, ignoring...");
+        return;
+    }
+
+    buildMesh(mesh_project);
+}
+
+void MainWindow::onSetOutputFile()
+{
+    QString filename = QFileDialog::getSaveFileName(this, "Select Mesh Output File", QDir::currentPath(), "OBJ files (*.obj)");
+    if (!filename.isNull())
+    {
+        mesh_project->output_file_name = filename.toStdString();
+        dirtyProject();
     }
 }
 

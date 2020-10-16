@@ -18,6 +18,7 @@ struct MeshProject
     AuxGeometry::Ptr aux_geometry = std::make_shared<AuxGeometry>();
     BuildInfo::Ptr build_info = std::make_shared<BuildInfo>();
     std::string file_name;
+    std::string output_file_name;
     bool dirty = false;
 };
 
@@ -30,7 +31,11 @@ inline void loadMeshProject(MeshProject::Ptr& project, const std::string& file_n
     {
         std::string next_token;
         std::getline(file_in, next_token);
-        if (next_token == "camera_info")
+        if (next_token == "output_file_name")
+        {
+            file_in >> project->output_file_name;
+        }
+        else if (next_token == "camera_info")
         {
             auto new_camera_info = std::make_shared<CameraInfo>();
             loadCameraInfo(new_camera_info, file_in);
@@ -55,6 +60,7 @@ inline void saveMeshProject(const MeshProject::Ptr& project, const std::string& 
 {
     std::ofstream file_out(file_name);
     file_out << "# Gkm-World Mesh Builder project file\n";
+    file_out << "output_file_name\n" << project->output_file_name << "\n";
     for (auto camera_info : project->build_info->cameras_info)
     {
         saveCameraInfo(camera_info, file_out);

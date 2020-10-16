@@ -3,7 +3,7 @@
 
 #include "vbo_fill.h"
 #include "color_hasher.h"
-#include "global_parameters.h"
+#include "build_mesh.h"
 
 constexpr static VertexPositionColor g_box_vbo[] =
 {
@@ -158,17 +158,11 @@ static void fillVertices(
     if (mesh_project->build_info)
     {
         std::list<VertexProjectionInfo> vertices;
-        auto& cameras = mesh_project->build_info->cameras_info;
-        const int camera_count = static_cast<int>(cameras.size());
         for (auto& vertex : mesh_project->build_info->vertices)
         {
             for (auto& position : vertex->positions)
             {
-                CameraInfo::Ptr used_camera = nullptr;
-                if (position.camera_index >= 0 && position.camera_index < camera_count)
-                {
-                    used_camera = cameras[position.camera_index];
-                }
+                CameraInfo::Ptr used_camera = getCamera(mesh_project, position.camera_index);
                 if (used_camera)
                 {
                     vertices.push_back({ used_camera, vertex->id, position.x, position.y });
@@ -178,31 +172,21 @@ static void fillVertices(
         vbo.reserve(vbo.size() + vertices.size() * 2);
         for (auto& vertex : vertices)
         {
-            const double camera_aspect = static_cast<double>(vertex.camera->width()) / vertex.camera->height();
-            const double forward_offset = 16.0;
-            const double full_offset_y = forward_offset * tan(GRAD_TO_RAD * vertex.camera->fov / 2.0);
-            const double full_offset_x = full_offset_y * camera_aspect;
-            Eigen::Vector3d pos = vertex.camera->viewer_pos;
-            Eigen::Vector3d forward = (vertex.camera->viewer_target - pos).normalized();
-            Eigen::Vector3d up = vertex.camera->viewer_up.normalized();
-            Eigen::Vector3d right = forward.cross(up).normalized();
-            const double rel_x = static_cast<double>(vertex.x) / vertex.camera->width();
-            const double rel_y = static_cast<double>(vertex.y) / vertex.camera->height();
-            Eigen::Vector3d vertex_direction = forward * forward_offset + right * (vertex.x - photo_x_low) + up * (vertex.y - photo_y_low);
-            Eigen::Vector3d vertex_dir = vertex_direction.normalized() * 2048.0;
-            Eigen::Vector3d end_vertex_line = pos + vertex_dir;
+            Eigen::Vector3d start;
+            Eigen::Vector3d finish;
+            calculateVertexLinePoints(vertex.camera, vertex.x, vertex.y, start, finish);
 
             VertexPositionColor first_vertex;
-            first_vertex.x = static_cast<float>(vertex.camera->viewer_pos.x());
-            first_vertex.y = static_cast<float>(vertex.camera->viewer_pos.y());
-            first_vertex.z = static_cast<float>(vertex.camera->viewer_pos.z());
+            first_vertex.x = static_cast<float>(start.x());
+            first_vertex.y = static_cast<float>(start.y());
+            first_vertex.z = static_cast<float>(start.z());
             first_vertex.abgr = ColorHasher::getColor(vertex.id);
             vbo.push_back(first_vertex);
 
             VertexPositionColor second_vertex;
-            second_vertex.x = static_cast<float>(end_vertex_line.x());
-            second_vertex.y = static_cast<float>(end_vertex_line.y());
-            second_vertex.z = static_cast<float>(end_vertex_line.z());
+            second_vertex.x = static_cast<float>(finish.x());
+            second_vertex.y = static_cast<float>(finish.y());
+            second_vertex.z = static_cast<float>(finish.z());
             second_vertex.abgr = ColorHasher::getColor(vertex.id);
             vbo.push_back(second_vertex);
         }

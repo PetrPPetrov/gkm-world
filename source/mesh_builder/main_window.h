@@ -81,6 +81,9 @@ private:
     void onRemoveVertex();
     void onRemoveVertexPosition();
 
+    void onBuildMesh();
+    void onSetOutputFile();
+
     void onLockedChanged(int state);
     void onRotationChanged(int index);
     void onFovChanged(double value);
@@ -112,6 +115,9 @@ private:
     QAction* add_vertex_act = nullptr;
     QAction* remove_vertex_act = nullptr;
     QAction* remove_vertex_position_on_photo_act = nullptr;
+
+    QAction* build_mesh_act = nullptr;
+    QAction* set_output_file_act = nullptr;
 
     MeshBuilderWidget* camera_orientation_widget = nullptr;
     QMdiSubWindow* camera_orientation_window = nullptr;
