@@ -27,6 +27,12 @@ MainWindow::MainWindow()
     g_main_window = this;
     main_window.setupUi(this);
 
+    initializeMenu();
+    initializeWidgets();
+}
+
+void MainWindow::initializeMenu()
+{
     QMenu* project_menu = menuBar()->addMenu("Project");
 
     new_project_act = new QAction("&New", this);
@@ -102,6 +108,23 @@ MainWindow::MainWindow()
     connect(remove_vertex_position_on_photo_act, &QAction::triggered, this, &MainWindow::onRemoveVertexPosition);
     vertex_menu->addAction(remove_vertex_position_on_photo_act);
 
+    QMenu* triangle_menu = menuBar()->addMenu("Triangle");
+
+    add_triangle_act = new QAction("Add triangle", this);
+    connect(add_triangle_act, &QAction::triggered, this, &MainWindow::onAddTriangle);
+    triangle_menu->addAction(add_triangle_act);
+
+    remove_triangle_act = new QAction("Remove triangle", this);
+    remove_triangle_act->setEnabled(false);
+    connect(remove_triangle_act, &QAction::triggered, this, &MainWindow::onRemoveTriangle);
+    triangle_menu->addAction(remove_triangle_act);
+
+    triangle_menu->addSeparator();
+    use_selected_vertex_in_triangle_act = new QAction("Use vertex", this);
+    use_selected_vertex_in_triangle_act->setEnabled(false);
+    connect(use_selected_vertex_in_triangle_act, &QAction::triggered, this, &MainWindow::onUseVertex);
+    triangle_menu->addAction(use_selected_vertex_in_triangle_act);
+
     QMenu* build_menu = menuBar()->addMenu("Build");
 
     build_mesh_act = new QAction("Build Mesh", this);
@@ -114,7 +137,10 @@ MainWindow::MainWindow()
     set_output_file_act->setEnabled(true);
     connect(set_output_file_act, &QAction::triggered, this, &MainWindow::onSetOutputFile);
     build_menu->addAction(set_output_file_act);
+}
 
+void MainWindow::initializeWidgets()
+{
     photo_list_widget = new QListWidget(main_window.centralwidget);
     connect(photo_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onPhotoSelected);
     photo_list_window = main_window.centralwidget->addSubWindow(photo_list_widget);
@@ -135,6 +161,16 @@ MainWindow::MainWindow()
     vertex_position_on_photo_list_window = main_window.centralwidget->addSubWindow(vertex_position_on_photo_list_widget);
     vertex_position_on_photo_list_window->setWindowTitle("Vertex Position on Photo List");
 
+    triangle_list_widget = new QListWidget(main_window.centralwidget);
+    connect(triangle_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onTriangleSelected);
+    triangle_list_window = main_window.centralwidget->addSubWindow(triangle_list_widget);
+    triangle_list_window->setWindowTitle("Triangle List");
+
+    current_triangle_list_widget = new QListWidget(main_window.centralwidget);
+    connect(current_triangle_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onCurrentTriangleSelected);
+    current_triangle_list_window = main_window.centralwidget->addSubWindow(current_triangle_list_widget);
+    current_triangle_list_window->setWindowTitle("Current Triangle");
+
     log_widget = new QPlainTextEdit(main_window.centralwidget);
     log_widget->setReadOnly(true);
     log_widget->ensureCursorVisible();
@@ -144,7 +180,7 @@ MainWindow::MainWindow()
 
     camera_orientation_widget = new MeshBuilderWidget(main_window.centralwidget);
     camera_orientation_window = main_window.centralwidget->addSubWindow(camera_orientation_widget);
-    camera_orientation_window->setWindowTitle("3D Camera Orientation for Photo");
+    camera_orientation_window->setWindowTitle("3D Camera for Photo");
 }
 
 void MainWindow::updateWindowTitle()
@@ -233,6 +269,12 @@ void MainWindow::showEvent(QShowEvent* event)
 
         vertex_position_on_photo_list_window->resize(QSize(main_window.centralwidget->width() / 5, main_window.centralwidget->height() / 2));
         vertex_position_on_photo_list_window->move(main_window.centralwidget->width() * 4 / 5, main_window.centralwidget->height() / 2);
+
+        triangle_list_window->resize(QSize(main_window.centralwidget->width() / 5, main_window.centralwidget->height() / 2));
+        triangle_list_window->move(main_window.centralwidget->width() * 3 / 5, 0);
+
+        current_triangle_list_window->resize(QSize(main_window.centralwidget->width() / 5, main_window.centralwidget->height() / 2));
+        current_triangle_list_window->move(main_window.centralwidget->width() * 3 / 5, main_window.centralwidget->height() / 2);
 
         log_window->resize(QSize(main_window.centralwidget->width() / 3, main_window.centralwidget->height() / 4));
         log_window->move(0, main_window.centralwidget->height() * 3 / 4);
@@ -328,13 +370,12 @@ void MainWindow::updateCameraWidgetSize()
     double available_aspect = static_cast<double>(camera_available_width) / camera_available_height;
     if (available_aspect > photo_aspect)
     {
-        camera_orientation_widget->setFixedSize(QSize(static_cast<int>(camera_available_height * photo_aspect), camera_available_height));
+        camera_orientation_window->resize(QSize(static_cast<int>(camera_available_height * photo_aspect), camera_available_height));
     }
     else
     {
-        camera_orientation_widget->setFixedSize(QSize(camera_available_width, static_cast<int>(camera_available_width / photo_aspect)));
+        camera_orientation_window->resize(QSize(camera_available_width, static_cast<int>(camera_available_width / photo_aspect)));
     }
-    camera_orientation_window->adjustSize();
     camera_orientation_widget->updatePhotoTexture();
     camera_orientation_widget->update();
 
@@ -555,129 +596,63 @@ void MainWindow::addVertexPositionInfoWidgetItem(unsigned vertex_id, const Verte
     vertex_position_on_photo_list_widget->setItemWidget(item, widget);
 }
 
-void MainWindow::onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected)
+void MainWindow::fillTriangleListWidget()
 {
-    if (photo_list_widget->selectedItems().size() > 0)
+    triangle_list_widget->clear();
+    triangle_list_item_to_triangle_id.clear();
+    for (auto triangle : mesh_project->build_info->triangles)
     {
-        int index = photo_list_widget->currentIndex().row();
-        if (index >= 0 && static_cast<size_t>(index) < mesh_project->build_info->cameras_info.size())
-        {
-            remove_photo_act->setEnabled(true);
-            photo_list_widget->itemWidget(photo_list_widget->item(index))->setEnabled(true);
-            int prev_index = -1;
-            if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
-            {
-                prev_index = deselected.front().indexes().front().row();
-            }
-            if (prev_index >= 0)
-            {
-                photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->setEnabled(false);
-            }
-            camera_info = mesh_project->build_info->cameras_info[index];
-            updateCameraWidgetSize();
-        }
-    }
-    else
-    {
-        camera_info = nullptr;
-        camera_orientation_widget->setPhoto(nullptr);
-        remove_photo_act->setEnabled(false);
-        camera_orientation_window->setFixedSize(QSize(camera_available_width, camera_available_height));
-    }
-    camera_orientation_widget->updatePhotoTexture();
-    camera_orientation_widget->updateLineSetGeometry();
-    camera_orientation_widget->update();
-}
-
-void MainWindow::onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected)
-{
-    if (aux_geometry_list_widget->selectedItems().size() > 0)
-    {
-        remove_aux_geom_act->setEnabled(true);
-        int index = aux_geometry_list_widget->currentIndex().row();
-        aux_geometry_list_widget->itemWidget(aux_geometry_list_widget->item(index))->setEnabled(true);
-        int prev_index = -1;
-        if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
-        {
-            prev_index = deselected.front().indexes().front().row();
-        }
-        if (prev_index >= 0)
-        {
-            aux_geometry_list_widget->itemWidget(aux_geometry_list_widget->item(prev_index))->setEnabled(false);
-        }
-    }
-    else
-    {
-        remove_aux_geom_act->setEnabled(false);
+        addTriangleListWidgetItem(triangle);
     }
 }
 
-void MainWindow::onVertexSelected(const QItemSelection& selected, const QItemSelection& deselected)
+void MainWindow::addTriangleListWidgetItem(const Triangle::Ptr& triangle)
 {
-    if (vertex_list_widget->selectedItems().size() > 0)
+    if (triangle->id != -1)
     {
-        remove_vertex_act->setEnabled(true);
-        fillVertexPositionInfoWidget();
-    }
-    else
-    {
-        remove_vertex_act->setEnabled(false);
+        using namespace ColorHasher;
+
+        QColor color(ColorHasher::getRed(triangle->id), ColorHasher::getGreen(triangle->id), ColorHasher::getBlue(triangle->id));
+        QLabel* label = new QLabel(triangle_list_widget);
+        label->setText(QString("Triangle #%1").arg(triangle->id) + QString(" [<font color=") + color.name() + QString(">=</font>]"));
+        QListWidgetItem* item = new QListWidgetItem(triangle_list_widget);
+        triangle_list_widget->addItem(item);
+        triangle_list_widget->setItemWidget(item, label);
+        triangle_list_item_to_triangle_id.emplace(item, triangle->id);
     }
 }
 
-void MainWindow::onVertexPositionSelected(const QItemSelection& selected, const QItemSelection& deselected)
+void MainWindow::fillCurrentTriangleListWidget()
 {
-    if (vertex_position_on_photo_list_widget->selectedItems().size() > 0)
+    current_triangle_list_widget->clear();
+    const int index = triangle_list_widget->currentRow();
+    auto fit = triangle_list_item_to_triangle_id.find(triangle_list_widget->item(index));
+    if (fit != triangle_list_item_to_triangle_id.end())
     {
-        remove_vertex_position_on_photo_act->setEnabled(true);
-    }
-    else
-    {
-        remove_vertex_position_on_photo_act->setEnabled(false);
+        Triangle::Ptr triangle = mesh_project->build_info->triangles.at(fit->second);
+        addCurrentTriangleListWidgetItem(triangle->vertices[0]);
+        addCurrentTriangleListWidgetItem(triangle->vertices[1]);
+        addCurrentTriangleListWidgetItem(triangle->vertices[2]);
     }
 }
 
-void MainWindow::closeEvent(QCloseEvent* event)
+void MainWindow::addCurrentTriangleListWidgetItem(int vertex_id)
 {
-    if (mesh_project->dirty)
-    {
-        QMessageBox msg_box;
-        msg_box.setText("The project has been modified.");
-        msg_box.setWindowTitle("Gkm-World Mesh-Builder");
-        msg_box.setInformativeText("Do you want to save your changes?");
-        msg_box.setStandardButtons(QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
-        msg_box.setDefaultButton(QMessageBox::Save);
-        int ret = msg_box.exec();
-        switch (ret)
-        {
-        case QMessageBox::Save:
-            onSaveProject();
-        case QMessageBox::Discard:
-            event->accept();
-            break;
-        case QMessageBox::Cancel:
-            event->ignore();
-        default:
-            break;
-        }
-    }
-}
+    using namespace ColorHasher;
 
-void MainWindow::resizeEvent(QResizeEvent* event)
-{
-    int new_camera_available_width = main_window.centralwidget->width() * 2 / 3 - main_window.centralwidget->width() / 5;
-    int new_camera_available_height = main_window.centralwidget->height() * 9 / 10;
-    if (new_camera_available_width > initial_camera_available_width && new_camera_available_height > initial_camera_available_height)
+    QColor color(ColorHasher::getRed(vertex_id), ColorHasher::getGreen(vertex_id), ColorHasher::getBlue(vertex_id));
+    QLabel* label = new QLabel(current_triangle_list_widget);
+    if (vertex_id == -1)
     {
-        camera_available_width = new_camera_available_width;
-        camera_available_height = new_camera_available_height;
+        label->setText("Vertex N/A");
     }
     else
     {
-        camera_available_width = initial_camera_available_width;
-        camera_available_height = initial_camera_available_height;
+        label->setText(QString("Vertex #%1").arg(vertex_id) + QString(" [<font color=") + color.name() + QString(">+</font>]"));
     }
-    QMainWindow::resizeEvent(event);
+    QListWidgetItem* item = new QListWidgetItem(current_triangle_list_widget);
+    current_triangle_list_widget->addItem(item);
+    current_triangle_list_widget->setItemWidget(item, label);
 }
 
 void MainWindow::onNewProject()
@@ -851,11 +826,11 @@ void MainWindow::onAddVertex()
 
 void MainWindow::onRemoveVertex()
 {
-    dirtyProject();
     const int index = vertex_list_widget->currentRow();
     auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(index));
     if (fit != vertex_list_item_to_vertex_id.end())
     {
+        dirtyProject();
         mesh_project->build_info->vertices.at(fit->second)->id = -1;
         fillVertexListWidget();
         if (index < vertex_list_widget->count())
@@ -886,6 +861,80 @@ void MainWindow::onRemoveVertexPosition()
             auto& positions = mesh_project->build_info->vertices.at(fit->second)->positions;
             positions.erase(positions.begin() + vertex_position_index);
             fillVertexPositionInfoWidget();
+        }
+    }
+}
+
+void MainWindow::onAddTriangle()
+{
+    dirtyProject();
+    auto& triangles = mesh_project->build_info->triangles;
+    const unsigned count = static_cast<unsigned>(triangles.size());
+    bool added = false;
+    for (unsigned i = 0; i < count; ++i)
+    {
+        if (triangles[i]->id == -1)
+        {
+            // Found free vertex
+            triangles[i]->id = i;
+            triangles[i]->vertices[0] = -1;
+            triangles[i]->vertices[1] = -1;
+            triangles[i]->vertices[2] = -1;
+            added = true;
+            break;
+        }
+    }
+    if (!added)
+    {
+        auto new_triangle = std::make_shared<Triangle>();
+        new_triangle->id = count;
+        triangles.push_back(new_triangle);
+    }
+
+    fillTriangleListWidget();
+}
+
+void MainWindow::onRemoveTriangle()
+{
+    const int index = triangle_list_widget->currentRow();
+    auto fit = triangle_list_item_to_triangle_id.find(triangle_list_widget->item(index));
+    if (fit != triangle_list_item_to_triangle_id.end())
+    {
+        dirtyProject();
+        mesh_project->build_info->triangles.at(fit->second)->id = -1;
+        fillTriangleListWidget();
+        if (index < triangle_list_widget->count())
+        {
+            triangle_list_widget->setCurrentRow(index);
+        }
+        else if (triangle_list_widget->count() > 0)
+        {
+            triangle_list_widget->setCurrentRow(triangle_list_widget->count() - 1);
+        }
+        else
+        {
+            triangle_list_widget->clearSelection();
+        }
+    }
+}
+
+void MainWindow::onUseVertex()
+{
+    const int triangle_index = triangle_list_widget->currentRow();
+    auto triangle_fit = triangle_list_item_to_triangle_id.find(triangle_list_widget->item(triangle_index));
+    if (triangle_fit != triangle_list_item_to_triangle_id.end())
+    {
+        const int vertex_in_triange_index = current_triangle_list_widget->currentRow();
+        if (vertex_in_triange_index >= 0)
+        {
+            const int vertex_index = vertex_list_widget->currentRow();
+            auto vertex_fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(vertex_index));
+            if (vertex_fit != vertex_list_item_to_vertex_id.end())
+            {
+                dirtyProject();
+                mesh_project->build_info->triangles.at(triangle_fit->second)->vertices[vertex_in_triange_index] = mesh_project->build_info->vertices.at(vertex_fit->second)->id;
+                fillCurrentTriangleListWidget();
+            }
         }
     }
 }
@@ -1051,4 +1100,164 @@ void MainWindow::onAuxBoxSizeZChanged(double value)
             camera_orientation_widget->update();
         }
     }
+}
+
+void MainWindow::onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    if (photo_list_widget->selectedItems().size() > 0)
+    {
+        int index = photo_list_widget->currentIndex().row();
+        if (index >= 0 && static_cast<size_t>(index) < mesh_project->build_info->cameras_info.size())
+        {
+            remove_photo_act->setEnabled(true);
+            photo_list_widget->itemWidget(photo_list_widget->item(index))->setEnabled(true);
+            int prev_index = -1;
+            if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
+            {
+                prev_index = deselected.front().indexes().front().row();
+            }
+            if (prev_index >= 0)
+            {
+                photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->setEnabled(false);
+            }
+            camera_info = mesh_project->build_info->cameras_info[index];
+            updateCameraWidgetSize();
+        }
+    }
+    else
+    {
+        camera_info = nullptr;
+        camera_orientation_widget->setPhoto(nullptr);
+        remove_photo_act->setEnabled(false);
+        camera_orientation_window->setFixedSize(QSize(camera_available_width, camera_available_height));
+    }
+    camera_orientation_widget->updatePhotoTexture();
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
+}
+
+void MainWindow::onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    if (aux_geometry_list_widget->selectedItems().size() > 0)
+    {
+        remove_aux_geom_act->setEnabled(true);
+        int index = aux_geometry_list_widget->currentIndex().row();
+        aux_geometry_list_widget->itemWidget(aux_geometry_list_widget->item(index))->setEnabled(true);
+        int prev_index = -1;
+        if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
+        {
+            prev_index = deselected.front().indexes().front().row();
+        }
+        if (prev_index >= 0)
+        {
+            aux_geometry_list_widget->itemWidget(aux_geometry_list_widget->item(prev_index))->setEnabled(false);
+        }
+    }
+    else
+    {
+        remove_aux_geom_act->setEnabled(false);
+    }
+}
+
+void MainWindow::onVertexSelected(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    use_selected_vertex_in_triangle_act->setEnabled(false);
+
+    if (vertex_list_widget->selectedItems().size() > 0)
+    {
+        remove_vertex_act->setEnabled(true);
+        fillVertexPositionInfoWidget();
+        if (current_triangle_list_widget->currentRow() >= 0)
+        {
+            use_selected_vertex_in_triangle_act->setEnabled(true);
+        }
+    }
+    else
+    {
+        remove_vertex_act->setEnabled(false);
+    }
+}
+
+void MainWindow::onVertexPositionSelected(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    if (vertex_position_on_photo_list_widget->selectedItems().size() > 0)
+    {
+        remove_vertex_position_on_photo_act->setEnabled(true);
+    }
+    else
+    {
+        remove_vertex_position_on_photo_act->setEnabled(false);
+    }
+}
+
+void MainWindow::onTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    if (triangle_list_widget->selectedItems().size() > 0)
+    {
+        remove_triangle_act->setEnabled(true);
+        fillCurrentTriangleListWidget();
+    }
+    else
+    {
+        remove_triangle_act->setEnabled(false);
+    }
+}
+
+void MainWindow::onCurrentTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    if (current_triangle_list_widget->selectedItems().size() > 0)
+    {
+        const int vertex_index = vertex_list_widget->currentRow();
+        auto vertex_fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(vertex_index));
+        if (vertex_fit != vertex_list_item_to_vertex_id.end())
+        {
+            use_selected_vertex_in_triangle_act->setEnabled(true);
+            return;
+        }
+    }
+
+    use_selected_vertex_in_triangle_act->setEnabled(false);
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    if (mesh_project->dirty)
+    {
+        QMessageBox msg_box;
+        msg_box.setText("The project has been modified.");
+        msg_box.setWindowTitle("Gkm-World Mesh-Builder");
+        msg_box.setInformativeText("Do you want to save your changes?");
+        msg_box.setStandardButtons(QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+        msg_box.setDefaultButton(QMessageBox::Save);
+        int ret = msg_box.exec();
+        switch (ret)
+        {
+        case QMessageBox::Save:
+            onSaveProject();
+        case QMessageBox::Discard:
+            event->accept();
+            break;
+        case QMessageBox::Cancel:
+            event->ignore();
+        default:
+            break;
+        }
+    }
+}
+
+void MainWindow::resizeEvent(QResizeEvent* event)
+{
+    int new_camera_available_width = main_window.centralwidget->width() * 2 / 3 - main_window.centralwidget->width() / 5;
+    int new_camera_available_height = main_window.centralwidget->height() * 9 / 10;
+    if (new_camera_available_width > initial_camera_available_width && new_camera_available_height > initial_camera_available_height)
+    {
+        camera_available_width = new_camera_available_width;
+        camera_available_height = new_camera_available_height;
+    }
+    else
+    {
+        camera_available_width = initial_camera_available_width;
+        camera_available_height = initial_camera_available_height;
+    }
+    QMainWindow::resizeEvent(event);
 }

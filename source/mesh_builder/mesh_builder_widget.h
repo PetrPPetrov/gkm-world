@@ -70,7 +70,6 @@ private:
     int photo_x_high;
     int photo_y_low;
     int photo_y_high;
-    float photo_aspect;
 
     QVector3D viewer_pos;
     QVector3D viewer_target;

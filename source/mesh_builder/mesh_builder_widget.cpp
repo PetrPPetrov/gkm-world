@@ -89,7 +89,6 @@ void MeshBuilderWidget::updatePhotoTexture()
 
     photo_width = camera_info ? camera_info->width() : photo_texture->width();
     photo_height = camera_info ? camera_info->height() : photo_texture->height();;
-    photo_aspect = static_cast<float>(photo_width) / photo_height;
 
     photo_x_low = -photo_width / 2;
     photo_x_high = photo_x_low + photo_width;
@@ -273,13 +272,14 @@ void MeshBuilderWidget::paintGL()
 
     const int viewport_width = width();
     const int viewport_height = height();
-    const float viewport_aspect = static_cast<double>(viewport_width) / viewport_height;
+    const double viewport_aspect = static_cast<double>(viewport_width) / viewport_height;
 
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     QMatrix4x4 ortho_projection;
-    ortho_projection.ortho(photo_x_low, photo_x_high, photo_y_low, photo_y_high, 0.125f, 2048.0f);
+    ortho_projection.ortho(photo_y_low * viewport_aspect, photo_y_high * viewport_aspect, photo_y_low, photo_y_high, 0.125f, 2048.0f);
+
     photo_vao->bind();
     photo_program->bind();
     photo_program->setUniformValue(photo_matrix_location, ortho_projection);
@@ -296,7 +296,7 @@ void MeshBuilderWidget::paintGL()
     }
 
     QMatrix4x4 projection_matrix;
-    projection_matrix.perspective(fov, viewport_aspect, 0.125f, 1024.0f);
+    projection_matrix.perspective(fov, static_cast<float>(viewport_aspect), 0.125f, 1024.0f);
     QMatrix4x4 view_matrix;
     view_matrix.lookAt(viewer_pos, viewer_target, viewer_up);
     QMatrix4x4 mvp_matrix = projection_matrix * view_matrix;

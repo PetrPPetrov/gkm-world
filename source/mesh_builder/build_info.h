@@ -135,10 +135,19 @@ inline void saveVertex(const Vertex::Ptr& vertex, std::ofstream& file_out)
     }
 }
 
+struct Triangle
+{
+    typedef std::shared_ptr<Triangle> Ptr;
+
+    int id = -1;
+    int vertices[3] = { -1, -1, -1 };
+};
+
 struct BuildInfo
 {
     typedef std::shared_ptr<BuildInfo> Ptr;
 
     std::vector<CameraInfo::Ptr> cameras_info;
     std::vector<Vertex::Ptr> vertices;
+    std::vector<Triangle::Ptr> triangles;
 };

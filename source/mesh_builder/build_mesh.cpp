@@ -12,7 +12,7 @@ constexpr static double EPSILON = 0.001;
 // two lines P1P2 and P3P4. Calculate also the values of mua and mub where
 //    Pa = P1 + mua (P2 - P1)
 //    Pb = P3 + mub (P4 - P3)
-// Return FALSE if no solution exists.
+// Return false if no solution exists.
 static inline bool calculateLineLineIntersect(
     const Eigen::Vector3d& p1, const Eigen::Vector3d& p2,
     const Eigen::Vector3d& p3, const Eigen::Vector3d& p4,

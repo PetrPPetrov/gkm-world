@@ -31,6 +31,12 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow();
+
+private:
+    void initializeMenu();
+    void initializeWidgets();
+
+public:
     void updateWindowTitle();
     void setVertexPosition(QPointF position);
 
@@ -56,14 +62,10 @@ private:
     void addVertexListWidgetItem(const Vertex::Ptr& vertex);
     void fillVertexPositionInfoWidget();
     void addVertexPositionInfoWidgetItem(unsigned vertex_id, const VertexPositionInfo& vertex_position);
-
-    void onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected);
-    void onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected);
-    void onVertexSelected(const QItemSelection& selected, const QItemSelection& deselected);
-    void onVertexPositionSelected(const QItemSelection& selected, const QItemSelection& deselected);
-
-    void closeEvent(QCloseEvent* event);
-    void resizeEvent(QResizeEvent* event);
+    void fillTriangleListWidget();
+    void addTriangleListWidgetItem(const Triangle::Ptr& triangle);
+    void fillCurrentTriangleListWidget();
+    void addCurrentTriangleListWidgetItem(int vertex_id);
 
     void onNewProject();
     void onOpenProject();
@@ -81,6 +83,10 @@ private:
     void onRemoveVertex();
     void onRemoveVertexPosition();
 
+    void onAddTriangle();
+    void onRemoveTriangle();
+    void onUseVertex();
+
     void onBuildMesh();
     void onSetOutputFile();
 
@@ -94,6 +100,16 @@ private:
     void onAuxBoxSizeXChanged(double value);
     void onAuxBoxSizeYChanged(double value);
     void onAuxBoxSizeZChanged(double value);
+
+    void onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected);
+    void onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected);
+    void onVertexSelected(const QItemSelection& selected, const QItemSelection& deselected);
+    void onVertexPositionSelected(const QItemSelection& selected, const QItemSelection& deselected);
+    void onTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected);
+    void onCurrentTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected);
+
+    void closeEvent(QCloseEvent* event);
+    void resizeEvent(QResizeEvent* event);
 
 private:
     bool first_show = true;
@@ -115,6 +131,10 @@ private:
     QAction* add_vertex_act = nullptr;
     QAction* remove_vertex_act = nullptr;
     QAction* remove_vertex_position_on_photo_act = nullptr;
+
+    QAction* add_triangle_act = nullptr;
+    QAction* remove_triangle_act = nullptr;
+    QAction* use_selected_vertex_in_triangle_act = nullptr;
 
     QAction* build_mesh_act = nullptr;
     QAction* set_output_file_act = nullptr;
@@ -144,6 +164,13 @@ private:
 
     QListWidget* vertex_position_on_photo_list_widget = nullptr;
     QMdiSubWindow* vertex_position_on_photo_list_window = nullptr;
+
+    QListWidget* triangle_list_widget = nullptr;
+    QMdiSubWindow* triangle_list_window = nullptr;
+    std::unordered_map<QListWidgetItem*, unsigned> triangle_list_item_to_triangle_id;
+
+    QListWidget* current_triangle_list_widget = nullptr;
+    QMdiSubWindow* current_triangle_list_window = nullptr;
 
     const std::string auto_save_file_name = "autosave.gmb";
 
