@@ -201,17 +201,16 @@ void MainWindow::updateWindowTitle()
 void MainWindow::setVertexPosition(QPointF position)
 {
     const int camera_index = photo_list_widget->currentRow();
-    const int vertex_index = vertex_list_widget->currentRow();
-    if (camera_index >= 0 && vertex_index >= 0)
+    if (camera_index >= 0)
     {
-        auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(vertex_index));
-        if (fit != vertex_list_item_to_vertex_id.end())
+        auto selected_vertex = getVertex(vertex_list_widget->currentRow());
+        if (selected_vertex)
         {
             int photo_width = camera_info->width();
             int photo_height = camera_info->height();
 
             bool found = false;
-            for (auto& vertex_position : mesh_project->build_info->vertices[fit->second]->positions)
+            for (auto& vertex_position : selected_vertex->positions)
             {
                 if (vertex_position.camera_index == camera_index)
                 {
@@ -223,17 +222,17 @@ void MainWindow::setVertexPosition(QPointF position)
             }
             if (!found)
             {
-                if (mesh_project->build_info->vertices[fit->second]->positions.size() < 2)
+                if (selected_vertex->positions.size() < 2)
                 {
                     VertexPositionInfo new_vertex_position_info;
                     new_vertex_position_info.camera_index = camera_index;
                     new_vertex_position_info.x = position.x() * camera_scale_x;
                     new_vertex_position_info.y = photo_height - position.y() * camera_scale_y;
-                    mesh_project->build_info->vertices[fit->second]->positions.push_back(new_vertex_position_info);
+                    selected_vertex->positions.push_back(new_vertex_position_info);
                 }
                 else
                 {
-                    log_widget->appendPlainText(QString("Vertex #%1 has 2 binding positions").arg(fit->second));
+                    log_widget->appendPlainText(QString("Vertex #%1 has 2 binding positions").arg(selected_vertex->id));
                 }
             }
             fillVertexPositionInfoWidget();
@@ -252,8 +251,7 @@ void MainWindow::showEvent(QShowEvent* event)
     {
         first_show = false;
 
-        initial_camera_available_width = camera_available_width = main_window.centralwidget->width() * 2 / 3 - main_window.centralwidget->width() / 5;
-        initial_camera_available_height = camera_available_height = main_window.centralwidget->height() * 9 / 10;
+        updateCameraWidgetAvailableSize();
 
         camera_orientation_window->resize(QSize(camera_available_width, camera_available_height));
         camera_orientation_window->move(main_window.centralwidget->width() / 3, 0);
@@ -381,6 +379,12 @@ void MainWindow::updateCameraWidgetSize()
 
     camera_scale_x = static_cast<double>(photo_width) / camera_orientation_widget->width();
     camera_scale_y = static_cast<double>(photo_height) / camera_orientation_widget->height();
+}
+
+void MainWindow::updateCameraWidgetAvailableSize()
+{
+    camera_available_width = main_window.centralwidget->width() * 2 / 3 - main_window.centralwidget->width() / 5;
+    camera_available_height = main_window.centralwidget->height() * 9 / 10;
 }
 
 void MainWindow::fillPhotoListWidget()
@@ -560,21 +564,17 @@ void MainWindow::addVertexListWidgetItem(const Vertex::Ptr& vertex)
 void MainWindow::fillVertexPositionInfoWidget()
 {
     vertex_position_on_photo_list_widget->clear();
-    const int vertex_index = vertex_list_widget->currentRow();
-    if (vertex_index >= 0)
+    auto selected_vertex = getVertex(vertex_list_widget->currentRow());
+    if (selected_vertex)
     {
-        auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(vertex_index));
-        if (fit != vertex_list_item_to_vertex_id.end())
+        for (auto& vertex_position : selected_vertex->positions)
         {
-            for (auto& vertex_position : mesh_project->build_info->vertices[fit->second]->positions)
-            {
-                addVertexPositionInfoWidgetItem(fit->second, vertex_position);
-            }
+            addVertexPositionInfoWidgetItem(selected_vertex->id, vertex_position);
         }
     }
 }
 
-void MainWindow::addVertexPositionInfoWidgetItem(unsigned vertex_id, const VertexPositionInfo& vertex_position)
+void MainWindow::addVertexPositionInfoWidgetItem(int vertex_id, const VertexPositionInfo& vertex_position)
 {
     QWidget* widget = new QWidget(vertex_position_on_photo_list_widget);
     QLabel* label0 = new QLabel(QString("Vertex #%1").arg(vertex_id), vertex_position_on_photo_list_widget);
@@ -626,13 +626,12 @@ void MainWindow::fillCurrentTriangleListWidget()
 {
     current_triangle_list_widget->clear();
     const int index = triangle_list_widget->currentRow();
-    auto fit = triangle_list_item_to_triangle_id.find(triangle_list_widget->item(index));
-    if (fit != triangle_list_item_to_triangle_id.end())
+    auto selected_triangle = getTriangle(index);
+    if (selected_triangle)
     {
-        Triangle::Ptr triangle = mesh_project->build_info->triangles.at(fit->second);
-        addCurrentTriangleListWidgetItem(triangle->vertices[0]);
-        addCurrentTriangleListWidgetItem(triangle->vertices[1]);
-        addCurrentTriangleListWidgetItem(triangle->vertices[2]);
+        addCurrentTriangleListWidgetItem(selected_triangle->vertices[0]);
+        addCurrentTriangleListWidgetItem(selected_triangle->vertices[1]);
+        addCurrentTriangleListWidgetItem(selected_triangle->vertices[2]);
     }
 }
 
@@ -653,6 +652,44 @@ void MainWindow::addCurrentTriangleListWidgetItem(int vertex_id)
     QListWidgetItem* item = new QListWidgetItem(current_triangle_list_widget);
     current_triangle_list_widget->addItem(item);
     current_triangle_list_widget->setItemWidget(item, label);
+}
+
+AuxGeometryBox::Ptr MainWindow::getAuxBox(int row_index) const
+{
+    auto fit = aux_geom_list_item_to_box.find(aux_geometry_list_widget->item(row_index));
+    if (fit != aux_geom_list_item_to_box.end())
+    {
+        return fit->second;
+    }
+    return nullptr;
+}
+
+Vertex::Ptr MainWindow::getVertex(int row_index) const
+{
+    auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(row_index));
+    if (fit != vertex_list_item_to_vertex_id.end())
+    {
+        int vertex_id = fit->second;
+        if (vertex_id < mesh_project->build_info->vertices.size() && mesh_project->build_info->vertices[vertex_id]->id != -1)
+        {
+            return mesh_project->build_info->vertices[vertex_id];
+        }
+    }
+    return nullptr;
+}
+
+Triangle::Ptr MainWindow::getTriangle(int row_index) const
+{
+    auto fit = triangle_list_item_to_triangle_id.find(triangle_list_widget->item(row_index));
+    if (fit != triangle_list_item_to_triangle_id.end())
+    {
+        int triangle_id = fit->second;
+        if (triangle_id < mesh_project->build_info->triangles.size() && mesh_project->build_info->triangles[triangle_id]->id != -1)
+        {
+            return mesh_project->build_info->triangles[triangle_id];
+        }
+    }
+    return nullptr;
 }
 
 void MainWindow::onNewProject()
@@ -827,11 +864,11 @@ void MainWindow::onAddVertex()
 void MainWindow::onRemoveVertex()
 {
     const int index = vertex_list_widget->currentRow();
-    auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(index));
-    if (fit != vertex_list_item_to_vertex_id.end())
+    auto selected_vertex = getVertex(index);
+    if (selected_vertex)
     {
         dirtyProject();
-        mesh_project->build_info->vertices.at(fit->second)->id = -1;
+        selected_vertex->id = -1;
         fillVertexListWidget();
         if (index < vertex_list_widget->count())
         {
@@ -852,13 +889,13 @@ void MainWindow::onRemoveVertexPosition()
 {
     dirtyProject();
     const int index = vertex_list_widget->currentRow();
-    auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(index));
-    if (fit != vertex_list_item_to_vertex_id.end())
+    auto selected_vertex = getVertex(index);
+    if (selected_vertex)
     {
         const int vertex_position_index = vertex_position_on_photo_list_widget->currentRow();
         if (vertex_position_index >= 0)
         {
-            auto& positions = mesh_project->build_info->vertices.at(fit->second)->positions;
+            auto& positions = selected_vertex->positions;
             positions.erase(positions.begin() + vertex_position_index);
             fillVertexPositionInfoWidget();
         }
@@ -897,11 +934,11 @@ void MainWindow::onAddTriangle()
 void MainWindow::onRemoveTriangle()
 {
     const int index = triangle_list_widget->currentRow();
-    auto fit = triangle_list_item_to_triangle_id.find(triangle_list_widget->item(index));
-    if (fit != triangle_list_item_to_triangle_id.end())
+    auto selected_triangle = getTriangle(index);
+    if (selected_triangle)
     {
         dirtyProject();
-        mesh_project->build_info->triangles.at(fit->second)->id = -1;
+        selected_triangle->id = -1;
         fillTriangleListWidget();
         if (index < triangle_list_widget->count())
         {
@@ -921,18 +958,17 @@ void MainWindow::onRemoveTriangle()
 void MainWindow::onUseVertex()
 {
     const int triangle_index = triangle_list_widget->currentRow();
-    auto triangle_fit = triangle_list_item_to_triangle_id.find(triangle_list_widget->item(triangle_index));
-    if (triangle_fit != triangle_list_item_to_triangle_id.end())
+    auto selected_triangle = getTriangle(triangle_index);
+    if (selected_triangle)
     {
         const int vertex_in_triange_index = current_triangle_list_widget->currentRow();
         if (vertex_in_triange_index >= 0)
         {
-            const int vertex_index = vertex_list_widget->currentRow();
-            auto vertex_fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(vertex_index));
-            if (vertex_fit != vertex_list_item_to_vertex_id.end())
+            auto selected_vertex = getVertex(vertex_list_widget->currentRow());
+            if (selected_vertex)
             {
                 dirtyProject();
-                mesh_project->build_info->triangles.at(triangle_fit->second)->vertices[vertex_in_triange_index] = mesh_project->build_info->vertices.at(vertex_fit->second)->id;
+                selected_triangle->vertices[vertex_in_triange_index] = selected_vertex->id;
                 fillCurrentTriangleListWidget();
             }
         }
@@ -1008,97 +1044,73 @@ void MainWindow::onFovChanged(double value)
 
 void MainWindow::onAuxBoxPosXChanged(double value)
 {
-    int index = aux_geometry_list_widget->currentRow();
-    if (index >= 0)
+    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
+    if (selected_box)
     {
-        auto fit = aux_geom_list_item_to_box.find(aux_geometry_list_widget->item(index));
-        if (fit != aux_geom_list_item_to_box.end())
-        {
-            fit->second->position.setX(value);
-            dirtyProject();
-            camera_orientation_widget->updateLineSetGeometry();
-            camera_orientation_widget->update();
-        }
+        selected_box->position.setX(value);
+        dirtyProject();
+        camera_orientation_widget->updateLineSetGeometry();
+        camera_orientation_widget->update();
     }
 }
 
 void MainWindow::onAuxBoxPosYChanged(double value)
 {
-    int index = aux_geometry_list_widget->currentRow();
-    if (index >= 0)
+    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
+    if (selected_box)
     {
-        auto fit = aux_geom_list_item_to_box.find(aux_geometry_list_widget->item(index));
-        if (fit != aux_geom_list_item_to_box.end())
-        {
-            fit->second->position.setY(value);
-            dirtyProject();
-            camera_orientation_widget->updateLineSetGeometry();
-            camera_orientation_widget->update();
-        }
+        selected_box->position.setY(value);
+        dirtyProject();
+        camera_orientation_widget->updateLineSetGeometry();
+        camera_orientation_widget->update();
     }
 }
 
 void MainWindow::onAuxBoxPosZChanged(double value)
 {
-    int index = aux_geometry_list_widget->currentRow();
-    if (index >= 0)
+    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
+    if (selected_box)
     {
-        auto fit = aux_geom_list_item_to_box.find(aux_geometry_list_widget->item(index));
-        if (fit != aux_geom_list_item_to_box.end())
-        {
-            fit->second->position.setZ(value);
-            dirtyProject();
-            camera_orientation_widget->updateLineSetGeometry();
-            camera_orientation_widget->update();
-        }
+        selected_box->position.setZ(value);
+        dirtyProject();
+        camera_orientation_widget->updateLineSetGeometry();
+        camera_orientation_widget->update();
     }
 }
 
 void MainWindow::onAuxBoxSizeXChanged(double value)
 {
-    int index = aux_geometry_list_widget->currentRow();
-    if (index >= 0)
+    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
+    if (selected_box)
     {
-        auto fit = aux_geom_list_item_to_box.find(aux_geometry_list_widget->item(index));
-        if (fit != aux_geom_list_item_to_box.end())
-        {
-            fit->second->size.setX(value);
-            dirtyProject();
-            camera_orientation_widget->updateLineSetGeometry();
-            camera_orientation_widget->update();
-        }
+        selected_box->size.setX(value);
+        dirtyProject();
+        camera_orientation_widget->updateLineSetGeometry();
+        camera_orientation_widget->update();
     }
 }
 
 void MainWindow::onAuxBoxSizeYChanged(double value)
 {
-    int index = aux_geometry_list_widget->currentRow();
-    if (index >= 0)
+    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
+    if (selected_box)
     {
-        auto fit = aux_geom_list_item_to_box.find(aux_geometry_list_widget->item(index));
-        if (fit != aux_geom_list_item_to_box.end())
-        {
-            fit->second->size.setY(value);
-            dirtyProject();
-            camera_orientation_widget->updateLineSetGeometry();
-            camera_orientation_widget->update();
-        }
+        selected_box->size.setY(value);
+        dirtyProject();
+        camera_orientation_widget->updateLineSetGeometry();
+        camera_orientation_widget->update();
     }
 }
 
 void MainWindow::onAuxBoxSizeZChanged(double value)
 {
-    int index = aux_geometry_list_widget->currentRow();
-    if (index >= 0)
+    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
+    if (selected_box)
     {
-        auto fit = aux_geom_list_item_to_box.find(aux_geometry_list_widget->item(index));
-        if (fit != aux_geom_list_item_to_box.end())
-        {
-            fit->second->size.setZ(value);
-            dirtyProject();
-            camera_orientation_widget->updateLineSetGeometry();
-            camera_orientation_widget->update();
-        }
+        selected_box->size.setZ(value);
+        dirtyProject();
+        camera_orientation_widget->updateLineSetGeometry();
+        camera_orientation_widget->update();
     }
 }
 
@@ -1207,9 +1219,8 @@ void MainWindow::onCurrentTriangleSelected(const QItemSelection& selected, const
 {
     if (current_triangle_list_widget->selectedItems().size() > 0)
     {
-        const int vertex_index = vertex_list_widget->currentRow();
-        auto vertex_fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(vertex_index));
-        if (vertex_fit != vertex_list_item_to_vertex_id.end())
+        auto selected_vertex = getVertex(vertex_list_widget->currentRow());
+        if (selected_vertex)
         {
             use_selected_vertex_in_triangle_act->setEnabled(true);
             return;
@@ -1247,17 +1258,6 @@ void MainWindow::closeEvent(QCloseEvent* event)
 
 void MainWindow::resizeEvent(QResizeEvent* event)
 {
-    int new_camera_available_width = main_window.centralwidget->width() * 2 / 3 - main_window.centralwidget->width() / 5;
-    int new_camera_available_height = main_window.centralwidget->height() * 9 / 10;
-    if (new_camera_available_width > initial_camera_available_width && new_camera_available_height > initial_camera_available_height)
-    {
-        camera_available_width = new_camera_available_width;
-        camera_available_height = new_camera_available_height;
-    }
-    else
-    {
-        camera_available_width = initial_camera_available_width;
-        camera_available_height = initial_camera_available_height;
-    }
+    updateCameraWidgetAvailableSize();
     QMainWindow::resizeEvent(event);
 }

@@ -53,6 +53,7 @@ private:
     void loadPhotos();
     void updateProject();
     void updateCameraWidgetSize();
+    void updateCameraWidgetAvailableSize();
 
     void fillPhotoListWidget();
     void addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info);
@@ -61,11 +62,15 @@ private:
     void fillVertexListWidget();
     void addVertexListWidgetItem(const Vertex::Ptr& vertex);
     void fillVertexPositionInfoWidget();
-    void addVertexPositionInfoWidgetItem(unsigned vertex_id, const VertexPositionInfo& vertex_position);
+    void addVertexPositionInfoWidgetItem(int vertex_id, const VertexPositionInfo& vertex_position);
     void fillTriangleListWidget();
     void addTriangleListWidgetItem(const Triangle::Ptr& triangle);
     void fillCurrentTriangleListWidget();
     void addCurrentTriangleListWidgetItem(int vertex_id);
+
+    AuxGeometryBox::Ptr getAuxBox(int row_index) const;
+    Vertex::Ptr getVertex(int row_index) const;
+    Triangle::Ptr getTriangle(int row_index) const;
 
     void onNewProject();
     void onOpenProject();
@@ -141,8 +146,6 @@ private:
 
     MeshBuilderWidget* camera_orientation_widget = nullptr;
     QMdiSubWindow* camera_orientation_window = nullptr;
-    int initial_camera_available_width = 300;
-    int initial_camera_available_height = 200;
     int camera_available_width = 300;
     int camera_available_height = 200;
     double camera_scale_x = 1.0;
