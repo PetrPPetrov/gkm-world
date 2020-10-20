@@ -104,19 +104,19 @@ static void fillHubPoints(
     {
         std::list<VertexInfo> vertices;
         auto& cameras = mesh_project->build_info->cameras_info;
-        const int camera_count = static_cast<int>(cameras.size());
+        const unsigned camera_count = static_cast<unsigned>(cameras.size());
         for (auto& vertex : mesh_project->build_info->vertices)
         {
             for (auto& position : vertex->positions)
             {
                 CameraInfo::Ptr used_camera = nullptr;
-                if (position.camera_index >= 0 && position.camera_index < camera_count)
+                if (position->camera_index < camera_count)
                 {
-                    used_camera = cameras[position.camera_index];
+                    used_camera = cameras[position->camera_index];
                 }
                 if (used_camera == cur_camera)
                 {
-                    vertices.push_back({ vertex->id, position.x, position.y });
+                    vertices.push_back({ vertex->id, position->x, position->y });
                     break;
                 }
             }
@@ -162,10 +162,10 @@ static void fillVertices(
         {
             for (auto& position : vertex->positions)
             {
-                CameraInfo::Ptr used_camera = getCamera(mesh_project, position.camera_index);
+                CameraInfo::Ptr used_camera = getCamera(mesh_project, position->camera_index);
                 if (used_camera)
                 {
-                    vertices.push_back({ used_camera, vertex->id, position.x, position.y });
+                    vertices.push_back({ used_camera, vertex->id, position->x, position->y });
                 }
             }
         }

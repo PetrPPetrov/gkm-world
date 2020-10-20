@@ -11,6 +11,16 @@
 #include <QImage>
 #include "common.h"
 
+struct VertexPositionInfo
+{
+    typedef std::shared_ptr<VertexPositionInfo> Ptr;
+
+    unsigned camera_index = 0;
+    unsigned vertex_id = 0;
+    int x = 0;
+    int y = 0;
+};
+
 struct CameraInfo
 {
     typedef std::shared_ptr<CameraInfo> Ptr;
@@ -25,6 +35,8 @@ struct CameraInfo
     bool locked = false;
     int rotation = 0;
     double fov = 50.0;
+
+    std::vector<VertexPositionInfo::Ptr> vertex_positions;
 
     int width() const
     {
@@ -86,19 +98,12 @@ inline void saveCameraInfo(const CameraInfo::Ptr& camera_info, std::ofstream& fi
     file_out << "fov\n" << camera_info->fov << "\n";
 }
 
-struct VertexPositionInfo
-{
-    int camera_index = 0;
-    int x = 0;
-    int y = 0;
-};
-
 struct Vertex
 {
     typedef std::shared_ptr<Vertex> Ptr;
 
     int id = -1;
-    std::vector<VertexPositionInfo> positions;
+    std::vector<VertexPositionInfo::Ptr> positions;
 };
 
 inline void loadVertex(Vertex::Ptr& vertex, std::ifstream& file_in)
@@ -111,13 +116,14 @@ inline void loadVertex(Vertex::Ptr& vertex, std::ifstream& file_in)
     vertex->positions.reserve(count);
     for (size_t i = 0; i < count; ++i)
     {
-        VertexPositionInfo new_info;
+        auto new_info = std::make_shared<VertexPositionInfo>();
         loadToken("camera_index", file_in);
-        file_in >> new_info.camera_index;
+        file_in >> new_info->camera_index;
         loadToken("vertex_position_x", file_in);
-        file_in >> new_info.x;
+        file_in >> new_info->x;
         loadToken("vertex_position_y", file_in);
-        file_in >> new_info.y;
+        file_in >> new_info->y;
+        new_info->vertex_id = vertex->id;
         vertex->positions.push_back(new_info);
     }
 }
@@ -129,9 +135,9 @@ inline void saveVertex(const Vertex::Ptr& vertex, std::ofstream& file_out)
     file_out << "vertex_position_count\n" << vertex->positions.size() << "\n";
     for (auto vertex_position_info : vertex->positions)
     {
-        file_out << "camera_index\n" << vertex_position_info.camera_index << "\n";
-        file_out << "vertex_position_x\n" << vertex_position_info.x << "\n";
-        file_out << "vertex_position_y\n" << vertex_position_info.y << "\n";
+        file_out << "camera_index\n" << vertex_position_info->camera_index << "\n";
+        file_out << "vertex_position_x\n" << vertex_position_info->x << "\n";
+        file_out << "vertex_position_y\n" << vertex_position_info->y << "\n";
     }
 }
 

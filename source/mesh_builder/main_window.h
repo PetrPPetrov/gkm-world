@@ -61,15 +61,17 @@ private:
     void addAuxGeometryListWidgetItem(const AuxGeometryBox::Ptr& aux_box);
     void fillVertexListWidget();
     void addVertexListWidgetItem(const Vertex::Ptr& vertex);
-    void fillVertexPositionInfoWidget();
-    void addVertexPositionInfoWidgetItem(int vertex_id, const VertexPositionInfo& vertex_position);
+    void fillCurrentVertexWidget();
+    void addCurrentVertexWidgetItem(const VertexPositionInfo::Ptr& vertex_position);
     void fillTriangleListWidget();
     void addTriangleListWidgetItem(const Triangle::Ptr& triangle);
     void fillCurrentTriangleListWidget();
     void addCurrentTriangleListWidgetItem(int vertex_id);
 
+    int getCurrentCameraIndex() const;
     AuxGeometryBox::Ptr getAuxBox(int row_index) const;
     Vertex::Ptr getVertex(int row_index) const;
+    VertexPositionInfo::Ptr getCurrentVertex(int row_index) const;
     Triangle::Ptr getTriangle(int row_index) const;
 
     void onNewProject();
@@ -86,7 +88,8 @@ private:
 
     void onAddVertex();
     void onRemoveVertex();
-    void onRemoveVertexPosition();
+    void onAddCurrentVertex();
+    void onRemoveCurrentVertex();
 
     void onAddTriangle();
     void onRemoveTriangle();
@@ -109,7 +112,7 @@ private:
     void onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected);
     void onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected);
     void onVertexSelected(const QItemSelection& selected, const QItemSelection& deselected);
-    void onVertexPositionSelected(const QItemSelection& selected, const QItemSelection& deselected);
+    void onCurrentVertexSelected(const QItemSelection& selected, const QItemSelection& deselected);
     void onTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected);
     void onCurrentTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected);
 
@@ -135,7 +138,8 @@ private:
 
     QAction* add_vertex_act = nullptr;
     QAction* remove_vertex_act = nullptr;
-    QAction* remove_vertex_position_on_photo_act = nullptr;
+    QAction* add_current_vertex_act = nullptr;
+    QAction* remove_current_vertex_act = nullptr;
 
     QAction* add_triangle_act = nullptr;
     QAction* remove_triangle_act = nullptr;
@@ -165,8 +169,9 @@ private:
     QMdiSubWindow* vertex_list_window = nullptr;
     std::unordered_map<QListWidgetItem*, unsigned> vertex_list_item_to_vertex_id;
 
-    QListWidget* vertex_position_on_photo_list_widget = nullptr;
-    QMdiSubWindow* vertex_position_on_photo_list_window = nullptr;
+    QListWidget* current_vertex_list_widget = nullptr;
+    QMdiSubWindow* current_vertex_list_window = nullptr;
+    std::unordered_map<QListWidgetItem*, VertexPositionInfo::Ptr> current_vertex_list_item_to_vertex_position;
 
     QListWidget* triangle_list_widget = nullptr;
     QMdiSubWindow* triangle_list_window = nullptr;

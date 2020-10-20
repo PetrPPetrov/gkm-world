@@ -103,10 +103,16 @@ void MainWindow::initializeMenu()
     connect(remove_vertex_act, &QAction::triggered, this, &MainWindow::onRemoveVertex);
     vertex_menu->addAction(remove_vertex_act);
 
-    remove_vertex_position_on_photo_act = new QAction("Remove vertex position", this);
-    remove_vertex_position_on_photo_act->setEnabled(false);
-    connect(remove_vertex_position_on_photo_act, &QAction::triggered, this, &MainWindow::onRemoveVertexPosition);
-    vertex_menu->addAction(remove_vertex_position_on_photo_act);
+    vertex_menu->addSeparator();
+    add_current_vertex_act = new QAction("Add current vertex", this);
+    add_current_vertex_act->setEnabled(false);
+    connect(add_current_vertex_act, &QAction::triggered, this, &MainWindow::onAddCurrentVertex);
+    vertex_menu->addAction(add_current_vertex_act);
+
+    remove_current_vertex_act = new QAction("Remove current vertex", this);
+    remove_current_vertex_act->setEnabled(false);
+    connect(remove_current_vertex_act, &QAction::triggered, this, &MainWindow::onRemoveCurrentVertex);
+    vertex_menu->addAction(remove_current_vertex_act);
 
     QMenu* triangle_menu = menuBar()->addMenu("Triangle");
 
@@ -156,10 +162,10 @@ void MainWindow::initializeWidgets()
     vertex_list_window = main_window.centralwidget->addSubWindow(vertex_list_widget);
     vertex_list_window->setWindowTitle("Vertex List");
 
-    vertex_position_on_photo_list_widget = new QListWidget(main_window.centralwidget);
-    connect(vertex_position_on_photo_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onVertexPositionSelected);
-    vertex_position_on_photo_list_window = main_window.centralwidget->addSubWindow(vertex_position_on_photo_list_widget);
-    vertex_position_on_photo_list_window->setWindowTitle("Vertex Position on Photo List");
+    current_vertex_list_widget = new QListWidget(main_window.centralwidget);
+    connect(current_vertex_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onCurrentVertexSelected);
+    current_vertex_list_window = main_window.centralwidget->addSubWindow(current_vertex_list_widget);
+    current_vertex_list_window->setWindowTitle("Current Vertex List");
 
     triangle_list_widget = new QListWidget(main_window.centralwidget);
     connect(triangle_list_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onTriangleSelected);
@@ -200,47 +206,47 @@ void MainWindow::updateWindowTitle()
 
 void MainWindow::setVertexPosition(QPointF position)
 {
-    const int camera_index = photo_list_widget->currentRow();
-    if (camera_index >= 0)
-    {
-        auto selected_vertex = getVertex(vertex_list_widget->currentRow());
-        if (selected_vertex)
-        {
-            int photo_width = camera_info->width();
-            int photo_height = camera_info->height();
+    //const int camera_index = photo_list_widget->currentRow();
+    //if (camera_index >= 0)
+    //{
+    //    auto selected_vertex = getVertex(vertex_list_widget->currentRow());
+    //    if (selected_vertex)
+    //    {
+    //        int photo_width = camera_info->width();
+    //        int photo_height = camera_info->height();
 
-            bool found = false;
-            for (auto& vertex_position : selected_vertex->positions)
-            {
-                if (vertex_position.camera_index == camera_index)
-                {
-                    vertex_position.x = position.x() * camera_scale_x;
-                    vertex_position.y = photo_height - position.y() * camera_scale_y;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-            {
-                if (selected_vertex->positions.size() < 2)
-                {
-                    VertexPositionInfo new_vertex_position_info;
-                    new_vertex_position_info.camera_index = camera_index;
-                    new_vertex_position_info.x = position.x() * camera_scale_x;
-                    new_vertex_position_info.y = photo_height - position.y() * camera_scale_y;
-                    selected_vertex->positions.push_back(new_vertex_position_info);
-                }
-                else
-                {
-                    log_widget->appendPlainText(QString("Vertex #%1 has 2 binding positions").arg(selected_vertex->id));
-                }
-            }
-            fillVertexPositionInfoWidget();
-            camera_orientation_widget->updateLineSetGeometry();
-            camera_orientation_widget->update();
-            dirtyProject();
-        }
-    }
+    //        bool found = false;
+    //        for (auto& vertex_position : selected_vertex->positions)
+    //        {
+    //            if (vertex_position.camera_index == camera_index)
+    //            {
+    //                vertex_position.x = position.x() * camera_scale_x;
+    //                vertex_position.y = photo_height - position.y() * camera_scale_y;
+    //                found = true;
+    //                break;
+    //            }
+    //        }
+    //        if (!found)
+    //        {
+    //            if (selected_vertex->positions.size() < 2)
+    //            {
+    //                VertexPositionInfo new_vertex_position_info;
+    //                new_vertex_position_info.camera_index = camera_index;
+    //                new_vertex_position_info.x = position.x() * camera_scale_x;
+    //                new_vertex_position_info.y = photo_height - position.y() * camera_scale_y;
+    //                selected_vertex->positions.push_back(new_vertex_position_info);
+    //            }
+    //            else
+    //            {
+    //                log_widget->appendPlainText(QString("Vertex #%1 has 2 binding positions").arg(selected_vertex->id));
+    //            }
+    //        }
+    //        fillVertexPositionInfoWidget();
+    //        camera_orientation_widget->updateLineSetGeometry();
+    //        camera_orientation_widget->update();
+    //        dirtyProject();
+    //    }
+    //}
 }
 
 void MainWindow::showEvent(QShowEvent* event)
@@ -265,8 +271,8 @@ void MainWindow::showEvent(QShowEvent* event)
         vertex_list_window->resize(QSize(main_window.centralwidget->width() / 5, main_window.centralwidget->height() / 2));
         vertex_list_window->move(main_window.centralwidget->width() * 4 / 5, 0);
 
-        vertex_position_on_photo_list_window->resize(QSize(main_window.centralwidget->width() / 5, main_window.centralwidget->height() / 2));
-        vertex_position_on_photo_list_window->move(main_window.centralwidget->width() * 4 / 5, main_window.centralwidget->height() / 2);
+        current_vertex_list_window->resize(QSize(main_window.centralwidget->width() / 5, main_window.centralwidget->height() / 2));
+        current_vertex_list_window->move(main_window.centralwidget->width() * 4 / 5, main_window.centralwidget->height() / 2);
 
         triangle_list_window->resize(QSize(main_window.centralwidget->width() / 5, main_window.centralwidget->height() / 2));
         triangle_list_window->move(main_window.centralwidget->width() * 3 / 5, 0);
@@ -561,39 +567,35 @@ void MainWindow::addVertexListWidgetItem(const Vertex::Ptr& vertex)
     }
 }
 
-void MainWindow::fillVertexPositionInfoWidget()
+void MainWindow::fillCurrentVertexWidget()
 {
-    vertex_position_on_photo_list_widget->clear();
-    auto selected_vertex = getVertex(vertex_list_widget->currentRow());
-    if (selected_vertex)
+    current_vertex_list_widget->clear();
+    current_vertex_list_item_to_vertex_position.clear();
+    for (auto& vertex_position : camera_info->vertex_positions)
     {
-        for (auto& vertex_position : selected_vertex->positions)
-        {
-            addVertexPositionInfoWidgetItem(selected_vertex->id, vertex_position);
-        }
+        addCurrentVertexWidgetItem(vertex_position);
     }
 }
 
-void MainWindow::addVertexPositionInfoWidgetItem(int vertex_id, const VertexPositionInfo& vertex_position)
+void MainWindow::addCurrentVertexWidgetItem(const VertexPositionInfo::Ptr& vertex_position)
 {
-    QWidget* widget = new QWidget(vertex_position_on_photo_list_widget);
-    QLabel* label0 = new QLabel(QString("Vertex #%1").arg(vertex_id), vertex_position_on_photo_list_widget);
-    QLabel* label1 = new QLabel(QString("Camera #%1").arg(vertex_position.camera_index), vertex_position_on_photo_list_widget);
-    QLabel* label2 = new QLabel(QString("X %1").arg(vertex_position.x), vertex_position_on_photo_list_widget);
-    QLabel* label3 = new QLabel(QString("Y %1").arg(vertex_position.y), vertex_position_on_photo_list_widget);
+    QWidget* widget = new QWidget(current_vertex_list_widget);
+    QLabel* label0 = new QLabel(QString("Vertex #%1").arg(vertex_position->vertex_id), current_vertex_list_widget);
+    QLabel* label2 = new QLabel(QString("X %1").arg(vertex_position->x), current_vertex_list_widget);
+    QLabel* label3 = new QLabel(QString("Y %1").arg(vertex_position->y), current_vertex_list_widget);
 
-    QGridLayout* layout = new QGridLayout(vertex_position_on_photo_list_widget);
+    QGridLayout* layout = new QGridLayout(current_vertex_list_widget);
     layout->addWidget(label0, 0, 0);
-    layout->addWidget(label1, 0, 1);
-    layout->addWidget(label2, 1, 0);
-    layout->addWidget(label3, 1, 1);
+    layout->addWidget(label2, 0, 1);
+    layout->addWidget(label3, 0, 2);
     layout->setSizeConstraint(QLayout::SetFixedSize);
     widget->setLayout(layout);
 
-    QListWidgetItem* item = new QListWidgetItem(vertex_position_on_photo_list_widget);
+    QListWidgetItem* item = new QListWidgetItem(current_vertex_list_widget);
     item->setSizeHint(widget->sizeHint());
-    vertex_position_on_photo_list_widget->addItem(item);
-    vertex_position_on_photo_list_widget->setItemWidget(item, widget);
+    current_vertex_list_widget->addItem(item);
+    current_vertex_list_widget->setItemWidget(item, widget);
+    current_vertex_list_item_to_vertex_position.emplace(item, vertex_position);
 }
 
 void MainWindow::fillTriangleListWidget()
@@ -654,6 +656,18 @@ void MainWindow::addCurrentTriangleListWidgetItem(int vertex_id)
     current_triangle_list_widget->setItemWidget(item, label);
 }
 
+int MainWindow::getCurrentCameraIndex() const
+{
+    for (size_t i = 0; i < mesh_project->build_info->cameras_info.size(); ++i)
+    {
+        if (camera_info == mesh_project->build_info->cameras_info[i])
+        {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
 AuxGeometryBox::Ptr MainWindow::getAuxBox(int row_index) const
 {
     auto fit = aux_geom_list_item_to_box.find(aux_geometry_list_widget->item(row_index));
@@ -669,11 +683,21 @@ Vertex::Ptr MainWindow::getVertex(int row_index) const
     auto fit = vertex_list_item_to_vertex_id.find(vertex_list_widget->item(row_index));
     if (fit != vertex_list_item_to_vertex_id.end())
     {
-        int vertex_id = fit->second;
+        unsigned vertex_id = fit->second;
         if (vertex_id < mesh_project->build_info->vertices.size() && mesh_project->build_info->vertices[vertex_id]->id != -1)
         {
             return mesh_project->build_info->vertices[vertex_id];
         }
+    }
+    return nullptr;
+}
+
+VertexPositionInfo::Ptr MainWindow::getCurrentVertex(int row_index) const
+{
+    auto fit = current_vertex_list_item_to_vertex_position.find(current_vertex_list_widget->item(row_index));
+    if (fit != current_vertex_list_item_to_vertex_position.end())
+    {
+        return fit->second;
     }
     return nullptr;
 }
@@ -683,7 +707,7 @@ Triangle::Ptr MainWindow::getTriangle(int row_index) const
     auto fit = triangle_list_item_to_triangle_id.find(triangle_list_widget->item(row_index));
     if (fit != triangle_list_item_to_triangle_id.end())
     {
-        int triangle_id = fit->second;
+        unsigned triangle_id = fit->second;
         if (triangle_id < mesh_project->build_info->triangles.size() && mesh_project->build_info->triangles[triangle_id]->id != -1)
         {
             return mesh_project->build_info->triangles[triangle_id];
@@ -786,7 +810,7 @@ void MainWindow::onRemovePhoto()
             auto vertex_position_it = vertex->positions.begin();
             while (vertex_position_it != vertex->positions.end())
             {
-                if (vertex_position_it->camera_index == index)
+                if ((*vertex_position_it)->camera_index == index)
                 {
                     vertex->positions.erase(vertex_position_it);
                     vertex_position_it = vertex->positions.begin();
@@ -799,7 +823,7 @@ void MainWindow::onRemovePhoto()
         }
         qDeleteAll(selected_items);
         updateProject();
-        fillVertexPositionInfoWidget();
+        fillCurrentVertexWidget();
     }
 }
 
@@ -885,21 +909,35 @@ void MainWindow::onRemoveVertex()
     }
 }
 
-void MainWindow::onRemoveVertexPosition()
+void MainWindow::onAddCurrentVertex()
 {
-    dirtyProject();
     const int index = vertex_list_widget->currentRow();
     auto selected_vertex = getVertex(index);
     if (selected_vertex)
     {
-        const int vertex_position_index = vertex_position_on_photo_list_widget->currentRow();
-        if (vertex_position_index >= 0)
+        for (auto& vertex_position : camera_info->vertex_positions)
         {
-            auto& positions = selected_vertex->positions;
-            positions.erase(positions.begin() + vertex_position_index);
-            fillVertexPositionInfoWidget();
+            if (vertex_position->vertex_id == selected_vertex->id)
+            {
+                return; // Selected vertex is always in the current vertex list
+            }
         }
+        if (selected_vertex->positions.size() >= 2)
+        {
+            return;
+        }
+        auto new_position_info = std::make_shared<VertexPositionInfo>();
+        new_position_info->vertex_id = selected_vertex->id;
+        new_position_info->camera_index = getCurrentCameraIndex();
+        camera_info->vertex_positions.push_back(new_position_info);
+        selected_vertex->positions.push_back(new_position_info);
+        dirtyProject();
+        fillCurrentVertexWidget();
     }
+}
+
+void MainWindow::onRemoveCurrentVertex()
+{
 }
 
 void MainWindow::onAddTriangle()
@@ -1175,30 +1213,57 @@ void MainWindow::onVertexSelected(const QItemSelection& selected, const QItemSel
 {
     use_selected_vertex_in_triangle_act->setEnabled(false);
 
-    if (vertex_list_widget->selectedItems().size() > 0)
+    auto selected_vertex = getVertex(vertex_list_widget->currentRow());
+    if (selected_vertex)
     {
         remove_vertex_act->setEnabled(true);
-        fillVertexPositionInfoWidget();
+        fillCurrentVertexWidget();
         if (current_triangle_list_widget->currentRow() >= 0)
         {
             use_selected_vertex_in_triangle_act->setEnabled(true);
+        }
+
+        if (camera_info)
+        {
+            bool found = false;
+            for (auto& vertex_position : camera_info->vertex_positions)
+            {
+                if (vertex_position->vertex_id == selected_vertex->id)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                add_current_vertex_act->setEnabled(true);
+            }
+            else
+            {
+                add_current_vertex_act->setEnabled(false);
+            }
+        }
+        else
+        {
+            add_current_vertex_act->setEnabled(false);
         }
     }
     else
     {
         remove_vertex_act->setEnabled(false);
+        add_current_vertex_act->setEnabled(false);
     }
 }
 
-void MainWindow::onVertexPositionSelected(const QItemSelection& selected, const QItemSelection& deselected)
+void MainWindow::onCurrentVertexSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    if (vertex_position_on_photo_list_widget->selectedItems().size() > 0)
+    if (current_vertex_list_widget->selectedItems().size() > 0)
     {
-        remove_vertex_position_on_photo_act->setEnabled(true);
+        remove_current_vertex_act->setEnabled(true);
     }
     else
     {
-        remove_vertex_position_on_photo_act->setEnabled(false);
+        remove_current_vertex_act->setEnabled(false);
     }
 }
 

@@ -22,6 +22,20 @@ struct MeshProject
     bool dirty = false;
 };
 
+inline void linkProject(MeshProject::Ptr& project)
+{
+    for (auto& vertex : project->build_info->vertices)
+    {
+        for (auto vertex_position : vertex->positions)
+        {
+            if (vertex_position->camera_index < project->build_info->cameras_info.size())
+            {
+                project->build_info->cameras_info[vertex_position->camera_index]->vertex_positions.push_back(vertex_position);
+            }
+        }
+    }
+}
+
 inline void loadMeshProject(MeshProject::Ptr& project, const std::string& file_name)
 {
     project = std::make_shared<MeshProject>();
@@ -54,6 +68,7 @@ inline void loadMeshProject(MeshProject::Ptr& project, const std::string& file_n
             project->build_info->vertices.push_back(new_vertex);
         }
     }
+    linkProject(project);
 }
 
 inline void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_name)

@@ -143,14 +143,14 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
             Eigen::Vector3d p1;
             Eigen::Vector3d p2;
             calculateVertexLinePoints(
-                getCamera(mesh_project, vertex->positions[0].camera_index),
-                vertex->positions[0].x, vertex->positions[0].y, p1, p2
+                getCamera(mesh_project, vertex->positions[0]->camera_index),
+                vertex->positions[0]->x, vertex->positions[0]->y, p1, p2
             );
             Eigen::Vector3d p3;
             Eigen::Vector3d p4;
             calculateVertexLinePoints(
-                getCamera(mesh_project, vertex->positions[1].camera_index),
-                vertex->positions[1].x, vertex->positions[1].y, p3, p4
+                getCamera(mesh_project, vertex->positions[1]->camera_index),
+                vertex->positions[1]->x, vertex->positions[1]->y, p3, p4
             );
             Eigen::Vector3d pa;
             Eigen::Vector3d pb;
