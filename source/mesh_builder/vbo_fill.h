@@ -9,7 +9,7 @@
 void fillLineSet(
     std::vector<VertexPositionColor>& vbo,
     const MeshProject::Ptr& mesh_project,
-    const CameraInfo::Ptr cur_camera,
+    const Camera::Ptr current_camera,
     int& aux_geom_line_set_vbo_start,
     int& aux_geom_line_set_vbo_size,
     int& hub_points_line_set_vbo_start,

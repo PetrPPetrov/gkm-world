@@ -295,46 +295,29 @@ void MainWindow::dirtyProject()
 
 void MainWindow::addPhoto(const char* filename)
 {
-    CameraInfo::Ptr new_camera_info = std::make_shared<CameraInfo>();
-    new_camera_info->photo_image_path = filename;
-    new_camera_info->viewer_pos = Eigen::Vector3d(3, 3, 3);
-    new_camera_info->viewer_target = Eigen::Vector3d(0, 0, 0);
-    new_camera_info->viewer_up = Eigen::Vector3d(0, 0, 1);
-    new_camera_info->rotation_radius = (new_camera_info->viewer_pos - new_camera_info->viewer_target).norm();
-    mesh_project->build_info->cameras_info.push_back(new_camera_info);
-
-    addPhotoListWidgetItem(new_camera_info);
+    addPhotoListWidgetItem(projectAddPhoto(mesh_project, filename));
+    dirtyProject();
 }
 
 void MainWindow::addAuxBox()
 {
-    std::unordered_set<int> used_id;
-    for (auto aux_box : mesh_project->aux_geometry->boxes)
-    {
-        used_id.emplace(aux_box->id);
-    }
-    int new_id = 0;
-    while (used_id.find(new_id) != used_id.end())
-    {
-        ++new_id;
-    }
-    AuxGeometryBox::Ptr new_box = std::make_shared<AuxGeometryBox>();
-    new_box->id = new_id;
-    new_box->size = QVector3D(1, 1, 1);
-    mesh_project->aux_geometry->boxes.push_back(new_box);
-    addAuxGeometryListWidgetItem(new_box);
+    addAuxGeometryListWidgetItem(projectAddAuxBox(mesh_project));
     dirtyProject();
 }
 
 void MainWindow::loadProject(const char* filename)
 {
-    loadMeshProject(mesh_project, filename);
+    mesh_project = loadMeshProject(filename);
     mesh_project->file_name = filename;
+
     fillPhotoListWidget();
     fillAuxGeometryListWidget();
     fillVertexListWidget();
+    fillCurrentVertexListWidget();
+    fillCurrentTriangleListWidget();
+
     loadPhotos();
-    if (mesh_project->build_info->cameras_info.size() > 0)
+    if (mesh_project->cameras.size() > 0)
     {
         photo_list_widget->setCurrentRow(0);
     }
@@ -342,12 +325,13 @@ void MainWindow::loadProject(const char* filename)
     {
         photo_list_widget->clearSelection();
     }
-    updateProject();
+    updateCameraWidget();
+    updateWindowTitle();
 }
 
 void MainWindow::loadPhotos()
 {
-    for (auto camera_info : mesh_project->build_info->cameras_info)
+    for (auto camera_info : mesh_project->cameras)
     {
         if (!camera_info->photo_image)
         {
@@ -356,20 +340,19 @@ void MainWindow::loadPhotos()
     }
 }
 
-void MainWindow::updateProject()
+void MainWindow::updateCameraWidget()
 {
     camera_orientation_widget->setMeshProject(mesh_project);
     camera_orientation_widget->updatePhotoTexture();
     camera_orientation_widget->updateLineSetGeometry();
-    updateWindowTitle();
     camera_orientation_widget->update();
 }
 
 void MainWindow::updateCameraWidgetSize()
 {
-    camera_orientation_widget->setPhoto(camera_info);
-    int photo_width = camera_info->width();
-    int photo_height = camera_info->height();
+    camera_orientation_widget->setPhoto(current_camera);
+    const int photo_width = cameraGetWidth(current_camera);
+    const int photo_height = cameraGetHeight(current_camera);
     double photo_aspect = static_cast<double>(photo_width) / photo_height;
     double available_aspect = static_cast<double>(camera_available_width) / camera_available_height;
     if (available_aspect > photo_aspect)
@@ -567,7 +550,7 @@ void MainWindow::addVertexListWidgetItem(const Vertex::Ptr& vertex)
     }
 }
 
-void MainWindow::fillCurrentVertexWidget()
+void MainWindow::fillCurrentVertexListWidget()
 {
     current_vertex_list_widget->clear();
     current_vertex_list_item_to_vertex_position.clear();
@@ -577,7 +560,7 @@ void MainWindow::fillCurrentVertexWidget()
     }
 }
 
-void MainWindow::addCurrentVertexWidgetItem(const VertexPositionInfo::Ptr& vertex_position)
+void MainWindow::addCurrentVertexListWidgetItem(const VertexPositionInfo::Ptr& vertex_position)
 {
     QWidget* widget = new QWidget(current_vertex_list_widget);
     QLabel* label0 = new QLabel(QString("Vertex #%1").arg(vertex_position->vertex_id), current_vertex_list_widget);

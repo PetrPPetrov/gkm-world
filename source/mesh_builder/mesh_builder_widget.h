@@ -24,7 +24,7 @@ public:
     MeshBuilderWidget(QWidget *parent);
     void setMeshProject(const MeshProject::Ptr& mesh_project);
     void updateLineSetGeometry();
-    void setPhoto(const CameraInfo::Ptr& camera_info);
+    void setPhoto(const Camera::Ptr& camera);
     void updatePhotoTexture();
 
 protected:
@@ -44,7 +44,7 @@ private:
 
 private:
     MeshProject::Ptr mesh_project;
-    CameraInfo::Ptr camera_info;
+    Camera::Ptr current_camera;
 
     std::unique_ptr<QOpenGLShaderProgram> line_set_program;
     std::unique_ptr<QOpenGLVertexArrayObject> line_set_vao;

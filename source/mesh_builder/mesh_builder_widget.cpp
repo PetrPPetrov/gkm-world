@@ -36,7 +36,7 @@ void MeshBuilderWidget::updateLineSetGeometry()
     fillLineSet(
         vertex_buffer,
         mesh_project,
-        camera_info,
+        current_camera,
         aux_geom_line_set_vbo_start,
         aux_geom_line_set_vbo_size,
         hub_points_line_set_vbo_start,
@@ -54,17 +54,17 @@ void MeshBuilderWidget::updateLineSetGeometry()
     }
 }
 
-void MeshBuilderWidget::setPhoto(const CameraInfo::Ptr& camera_info_)
+void MeshBuilderWidget::setPhoto(const Camera::Ptr& camera)
 {
-    camera_info = camera_info_;
-    if (camera_info)
+    current_camera = camera;
+    if (current_camera)
     {
-        viewer_previous_pos = viewer_pos = to_qt(camera_info->viewer_pos);
-        viewer_previous_target = viewer_target = to_qt(camera_info->viewer_target);
-        viewer_previous_up = viewer_up = to_qt(camera_info->viewer_up);
+        viewer_previous_pos = viewer_pos = to_qt(current_camera->viewer_pos);
+        viewer_previous_target = viewer_target = to_qt(current_camera->viewer_target);
+        viewer_previous_up = viewer_up = to_qt(current_camera->viewer_up);
         left_mouse_pressed = false;
         right_mouse_pressed = false;
-        rotation_radius = camera_info->rotation_radius;
+        rotation_radius = current_camera->rotation_radius;
     }
     else
     {
@@ -75,10 +75,10 @@ void MeshBuilderWidget::setPhoto(const CameraInfo::Ptr& camera_info_)
 void MeshBuilderWidget::updatePhotoTexture()
 {
     int rotation = 0;
-    if (camera_info)
+    if (current_camera)
     {
-        photo_texture = std::make_unique<QOpenGLTexture>(*camera_info->photo_image);
-        rotation = camera_info->rotation;
+        photo_texture = std::make_unique<QOpenGLTexture>(*current_camera->photo_image);
+        rotation = current_camera->rotation;
     }
     else
     {
@@ -87,8 +87,8 @@ void MeshBuilderWidget::updatePhotoTexture()
         photo_texture = std::make_unique<QOpenGLTexture>(dummy_image);
     }
 
-    photo_width = camera_info ? camera_info->width() : photo_texture->width();
-    photo_height = camera_info ? camera_info->height() : photo_texture->height();;
+    photo_width = current_camera ? getCameraWidth(current_camera) : photo_texture->width();
+    photo_height = current_camera ? getCameraHeight(current_camera) : photo_texture->height();;
 
     photo_x_low = -photo_width / 2;
     photo_x_high = photo_x_low + photo_width;
@@ -265,9 +265,9 @@ void MeshBuilderWidget::initializePhoto()
 void MeshBuilderWidget::paintGL()
 {
     float fov = 50.0;
-    if (camera_info)
+    if (current_camera)
     {
-        fov = static_cast<float>(camera_info->fov);
+        fov = static_cast<float>(current_camera->fov);
     }
 
     const int viewport_width = width();
@@ -322,7 +322,7 @@ void MeshBuilderWidget::paintGL()
 
 void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
 {
-    if (camera_info && camera_info->locked)
+    if (current_camera && current_camera->locked)
     {
         resetNavigation();
         return;
@@ -373,7 +373,7 @@ void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
 
 void MeshBuilderWidget::mousePressEvent(QMouseEvent* event)
 {
-    if (camera_info && camera_info->locked)
+    if (current_camera && current_camera->locked)
     {
         resetNavigation();
         g_main_window->setVertexPosition(event->localPos());
@@ -404,7 +404,7 @@ void MeshBuilderWidget::mousePressEvent(QMouseEvent* event)
 
 void MeshBuilderWidget::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (camera_info && camera_info->locked)
+    if (current_camera && current_camera->locked)
     {
         resetNavigation();
         return;
@@ -434,7 +434,7 @@ void MeshBuilderWidget::mouseReleaseEvent(QMouseEvent* event)
 
 void MeshBuilderWidget::wheelEvent(QWheelEvent* event)
 {
-    if (camera_info && camera_info->locked)
+    if (current_camera && current_camera->locked)
     {
         resetNavigation();
         return;
@@ -470,12 +470,12 @@ void MeshBuilderWidget::setDefaultCamera()
 
 void MeshBuilderWidget::updateCameraInfo()
 {
-    if (camera_info)
+    if (current_camera)
     {
-        camera_info->viewer_pos = to_eigen(viewer_pos);
-        camera_info->viewer_target = to_eigen(viewer_target);
-        camera_info->viewer_up = to_eigen(viewer_up);
-        camera_info->rotation_radius = rotation_radius;
+        current_camera->viewer_pos = to_eigen(viewer_pos);
+        current_camera->viewer_target = to_eigen(viewer_target);
+        current_camera->viewer_up = to_eigen(viewer_up);
+        current_camera->rotation_radius = rotation_radius;
         if (mesh_project)
         {
             mesh_project->dirty = true;

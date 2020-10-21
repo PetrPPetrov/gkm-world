@@ -65,11 +65,11 @@ static inline bool calculateLineLineIntersect(
     return true;
 }
 
-CameraInfo::Ptr getCamera(const MeshProject::Ptr& mesh_project, int camera_index)
+Camera::Ptr getCamera(const MeshProject::Ptr& mesh_project, int camera_index)
 {
-    auto& cameras = mesh_project->build_info->cameras_info;
+    auto& cameras = mesh_project->cameras;
     const int camera_count = static_cast<int>(cameras.size());
-    CameraInfo::Ptr used_camera = nullptr;
+    Camera::Ptr used_camera = nullptr;
     if (camera_index >= 0 && camera_index < camera_count)
     {
         used_camera = cameras[camera_index];
@@ -78,10 +78,12 @@ CameraInfo::Ptr getCamera(const MeshProject::Ptr& mesh_project, int camera_index
 }
 
 void calculateVertexLinePoints(
-    const CameraInfo::Ptr& camera, int x, int y,
+    const Camera::Ptr& camera, int x, int y,
     Eigen::Vector3d& start, Eigen::Vector3d& finish)
 {
-    const double camera_aspect = static_cast<double>(camera->width()) / camera->height();
+    const int camera_width = getCameraWidth(camera);
+    const int camera_height = getCameraHeight(camera);
+    const double camera_aspect = static_cast<double>(camera_width / camera_height);
     const double forward_offset = 16.0;
     const double full_offset_y = forward_offset * tan(GRAD_TO_RAD * camera->fov / 2.0);
     const double full_offset_x = full_offset_y * camera_aspect;
@@ -89,8 +91,8 @@ void calculateVertexLinePoints(
     Eigen::Vector3d forward = (camera->viewer_target - pos).normalized() * forward_offset;
     Eigen::Vector3d up = camera->viewer_up.normalized() * full_offset_y;
     Eigen::Vector3d right = forward.cross(up).normalized() * full_offset_x;
-    const double rel_x = 2.0 * x / camera->width() - 1.0;
-    const double rel_y = 2.0 * y / camera->height() - 1.0;
+    const double rel_x = 2.0 * x / camera_width - 1.0;
+    const double rel_y = 2.0 * y / camera_height - 1.0;
     Eigen::Vector3d vertex_direction = forward + right * rel_x + up * rel_y;
     Eigen::Vector3d vertex_dir = vertex_direction.normalized() * 2048.0;
     Eigen::Vector3d end_vertex_line = pos + vertex_dir;
@@ -126,13 +128,13 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
     }
 
     Mesh::Ptr new_mesh = std::make_shared<Mesh>();
-    const size_t source_vertex_count = mesh_project->build_info->vertices.size();
+    const size_t source_vertex_count = mesh_project->vertices.size();
     new_mesh->vertices.reserve(source_vertex_count);
     new_mesh->old_to_new_id_map.resize(source_vertex_count, source_vertex_count);
 
     for (size_t i = 0; i < source_vertex_count; ++i)
     {
-        const auto& vertex = mesh_project->build_info->vertices[i];
+        const auto& vertex = mesh_project->vertices[i];
         if (vertex->id == -1)
         {
             continue;

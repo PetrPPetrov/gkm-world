@@ -51,27 +51,27 @@ private:
 
     void loadProject(const char* filename);
     void loadPhotos();
-    void updateProject();
+    void updateCameraWidget();
     void updateCameraWidgetSize();
     void updateCameraWidgetAvailableSize();
 
     void fillPhotoListWidget();
-    void addPhotoListWidgetItem(const CameraInfo::Ptr& camera_info);
+    void addPhotoListWidgetItem(const Camera::Ptr& camera);
     void fillAuxGeometryListWidget();
-    void addAuxGeometryListWidgetItem(const AuxGeometryBox::Ptr& aux_box);
+    void addAuxGeometryListWidgetItem(const AuxBox::Ptr& aux_box);
     void fillVertexListWidget();
     void addVertexListWidgetItem(const Vertex::Ptr& vertex);
-    void fillCurrentVertexWidget();
-    void addCurrentVertexWidgetItem(const VertexPositionInfo::Ptr& vertex_position);
+    void fillCurrentVertexListWidget();
+    void addCurrentVertexListWidgetItem(const VertexPhotoPosition::Ptr& vertex_position);
     void fillTriangleListWidget();
     void addTriangleListWidgetItem(const Triangle::Ptr& triangle);
     void fillCurrentTriangleListWidget();
     void addCurrentTriangleListWidgetItem(int vertex_id);
 
     int getCurrentCameraIndex() const;
-    AuxGeometryBox::Ptr getAuxBox(int row_index) const;
+    AuxBox::Ptr getAuxBox(int row_index) const;
     Vertex::Ptr getVertex(int row_index) const;
-    VertexPositionInfo::Ptr getCurrentVertex(int row_index) const;
+    VertexPhotoPosition::Ptr getCurrentVertex(int row_index) const;
     Triangle::Ptr getTriangle(int row_index) const;
 
     void onNewProject();
@@ -160,30 +160,29 @@ private:
 
     QListWidget* photo_list_widget = nullptr;
     QMdiSubWindow* photo_list_window = nullptr;
+    std::unordered_map<QListWidgetItem*, Camera::Ptr> photo_list_item_to_camera;
 
     QListWidget* aux_geometry_list_widget = nullptr;
     QMdiSubWindow* aux_geometry_list_window = nullptr;
-    std::unordered_map<QListWidgetItem*, AuxGeometryBox::Ptr> aux_geom_list_item_to_box;
+    std::unordered_map<QListWidgetItem*, AuxBox::Ptr> aux_geom_list_item_to_box;
 
     QListWidget* vertex_list_widget = nullptr;
     QMdiSubWindow* vertex_list_window = nullptr;
-    std::unordered_map<QListWidgetItem*, unsigned> vertex_list_item_to_vertex_id;
+    std::unordered_map<QListWidgetItem*, Vertex::Ptr> vertex_list_item_to_vertex;
 
     QListWidget* current_vertex_list_widget = nullptr;
     QMdiSubWindow* current_vertex_list_window = nullptr;
-    std::unordered_map<QListWidgetItem*, VertexPositionInfo::Ptr> current_vertex_list_item_to_vertex_position;
+    std::unordered_map<QListWidgetItem*, VertexPhotoPosition::Ptr> current_vertex_list_item_to_vertex_position;
 
     QListWidget* triangle_list_widget = nullptr;
     QMdiSubWindow* triangle_list_window = nullptr;
-    std::unordered_map<QListWidgetItem*, unsigned> triangle_list_item_to_triangle_id;
+    std::unordered_map<QListWidgetItem*, Triangle::Ptr> triangle_list_item_to_triangle;
 
     QListWidget* current_triangle_list_widget = nullptr;
     QMdiSubWindow* current_triangle_list_window = nullptr;
 
-    const std::string auto_save_file_name = "autosave.gmb";
-
     MeshProject::Ptr mesh_project;
-    CameraInfo::Ptr camera_info;
+    Camera::Ptr current_camera;
 };
 
 extern MainWindow* g_main_window;

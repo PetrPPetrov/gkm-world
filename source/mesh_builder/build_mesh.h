@@ -5,10 +5,10 @@
 
 #include "mesh_project.h"
 
-CameraInfo::Ptr getCamera(const MeshProject::Ptr& mesh_project, int camera_index);
+Camera::Ptr getCamera(const MeshProject::Ptr& mesh_project, int camera_index);
 
 void calculateVertexLinePoints(
-    const CameraInfo::Ptr& camera, int x, int y,
+    const Camera::Ptr& camera, int x, int y,
     Eigen::Vector3d& start, Eigen::Vector3d& finish);
 
 void buildMesh(const MeshProject::Ptr& mesh_project);
