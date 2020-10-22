@@ -46,11 +46,9 @@ protected:
 private:
     void dirtyProject();
 
-    void addPhoto(const char* filename);
-    void addAuxBox();
-
     void loadProject(const char* filename);
     void loadPhotos();
+    void updateProject();
     void updateCameraWidget();
     void updateCameraWidgetSize();
     void updateCameraWidgetAvailableSize();
@@ -68,7 +66,7 @@ private:
     void fillCurrentTriangleListWidget();
     void addCurrentTriangleListWidgetItem(int vertex_id);
 
-    int getCurrentCameraIndex() const;
+    Camera::Ptr getCamera(int row_index) const;
     AuxBox::Ptr getAuxBox(int row_index) const;
     Vertex::Ptr getVertex(int row_index) const;
     VertexPhotoPosition::Ptr getCurrentVertex(int row_index) const;
@@ -118,6 +116,10 @@ private:
 
     void closeEvent(QCloseEvent* event);
     void resizeEvent(QResizeEvent* event);
+
+    void saveSelection();
+    void restoreSelection();
+    void restoreSelection(int saved_index, int saved_size, QListWidget* list_widget);
 
 private:
     bool first_show = true;
@@ -181,8 +183,27 @@ private:
     QListWidget* current_triangle_list_widget = nullptr;
     QMdiSubWindow* current_triangle_list_window = nullptr;
 
+    int saved_photo_list_selection;
+    int saved_aux_geometry_list_selection;
+    int saved_vertex_list_selection;
+    int saved_current_vertex_list_selection;
+    int saved_triangle_list_selection;
+    int saved_current_triangle_list_selection;
+
+    int saved_photo_list_size;
+    int saved_aux_geometry_list_size;
+    int saved_vertex_list_size;
+    int saved_current_vertex_list_size;
+    int saved_triangle_list_size;
+    int saved_current_triangle_list_size;
+
     MeshProject::Ptr mesh_project;
     Camera::Ptr current_camera;
+    AuxBox::Ptr current_aux_box;
+    Vertex::Ptr current_vertex;
+    VertexPhotoPosition::Ptr current_vertex_photo_position;
+    Triangle::Ptr current_triangle;
+    int current_triangle_item = -1;
 };
 
 extern MainWindow* g_main_window;

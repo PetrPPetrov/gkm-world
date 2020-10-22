@@ -29,7 +29,7 @@ struct VertexPhotoPosition
 {
     typedef std::shared_ptr<VertexPhotoPosition> Ptr;
 
-    unsigned camera_index = 0;
+    unsigned camera_id = 0;
     unsigned vertex_id = 0;
     int x = 0;
     int y = 0;
@@ -72,6 +72,7 @@ struct Camera
 
 int cameraGetWidth(const Camera::Ptr& camera);
 int cameraGetHeight(const Camera::Ptr& camera);
+int cameraGetRotationIndex(const Camera::Ptr& camera);
 
 struct MeshProject
 {
@@ -91,5 +92,8 @@ struct MeshProject
 MeshProject::Ptr loadMeshProject(const std::string& file_name);
 void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_name);
 
-Camera::Ptr projectAddPhoto(const MeshProject::Ptr& project, const char* filename);
-AuxBox::Ptr projectAddAuxBox(const MeshProject::Ptr& project);
+void projectAddPhoto(const MeshProject::Ptr& project, const char* filename);
+void projectRemovePhoto(const MeshProject::Ptr& project, const Camera::Ptr& camera);
+
+void projectAddAuxBox(const MeshProject::Ptr& project);
+void projectRemoveAuxBox(const MeshProject::Ptr& project, const AuxBox::Ptr& aux_box);

@@ -29,6 +29,22 @@ int cameraGetHeight(const Camera::Ptr& camera)
     }
 }
 
+int cameraGetRotationIndex(const Camera::Ptr& camera)
+{
+    switch (camera->rotation)
+    {
+    default:
+    case 0:
+        return 0;
+    case 90:
+        return 1;
+    case 180:
+        return 2;
+    case 270:
+        return 3;
+    }
+}
+
 static std::string loadToken(const std::string& expected_line, std::ifstream& file_in)
 {
     std::string read_line;
@@ -138,8 +154,8 @@ static Vertex::Ptr loadVertex(std::ifstream& file_in)
     for (size_t i = 0; i < count; ++i)
     {
         auto new_info = std::make_shared<VertexPhotoPosition>();
-        loadToken("camera_index", file_in);
-        file_in >> new_info->camera_index;
+        loadToken("camera_id", file_in);
+        file_in >> new_info->camera_id;
         loadToken("vertex_position_x", file_in);
         file_in >> new_info->x;
         loadToken("vertex_position_y", file_in);
@@ -157,7 +173,7 @@ static void saveVertex(const Vertex::Ptr& vertex, std::ofstream& file_out)
     file_out << "vertex_position_count\n" << vertex->positions.size() << "\n";
     for (auto vertex_position_info : vertex->positions)
     {
-        file_out << "camera_index\n" << vertex_position_info->camera_index << "\n";
+        file_out << "camera_id\n" << vertex_position_info->camera_id << "\n";
         file_out << "vertex_position_x\n" << vertex_position_info->x << "\n";
         file_out << "vertex_position_y\n" << vertex_position_info->y << "\n";
     }
@@ -190,11 +206,14 @@ static void linkProject(const MeshProject::Ptr& project)
 {
     for (auto& vertex : project->vertices)
     {
-        for (auto vertex_position : vertex->positions)
+        for (auto& vertex_position : vertex->positions)
         {
-            if (vertex_position->camera_index < project->cameras.size())
+            for (auto& camera : project->cameras)
             {
-                project->cameras[vertex_position->camera_index]->positions.push_back(vertex_position);
+                if (vertex_position->camera_id == camera->id)
+                {
+                    camera->positions.push_back(vertex_position);
+                }
             }
         }
     }
@@ -257,20 +276,58 @@ void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_na
     }
 }
 
-Camera::Ptr projectAddPhoto(const MeshProject::Ptr& project, const char* filename)
+void projectAddPhoto(const MeshProject::Ptr& project, const char* filename)
 {
+    std::unordered_set<int> used_id;
+    for (auto& camera : project->cameras)
+    {
+        used_id.emplace(camera->id);
+    }
+    int new_id = 0;
+    while (used_id.find(new_id) != used_id.end())
+    {
+        ++new_id;
+    }
     auto new_camera = std::make_shared<Camera>();
     new_camera->photo_image_path = filename;
     new_camera->viewer_pos = Eigen::Vector3d(3, 3, 3);
     new_camera->viewer_target = Eigen::Vector3d(0, 0, 0);
     new_camera->viewer_up = Eigen::Vector3d(0, 0, 1);
     new_camera->rotation_radius = (new_camera->viewer_pos - new_camera->viewer_target).norm();
-    new_camera->id = static_cast<int>(project->cameras.size());
+    new_camera->id = new_id;
     project->cameras.push_back(new_camera);
-    return new_camera;
 }
 
-AuxBox::Ptr projectAddAuxBox(const MeshProject::Ptr& project)
+void projectRemovePhoto(const MeshProject::Ptr& project, const Camera::Ptr& camera)
+{
+    auto cur_camera_it = project->cameras.begin();
+    while (cur_camera_it != project->cameras.end())
+    {
+        if (*cur_camera_it == camera)
+        {
+            project->cameras.erase(cur_camera_it);
+            break;
+        }
+    }
+    for (auto vertex : project->vertices)
+    {
+        auto vertex_position_it = vertex->positions.begin();
+        while (vertex_position_it != vertex->positions.end())
+        {
+            if ((*vertex_position_it)->camera_id == camera->id)
+            {
+                vertex->positions.erase(vertex_position_it);
+                vertex_position_it = vertex->positions.begin();
+            }
+            else
+            {
+                ++vertex_position_it;
+            }
+        }
+    }
+}
+
+void projectAddAuxBox(const MeshProject::Ptr& project)
 {
     auto& boxes = project->aux_geometry->boxes;
     const unsigned count = static_cast<unsigned>(boxes.size());
@@ -293,5 +350,9 @@ AuxBox::Ptr projectAddAuxBox(const MeshProject::Ptr& project)
 
     new_box->position = Eigen::Vector3d(0, 0, 0);
     new_box->size = Eigen::Vector3d(1, 1, 1);
-    return new_box;
+}
+
+void projectRemoveAuxBox(const MeshProject::Ptr& project, const AuxBox::Ptr& aux_box)
+{
+    aux_box->id = -1;
 }
