@@ -134,13 +134,12 @@ void MainWindow::initializeMenu()
     QMenu* build_menu = menuBar()->addMenu("Build");
 
     build_mesh_act = new QAction("Build Mesh", this);
-    build_mesh_act->setEnabled(true);
+    build_mesh_act->setEnabled(false);
     connect(build_mesh_act, &QAction::triggered, this, &MainWindow::onBuildMesh);
     build_menu->addAction(build_mesh_act);
 
     build_menu->addSeparator();
     set_output_file_act = new QAction("Set Output File", this);
-    set_output_file_act->setEnabled(true);
     connect(set_output_file_act, &QAction::triggered, this, &MainWindow::onSetOutputFile);
     build_menu->addAction(set_output_file_act);
 }
@@ -187,6 +186,8 @@ void MainWindow::initializeWidgets()
     camera_orientation_widget = new MeshBuilderWidget(main_window.centralwidget);
     camera_orientation_window = main_window.centralwidget->addSubWindow(camera_orientation_widget);
     camera_orientation_window->setWindowTitle("3D Camera for Photo");
+    camera_orientation_widget->setMinimumWidth(camera_minimum_width);
+    camera_orientation_widget->setMinimumHeight(camera_minimum_height);
 }
 
 void MainWindow::updateWindowTitle()
@@ -332,12 +333,26 @@ void MainWindow::updateProject()
 
     loadPhotos();
     updateCameraWidget();
+    updateActionState();
     updateWindowTitle();
+}
+
+void MainWindow::updateActionState()
+{
+    remove_photo_act->setEnabled(current_camera ? true : false);
+    remove_aux_geom_act->setEnabled(current_aux_box ? true : false);
+    add_current_vertex_act->setEnabled(current_camera && current_vertex);
+    remove_vertex_act->setEnabled(current_vertex ? true : false);
+    remove_current_vertex_act->setEnabled(current_vertex_photo_position ? true : false);
+    remove_triangle_act->setEnabled(current_triangle ? true : false);
+    use_selected_vertex_in_triangle_act->setEnabled(current_vertex && current_triangle && current_triangle_item >= 0 && current_triangle_item <= 2);
+    build_mesh_act->setEnabled(!mesh_project->output_file_name.empty());
 }
 
 void MainWindow::updateCameraWidget()
 {
     camera_orientation_widget->setMeshProject(mesh_project);
+    camera_orientation_widget->setPhoto(current_camera);
     camera_orientation_widget->updatePhotoTexture();
     camera_orientation_widget->updateLineSetGeometry();
     camera_orientation_widget->update();
@@ -345,24 +360,33 @@ void MainWindow::updateCameraWidget()
 
 void MainWindow::updateCameraWidgetSize()
 {
-    camera_orientation_widget->setPhoto(current_camera);
-    const int photo_width = cameraGetWidth(current_camera);
-    const int photo_height = cameraGetHeight(current_camera);
-    double photo_aspect = static_cast<double>(photo_width) / photo_height;
-    double available_aspect = static_cast<double>(camera_available_width) / camera_available_height;
-    if (available_aspect > photo_aspect)
+    if (current_camera)
     {
-        camera_orientation_window->resize(QSize(static_cast<int>(camera_available_height * photo_aspect), camera_available_height));
+        camera_orientation_widget->setPhoto(current_camera);
+        const int photo_width = cameraGetWidth(current_camera);
+        const int photo_height = cameraGetHeight(current_camera);
+        double photo_aspect = static_cast<double>(photo_width) / photo_height;
+        double available_aspect = static_cast<double>(camera_available_width) / camera_available_height;
+        if (available_aspect > photo_aspect)
+        {
+            camera_orientation_window->resize(QSize(static_cast<int>(camera_available_height * photo_aspect), camera_available_height));
+        }
+        else
+        {
+            camera_orientation_window->resize(QSize(camera_available_width, static_cast<int>(camera_available_width / photo_aspect)));
+        }
+        camera_orientation_widget->updatePhotoTexture();
+        camera_orientation_widget->update();
+
+        camera_scale_x = static_cast<double>(photo_width) / camera_orientation_widget->width();
+        camera_scale_y = static_cast<double>(photo_height) / camera_orientation_widget->height();
     }
     else
     {
-        camera_orientation_window->resize(QSize(camera_available_width, static_cast<int>(camera_available_width / photo_aspect)));
+        camera_orientation_window->resize(QSize(camera_available_width, camera_available_height));
+        camera_scale_x = 1.0;
+        camera_scale_y = 1.0;
     }
-    camera_orientation_widget->updatePhotoTexture();
-    camera_orientation_widget->update();
-
-    camera_scale_x = static_cast<double>(photo_width) / camera_orientation_widget->width();
-    camera_scale_y = static_cast<double>(photo_height) / camera_orientation_widget->height();
 }
 
 void MainWindow::updateCameraWidgetAvailableSize()
@@ -447,42 +471,54 @@ void MainWindow::addAuxGeometryListWidgetItem(const AuxBox::Ptr& aux_box)
     connect(posx, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxPosXChanged);
     posx->setRange(-1000, 1000);
     posx->setSingleStep(0.01);
+    posx->blockSignals(true);
     posx->setValue(aux_box->position.x());
+    posx->blockSignals(false);
 
     QLabel* posy_label = new QLabel("Pos.Y", aux_geometry_list_widget);
     QDoubleSpinBox* posy = new QDoubleSpinBox(aux_geometry_list_widget);
     connect(posy, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxPosYChanged);
     posy->setRange(-1000, 1000);
     posy->setSingleStep(0.01);
+    posy->blockSignals(true);
     posy->setValue(aux_box->position.y());
+    posy->blockSignals(false);
 
     QLabel* posz_label = new QLabel("Pos.Z", aux_geometry_list_widget);
     QDoubleSpinBox* posz = new QDoubleSpinBox(aux_geometry_list_widget);
     connect(posz, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxPosZChanged);
     posz->setRange(-1000, 1000);
     posz->setSingleStep(0.01);
+    posz->blockSignals(true);
     posz->setValue(aux_box->position.z());
+    posz->blockSignals(false);
 
     QLabel* sizex_label = new QLabel("Size.X", aux_geometry_list_widget);
     QDoubleSpinBox* sizex = new QDoubleSpinBox(aux_geometry_list_widget);
     connect(sizex, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxSizeXChanged);
     sizex->setRange(-1000, 1000);
     sizex->setSingleStep(0.01);
+    sizex->blockSignals(true);
     sizex->setValue(aux_box->size.x());
+    sizex->blockSignals(false);
 
     QLabel* sizey_label = new QLabel("Size.Y", aux_geometry_list_widget);
     QDoubleSpinBox* sizey = new QDoubleSpinBox(aux_geometry_list_widget);
     connect(sizey, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxSizeYChanged);
     sizey->setRange(-1000, 1000);
     sizey->setSingleStep(0.01);
+    sizey->blockSignals(true);
     sizey->setValue(aux_box->size.y());
+    sizey->blockSignals(false);
 
     QLabel* sizez_label = new QLabel("Size.Z", aux_geometry_list_widget);
     QDoubleSpinBox* sizez = new QDoubleSpinBox(aux_geometry_list_widget);
     connect(sizez, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &MainWindow::onAuxBoxSizeZChanged);
     sizez->setRange(-1000, 1000);
     sizez->setSingleStep(0.01);
+    sizez->blockSignals(true);
     sizez->setValue(aux_box->size.z());
+    sizez->blockSignals(false);
 
     QGridLayout* layout = new QGridLayout(aux_geometry_list_widget);
     layout->addWidget(label, 0, 0);
@@ -731,12 +767,16 @@ void MainWindow::onAddPhoto()
     QString filename = QFileDialog::getOpenFileName(this, "Select photo", QDir::currentPath(), "JPEG files (*.jpg *.jpeg);; PNG files (*.png)");
     if (!filename.isNull() && fileExists(filename.toStdString()))
     {
-        projectAddPhoto(mesh_project, filename.toStdString().c_str());
         dirtyProject();
+        current_camera = projectAddPhoto(mesh_project, filename.toStdString().c_str());
+        loadPhotos();
+        addPhotoListWidgetItem(current_camera);
+        photo_list_widget->setCurrentRow(photo_list_widget->count() - 1);
 
-        saveSelection();
-        updateProject();
-        restoreSelection();
+        updateCameraWidget();
+        updateCameraWidgetSize();
+        updateWindowTitle();
+        updateActionState();
     }
 }
 
@@ -750,16 +790,14 @@ void MainWindow::onRemovePhoto()
     reply = QMessageBox::question(this, "Confirmation", format_string.arg(photo_name), QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::Yes)
     {
+        dirtyProject();
         projectRemovePhoto(mesh_project, current_camera);
         auto selected_items = photo_list_widget->selectedItems();
         current_vertex_photo_position = nullptr;
-        current_vertex_list_widget->clearSelection();
-        dirtyProject();
 
-        saveSelection();
+        photoSaveSelection();
         qDeleteAll(selected_items);
-        updateProject();
-        restoreSelection();
+        photoRestoreSelection();
     }
 }
 
@@ -787,27 +825,7 @@ void MainWindow::onRemoveAuxGeom()
 
 void MainWindow::onAddVertex()
 {
-    auto& vertices = mesh_project->vertices;
-    const unsigned count = static_cast<unsigned>(vertices.size());
-    bool added = false;
-    for (unsigned i = 0; i < count; ++i)
-    {
-        if (vertices[i]->id == -1)
-        {
-            // Found free vertex
-            vertices[i]->id = i;
-            vertices[i]->positions.clear();
-            added = true;
-            break;
-        }
-    }
-    if (!added)
-    {
-        auto new_vertex = std::make_shared<Vertex>();
-        new_vertex->id = count;
-        vertices.push_back(new_vertex);
-    }
-
+    projectAddVertex(mesh_project);
     dirtyProject();
 
     saveSelection();
@@ -817,130 +835,68 @@ void MainWindow::onAddVertex()
 
 void MainWindow::onRemoveVertex()
 {
-    const int index = vertex_list_widget->currentRow();
-    auto selected_vertex = getVertex(index);
-    if (selected_vertex)
-    {
-        dirtyProject();
-        selected_vertex->id = -1;
-        fillVertexListWidget();
-        if (index < vertex_list_widget->count())
-        {
-            vertex_list_widget->setCurrentRow(index);
-        }
-        else if (vertex_list_widget->count() > 0)
-        {
-            vertex_list_widget->setCurrentRow(vertex_list_widget->count() - 1);
-        }
-        else
-        {
-            vertex_list_widget->clearSelection();
-        }
-    }
+    projectRemoveVertex(mesh_project, current_vertex);
+    auto selected_items = vertex_list_widget->selectedItems();
+    dirtyProject();
+
+    saveSelection();
+    qDeleteAll(selected_items);
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onAddCurrentVertex()
 {
-    const int index = vertex_list_widget->currentRow();
-    auto selected_vertex = getVertex(index);
-    if (selected_vertex)
-    {
-        for (auto& vertex_position : camera_info->vertex_positions)
-        {
-            if (vertex_position->vertex_id == selected_vertex->id)
-            {
-                return; // Selected vertex is always in the current vertex list
-            }
-        }
-        if (selected_vertex->positions.size() >= 2)
-        {
-            return;
-        }
-        auto new_position_info = std::make_shared<VertexPositionInfo>();
-        new_position_info->vertex_id = selected_vertex->id;
-        new_position_info->camera_index = getCurrentCameraIndex();
-        camera_info->vertex_positions.push_back(new_position_info);
-        selected_vertex->positions.push_back(new_position_info);
-        dirtyProject();
-        fillCurrentVertexWidget();
-    }
+    projectAddCurrentVertex(mesh_project, current_camera, current_vertex);
+    dirtyProject();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onRemoveCurrentVertex()
 {
+    projectRemoveCurrentVertex(mesh_project, current_camera, current_vertex);
+    auto selected_items = current_vertex_list_widget->selectedItems();
+    dirtyProject();
+
+    saveSelection();
+    qDeleteAll(selected_items);
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onAddTriangle()
 {
+    projectAddTriangle(mesh_project);
     dirtyProject();
-    auto& triangles = mesh_project->build_info->triangles;
-    const unsigned count = static_cast<unsigned>(triangles.size());
-    bool added = false;
-    for (unsigned i = 0; i < count; ++i)
-    {
-        if (triangles[i]->id == -1)
-        {
-            // Found free vertex
-            triangles[i]->id = i;
-            triangles[i]->vertices[0] = -1;
-            triangles[i]->vertices[1] = -1;
-            triangles[i]->vertices[2] = -1;
-            added = true;
-            break;
-        }
-    }
-    if (!added)
-    {
-        auto new_triangle = std::make_shared<Triangle>();
-        new_triangle->id = count;
-        triangles.push_back(new_triangle);
-    }
 
-    fillTriangleListWidget();
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onRemoveTriangle()
 {
-    const int index = triangle_list_widget->currentRow();
-    auto selected_triangle = getTriangle(index);
-    if (selected_triangle)
-    {
-        dirtyProject();
-        selected_triangle->id = -1;
-        fillTriangleListWidget();
-        if (index < triangle_list_widget->count())
-        {
-            triangle_list_widget->setCurrentRow(index);
-        }
-        else if (triangle_list_widget->count() > 0)
-        {
-            triangle_list_widget->setCurrentRow(triangle_list_widget->count() - 1);
-        }
-        else
-        {
-            triangle_list_widget->clearSelection();
-        }
-    }
+    projectRemoveTriangle(mesh_project, current_triangle);
+    auto selected_items = current_vertex_list_widget->selectedItems();
+    dirtyProject();
+
+    saveSelection();
+    qDeleteAll(selected_items);
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onUseVertex()
 {
-    const int triangle_index = triangle_list_widget->currentRow();
-    auto selected_triangle = getTriangle(triangle_index);
-    if (selected_triangle)
-    {
-        const int vertex_in_triange_index = current_triangle_list_widget->currentRow();
-        if (vertex_in_triange_index >= 0)
-        {
-            auto selected_vertex = getVertex(vertex_list_widget->currentRow());
-            if (selected_vertex)
-            {
-                dirtyProject();
-                selected_triangle->vertices[vertex_in_triange_index] = selected_vertex->id;
-                fillCurrentTriangleListWidget();
-            }
-        }
-    }
+    projectUseVertex(mesh_project, current_triangle, current_triangle_item, current_vertex);
+    dirtyProject();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onBuildMesh()
@@ -971,12 +927,12 @@ void MainWindow::onSetOutputFile()
 
 void MainWindow::onLockedChanged(int state)
 {
-    int index = photo_list_widget->currentRow();
-    if (index >= 0 && index < mesh_project->build_info->cameras_info.size())
-    {
-        mesh_project->build_info->cameras_info[index]->locked = state == Qt::Checked;
-        dirtyProject();
-    }
+    current_camera->locked = state == Qt::Checked;
+    dirtyProject();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onRotationChanged(int rotation_index)
@@ -998,130 +954,116 @@ void MainWindow::onRotationChanged(int rotation_index)
         new_rotation = 270;
         break;
     }
-    camera_info->rotation = new_rotation;
+    current_camera->rotation = new_rotation;
     dirtyProject();
+
+    saveSelection();
+    updateProject();
     updateCameraWidgetSize();
+    restoreSelection();
 }
 
 void MainWindow::onFovChanged(double value)
 {
-    camera_info->fov = value;
+    current_camera->fov = value;
     dirtyProject();
-    camera_orientation_widget->update();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onAuxBoxPosXChanged(double value)
 {
-    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
-    if (selected_box)
-    {
-        selected_box->position.setX(value);
-        dirtyProject();
-        camera_orientation_widget->updateLineSetGeometry();
-        camera_orientation_widget->update();
-    }
+    current_aux_box->position.x() = value;
+    dirtyProject();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onAuxBoxPosYChanged(double value)
 {
-    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
-    if (selected_box)
-    {
-        selected_box->position.setY(value);
-        dirtyProject();
-        camera_orientation_widget->updateLineSetGeometry();
-        camera_orientation_widget->update();
-    }
+    current_aux_box->position.y() = value;
+    dirtyProject();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onAuxBoxPosZChanged(double value)
 {
-    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
-    if (selected_box)
-    {
-        selected_box->position.setZ(value);
-        dirtyProject();
-        camera_orientation_widget->updateLineSetGeometry();
-        camera_orientation_widget->update();
-    }
+    current_aux_box->position.z() = value;
+    dirtyProject();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onAuxBoxSizeXChanged(double value)
 {
-    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
-    if (selected_box)
-    {
-        selected_box->size.setX(value);
-        dirtyProject();
-        camera_orientation_widget->updateLineSetGeometry();
-        camera_orientation_widget->update();
-    }
+    current_aux_box->size.x() = value;
+    dirtyProject();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onAuxBoxSizeYChanged(double value)
 {
-    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
-    if (selected_box)
-    {
-        selected_box->size.setY(value);
-        dirtyProject();
-        camera_orientation_widget->updateLineSetGeometry();
-        camera_orientation_widget->update();
-    }
+    current_aux_box->size.y() = value;
+    dirtyProject();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onAuxBoxSizeZChanged(double value)
 {
-    auto selected_box = getAuxBox(aux_geometry_list_widget->currentRow());
-    if (selected_box)
-    {
-        selected_box->size.setZ(value);
-        dirtyProject();
-        camera_orientation_widget->updateLineSetGeometry();
-        camera_orientation_widget->update();
-    }
+    current_aux_box->size.z() = value;
+    dirtyProject();
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    if (photo_list_widget->selectedItems().size() > 0)
+    const int index = photo_list_widget->currentRow();
+    current_camera = getCamera(index);
+    if (current_camera)
     {
-        int index = photo_list_widget->currentIndex().row();
-        if (index >= 0 && static_cast<size_t>(index) < mesh_project->build_info->cameras_info.size())
+        photo_list_widget->itemWidget(photo_list_widget->item(index))->setEnabled(true);
+        int prev_index = -1;
+        if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
         {
-            remove_photo_act->setEnabled(true);
-            photo_list_widget->itemWidget(photo_list_widget->item(index))->setEnabled(true);
-            int prev_index = -1;
-            if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
-            {
-                prev_index = deselected.front().indexes().front().row();
-            }
-            if (prev_index >= 0)
-            {
-                photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->setEnabled(false);
-            }
-            camera_info = mesh_project->build_info->cameras_info[index];
-            updateCameraWidgetSize();
+            prev_index = deselected.front().indexes().front().row();
+        }
+        if (prev_index >= 0 && prev_index < photo_list_widget->count())
+        {
+            photo_list_widget->itemWidget(photo_list_widget->item(prev_index))->setEnabled(false);
         }
     }
-    else
-    {
-        camera_info = nullptr;
-        camera_orientation_widget->setPhoto(nullptr);
-        remove_photo_act->setEnabled(false);
-        camera_orientation_window->setFixedSize(QSize(camera_available_width, camera_available_height));
-    }
-    camera_orientation_widget->updatePhotoTexture();
-    camera_orientation_widget->updateLineSetGeometry();
-    camera_orientation_widget->update();
+    updateCameraWidget();
+    updateCameraWidgetSize();
+
+    updateActionState();
+
+    fillCurrentVertexListWidget();
 }
 
 void MainWindow::onAuxGeometrySelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    if (aux_geometry_list_widget->selectedItems().size() > 0)
+    const int index = aux_geometry_list_widget->currentRow();
+    current_aux_box = getAuxBox(index);
+    if (current_aux_box)
     {
-        remove_aux_geom_act->setEnabled(true);
-        int index = aux_geometry_list_widget->currentIndex().row();
         aux_geometry_list_widget->itemWidget(aux_geometry_list_widget->item(index))->setEnabled(true);
         int prev_index = -1;
         if (deselected.size() > 0 && deselected.front().indexes().size() > 0)
@@ -1133,96 +1075,45 @@ void MainWindow::onAuxGeometrySelected(const QItemSelection& selected, const QIt
             aux_geometry_list_widget->itemWidget(aux_geometry_list_widget->item(prev_index))->setEnabled(false);
         }
     }
-    else
-    {
-        remove_aux_geom_act->setEnabled(false);
-    }
 }
 
 void MainWindow::onVertexSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    use_selected_vertex_in_triangle_act->setEnabled(false);
+    const int index = vertex_list_widget->currentRow();
+    current_vertex = getVertex(index);
 
-    auto selected_vertex = getVertex(vertex_list_widget->currentRow());
-    if (selected_vertex)
-    {
-        remove_vertex_act->setEnabled(true);
-        fillCurrentVertexWidget();
-        if (current_triangle_list_widget->currentRow() >= 0)
-        {
-            use_selected_vertex_in_triangle_act->setEnabled(true);
-        }
-
-        if (camera_info)
-        {
-            bool found = false;
-            for (auto& vertex_position : camera_info->vertex_positions)
-            {
-                if (vertex_position->vertex_id == selected_vertex->id)
-                {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-            {
-                add_current_vertex_act->setEnabled(true);
-            }
-            else
-            {
-                add_current_vertex_act->setEnabled(false);
-            }
-        }
-        else
-        {
-            add_current_vertex_act->setEnabled(false);
-        }
-    }
-    else
-    {
-        remove_vertex_act->setEnabled(false);
-        add_current_vertex_act->setEnabled(false);
-    }
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onCurrentVertexSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    if (current_vertex_list_widget->selectedItems().size() > 0)
-    {
-        remove_current_vertex_act->setEnabled(true);
-    }
-    else
-    {
-        remove_current_vertex_act->setEnabled(false);
-    }
+    const int index = current_vertex_list_widget->currentRow();
+    current_vertex_photo_position = getCurrentVertex(index);
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    if (triangle_list_widget->selectedItems().size() > 0)
-    {
-        remove_triangle_act->setEnabled(true);
-        fillCurrentTriangleListWidget();
-    }
-    else
-    {
-        remove_triangle_act->setEnabled(false);
-    }
+    const int index = triangle_list_widget->currentRow();
+    current_triangle = getTriangle(index);
+
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::onCurrentTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    if (current_triangle_list_widget->selectedItems().size() > 0)
-    {
-        auto selected_vertex = getVertex(vertex_list_widget->currentRow());
-        if (selected_vertex)
-        {
-            use_selected_vertex_in_triangle_act->setEnabled(true);
-            return;
-        }
-    }
+    current_triangle_item = current_triangle_list_widget->currentRow();
 
-    use_selected_vertex_in_triangle_act->setEnabled(false);
+    saveSelection();
+    updateProject();
+    restoreSelection();
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
@@ -1259,46 +1150,39 @@ void MainWindow::resizeEvent(QResizeEvent* event)
 
 void MainWindow::saveSelection()
 {
-    saved_photo_list_selection = photo_list_widget->currentRow();
-    saved_aux_geometry_list_selection = aux_geometry_list_widget->currentRow();
-    saved_vertex_list_selection = vertex_list_widget->currentRow();
-    saved_current_vertex_list_selection = current_vertex_list_widget->currentRow();
-    saved_triangle_list_selection = triangle_list_widget->currentRow();
-    saved_current_triangle_list_selection = current_triangle_list_widget->currentRow();
-
-    saved_photo_list_size = photo_list_widget->count();
-    saved_aux_geometry_list_size = aux_geometry_list_widget->count();
-    saved_vertex_list_size = vertex_list_widget->count();
-    saved_current_vertex_list_size = current_vertex_list_widget->count();
-    saved_triangle_list_size = triangle_list_widget->count();
-    saved_current_triangle_list_size = current_triangle_list_widget->count();
+    photoSaveSelection();
+    auxGeometrySaveSelection();
+    vertexSaveSelection();
+    currentVertexSaveSelection();
+    triangleSaveSelection();
+    currentTriangleSaveSelection();
 }
 
 void MainWindow::restoreSelection()
 {
-    restoreSelection(saved_photo_list_selection, saved_photo_list_size, photo_list_widget);
-    restoreSelection(saved_aux_geometry_list_selection, saved_aux_geometry_list_size, aux_geometry_list_widget);
-    restoreSelection(saved_vertex_list_selection, saved_vertex_list_size, vertex_list_widget);
-    restoreSelection(saved_current_vertex_list_selection, saved_current_vertex_list_size, current_vertex_list_widget);
-    restoreSelection(saved_triangle_list_selection, saved_triangle_list_size, triangle_list_widget);
-    restoreSelection(saved_current_triangle_list_selection, saved_current_triangle_list_size, current_triangle_list_widget);
+    photoRestoreSelection();
+    auxGeometryRestoreSelection();
+    vertexRestoreSelection();
+    currentVertexRestoreSelection();
+    triangleRestoreSelection();
+    currentTriangleRestoreSelection();
 }
 
 void MainWindow::restoreSelection(int saved_index, int saved_size, QListWidget* list_widget)
 {
     if (list_widget->count() < saved_size) // Remove operation
     {
-        if (saved_index > 0)
+        if (list_widget->count() == 0)
         {
-            list_widget->setCurrentRow(saved_index - 1);
+            list_widget->clearSelection();
         }
-        else if (list_widget->count() > 1)
+        else if (saved_index < list_widget->count())
         {
-            list_widget->setCurrentRow(1);
+            list_widget->setCurrentRow(saved_index);
         }
         else
         {
-            list_widget->clearSelection();
+            list_widget->setCurrentRow(list_widget->count() - 1);
         }
     }
     else
@@ -1308,4 +1192,70 @@ void MainWindow::restoreSelection(int saved_index, int saved_size, QListWidget* 
             list_widget->setCurrentRow(saved_index);
         }
     }
+}
+
+void MainWindow::photoSaveSelection()
+{
+    saved_photo_list_selection = photo_list_widget->currentRow();
+    saved_photo_list_size = photo_list_widget->count();
+}
+
+void MainWindow::photoRestoreSelection()
+{
+    restoreSelection(saved_photo_list_selection, saved_photo_list_size, photo_list_widget);
+}
+
+void MainWindow::auxGeometrySaveSelection()
+{
+    saved_aux_geometry_list_selection = aux_geometry_list_widget->currentRow();
+    saved_aux_geometry_list_size = aux_geometry_list_widget->count();
+}
+
+void MainWindow::auxGeometryRestoreSelection()
+{
+    restoreSelection(saved_aux_geometry_list_selection, saved_aux_geometry_list_size, aux_geometry_list_widget);
+}
+
+void MainWindow::vertexSaveSelection()
+{
+    saved_vertex_list_selection = vertex_list_widget->currentRow();
+    saved_vertex_list_size = vertex_list_widget->count();
+}
+
+void MainWindow::vertexRestoreSelection()
+{
+    restoreSelection(saved_vertex_list_selection, saved_vertex_list_size, vertex_list_widget);
+}
+
+void MainWindow::currentVertexSaveSelection()
+{
+    saved_current_vertex_list_selection = current_vertex_list_widget->currentRow();
+    saved_current_vertex_list_size = current_vertex_list_widget->count();
+}
+
+void MainWindow::currentVertexRestoreSelection()
+{
+    restoreSelection(saved_current_vertex_list_selection, saved_current_vertex_list_size, current_vertex_list_widget);
+}
+
+void MainWindow::triangleSaveSelection()
+{
+    saved_triangle_list_selection = triangle_list_widget->currentRow();
+    saved_triangle_list_size = triangle_list_widget->count();
+}
+
+void MainWindow::triangleRestoreSelection()
+{
+    restoreSelection(saved_triangle_list_selection, saved_triangle_list_size, triangle_list_widget);
+}
+
+void MainWindow::currentTriangleSaveSelection()
+{
+    saved_current_triangle_list_selection = current_triangle_list_widget->currentRow();
+    saved_current_triangle_list_size = current_triangle_list_widget->count();
+}
+
+void MainWindow::currentTriangleRestoreSelection()
+{
+    restoreSelection(saved_current_triangle_list_selection, saved_current_triangle_list_size, current_triangle_list_widget);
 }

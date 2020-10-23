@@ -87,8 +87,8 @@ void MeshBuilderWidget::updatePhotoTexture()
         photo_texture = std::make_unique<QOpenGLTexture>(dummy_image);
     }
 
-    photo_width = current_camera ? getCameraWidth(current_camera) : photo_texture->width();
-    photo_height = current_camera ? getCameraHeight(current_camera) : photo_texture->height();;
+    photo_width = current_camera ? cameraGetWidth(current_camera) : photo_texture->width();
+    photo_height = current_camera ? cameraGetHeight(current_camera) : photo_texture->height();;
 
     photo_x_low = -photo_width / 2;
     photo_x_high = photo_x_low + photo_width;

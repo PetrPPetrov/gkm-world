@@ -81,8 +81,8 @@ void calculateVertexLinePoints(
     const Camera::Ptr& camera, int x, int y,
     Eigen::Vector3d& start, Eigen::Vector3d& finish)
 {
-    const int camera_width = getCameraWidth(camera);
-    const int camera_height = getCameraHeight(camera);
+    const int camera_width = cameraGetWidth(camera);
+    const int camera_height = cameraGetHeight(camera);
     const double camera_aspect = static_cast<double>(camera_width / camera_height);
     const double forward_offset = 16.0;
     const double full_offset_y = forward_offset * tan(GRAD_TO_RAD * camera->fov / 2.0);
@@ -145,13 +145,13 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
             Eigen::Vector3d p1;
             Eigen::Vector3d p2;
             calculateVertexLinePoints(
-                getCamera(mesh_project, vertex->positions[0]->camera_index),
+                getCamera(mesh_project, vertex->positions[0]->camera_id),
                 vertex->positions[0]->x, vertex->positions[0]->y, p1, p2
             );
             Eigen::Vector3d p3;
             Eigen::Vector3d p4;
             calculateVertexLinePoints(
-                getCamera(mesh_project, vertex->positions[1]->camera_index),
+                getCamera(mesh_project, vertex->positions[1]->camera_id),
                 vertex->positions[1]->x, vertex->positions[1]->y, p3, p4
             );
             Eigen::Vector3d pa;

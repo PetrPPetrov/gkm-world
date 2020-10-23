@@ -92,8 +92,21 @@ struct MeshProject
 MeshProject::Ptr loadMeshProject(const std::string& file_name);
 void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_name);
 
-void projectAddPhoto(const MeshProject::Ptr& project, const char* filename);
+Camera::Ptr projectGetCamera(const MeshProject::Ptr& project, int camera_id);
+
+Camera::Ptr projectAddPhoto(const MeshProject::Ptr& project, const char* filename);
 void projectRemovePhoto(const MeshProject::Ptr& project, const Camera::Ptr& camera);
 
 void projectAddAuxBox(const MeshProject::Ptr& project);
 void projectRemoveAuxBox(const MeshProject::Ptr& project, const AuxBox::Ptr& aux_box);
+
+void projectAddVertex(const MeshProject::Ptr& project);
+void projectRemoveVertex(const MeshProject::Ptr& project, const Vertex::Ptr& vertex);
+
+void projectAddCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex);
+void projectRemoveCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex);
+
+void projectAddTriangle(const MeshProject::Ptr& project);
+void projectRemoveTriangle(const MeshProject::Ptr& project, const Triangle::Ptr& triangle);
+
+void projectUseVertex(const MeshProject::Ptr& project, const Triangle::Ptr& triangle, int triangle_item, const Vertex::Ptr& vertex);

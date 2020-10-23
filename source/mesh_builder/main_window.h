@@ -49,6 +49,7 @@ private:
     void loadProject(const char* filename);
     void loadPhotos();
     void updateProject();
+    void updateActionState();
     void updateCameraWidget();
     void updateCameraWidgetSize();
     void updateCameraWidgetAvailableSize();
@@ -121,6 +122,19 @@ private:
     void restoreSelection();
     void restoreSelection(int saved_index, int saved_size, QListWidget* list_widget);
 
+    void photoSaveSelection();
+    void photoRestoreSelection();
+    void auxGeometrySaveSelection();
+    void auxGeometryRestoreSelection();
+    void vertexSaveSelection();
+    void vertexRestoreSelection();
+    void currentVertexSaveSelection();
+    void currentVertexRestoreSelection();
+    void triangleSaveSelection();
+    void triangleRestoreSelection();
+    void currentTriangleSaveSelection();
+    void currentTriangleRestoreSelection();
+
 private:
     bool first_show = true;
     Ui::MainWindow main_window;
@@ -152,6 +166,8 @@ private:
 
     MeshBuilderWidget* camera_orientation_widget = nullptr;
     QMdiSubWindow* camera_orientation_window = nullptr;
+    const int camera_minimum_width = 256;
+    const int camera_minimum_height = 128;
     int camera_available_width = 300;
     int camera_available_height = 200;
     double camera_scale_x = 1.0;

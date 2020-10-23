@@ -276,7 +276,19 @@ void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_na
     }
 }
 
-void projectAddPhoto(const MeshProject::Ptr& project, const char* filename)
+Camera::Ptr projectGetCamera(const MeshProject::Ptr& project, int camera_id)
+{
+    for (auto& camera : project->cameras)
+    {
+        if (camera->id == camera_id)
+        {
+            return camera;
+        }
+    }
+    return nullptr;
+}
+
+Camera::Ptr projectAddPhoto(const MeshProject::Ptr& project, const char* filename)
 {
     std::unordered_set<int> used_id;
     for (auto& camera : project->cameras)
@@ -296,6 +308,7 @@ void projectAddPhoto(const MeshProject::Ptr& project, const char* filename)
     new_camera->rotation_radius = (new_camera->viewer_pos - new_camera->viewer_target).norm();
     new_camera->id = new_id;
     project->cameras.push_back(new_camera);
+    return new_camera;
 }
 
 void projectRemovePhoto(const MeshProject::Ptr& project, const Camera::Ptr& camera)
@@ -307,6 +320,10 @@ void projectRemovePhoto(const MeshProject::Ptr& project, const Camera::Ptr& came
         {
             project->cameras.erase(cur_camera_it);
             break;
+        }
+        else
+        {
+            ++cur_camera_it;
         }
     }
     for (auto vertex : project->vertices)
@@ -355,4 +372,107 @@ void projectAddAuxBox(const MeshProject::Ptr& project)
 void projectRemoveAuxBox(const MeshProject::Ptr& project, const AuxBox::Ptr& aux_box)
 {
     aux_box->id = -1;
+}
+
+void projectAddVertex(const MeshProject::Ptr& project)
+{
+    auto& vertices = project->vertices;
+    const unsigned count = static_cast<unsigned>(vertices.size());
+    Vertex::Ptr new_vertex;
+    for (unsigned i = 0; i < count; ++i)
+    {
+        if (vertices[i]->id == -1)
+        {
+            new_vertex = vertices[i];
+            vertices[i]->id = static_cast<int>(i);
+            vertices[i]->positions.clear();
+            break;
+        }
+    }
+    if (!new_vertex)
+    {
+        auto new_vertex = std::make_shared<Vertex>();
+        new_vertex->id = static_cast<int>(count);
+        vertices.push_back(new_vertex);
+    }
+}
+
+void projectRemoveVertex(const MeshProject::Ptr& project, const Vertex::Ptr& vertex)
+{
+    vertex->id = -1;
+}
+
+void projectAddCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex)
+{
+    auto new_position_info = std::make_shared<VertexPhotoPosition>();
+    new_position_info->vertex_id = vertex->id;
+    new_position_info->camera_id = camera->id;
+    camera->positions.push_back(new_position_info);
+    vertex->positions.push_back(new_position_info);
+}
+
+void projectRemoveCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex)
+{
+    auto vertex_position_it = camera->positions.begin();
+    while (vertex_position_it != camera->positions.end())
+    {
+        if ((*vertex_position_it)->vertex_id == vertex->id)
+        {
+            camera->positions.erase(vertex_position_it);
+            vertex_position_it = camera->positions.begin();
+        }
+        else
+        {
+            ++vertex_position_it;
+        }
+    }
+    vertex_position_it = vertex->positions.begin();
+    while (vertex_position_it != vertex->positions.end())
+    {
+        if ((*vertex_position_it)->camera_id == camera->id)
+        {
+            vertex->positions.erase(vertex_position_it);
+            vertex_position_it = vertex->positions.begin();
+        }
+        else
+        {
+            ++vertex_position_it;
+        }
+    }
+}
+
+void projectAddTriangle(const MeshProject::Ptr& project)
+{
+    auto& triangles = project->triangles;
+    const unsigned count = static_cast<unsigned>(triangles.size());
+    Triangle::Ptr new_triangle;
+    for (unsigned i = 0; i < count; ++i)
+    {
+        if (triangles[i]->id == -1)
+        {
+            // Found free vertex
+            triangles[i]->id = i;
+            triangles[i]->vertices[0] = -1;
+            triangles[i]->vertices[1] = -1;
+            triangles[i]->vertices[2] = -1;
+            new_triangle = triangles[i];
+            break;
+        }
+    }
+    if (!new_triangle)
+    {
+        auto new_triangle = std::make_shared<Triangle>();
+        new_triangle->id = count;
+        triangles.push_back(new_triangle);
+    }
+}
+
+void projectRemoveTriangle(const MeshProject::Ptr& project, const Triangle::Ptr& triangle)
+{
+    triangle->id = -1;
+}
+
+void projectUseVertex(const MeshProject::Ptr& project, const Triangle::Ptr& triangle, int triangle_item, const Vertex::Ptr& vertex)
+{
+    triangle->vertices[triangle_item] = vertex->id;
 }

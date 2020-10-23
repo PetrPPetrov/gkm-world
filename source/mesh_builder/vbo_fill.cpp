@@ -109,11 +109,7 @@ static void fillHubPoints(
         for (auto& position : vertex->positions)
         {
             Camera::Ptr used_camera = nullptr;
-            if (position->camera_index < camera_count)
-            {
-                used_camera = cameras[position->camera_index];
-            }
-            if (used_camera == current_camera)
+            if (position->camera_id == current_camera->id)
             {
                 vertices.push_back({ vertex->id, position->x, position->y });
                 break;
@@ -159,7 +155,7 @@ static void fillVertices(
     {
         for (auto& position : vertex->positions)
         {
-            Camera::Ptr used_camera = getCamera(mesh_project, position->camera_index);
+            Camera::Ptr used_camera = getCamera(mesh_project, position->camera_id);
             if (used_camera)
             {
                 vertices.push_back({ used_camera, vertex->id, position->x, position->y });
