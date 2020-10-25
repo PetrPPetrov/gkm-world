@@ -56,7 +56,10 @@ static void fillAuxGeometryBoxes(
     vbo.reserve(vbo.size() + boxes.size() * g_box_vbo_size);
     for (auto& box : boxes)
     {
-        fillAuxGeometryBox(vbo, box);
+        if (box->id != -1)
+        {
+            fillAuxGeometryBox(vbo, box);
+        }
     }
 }
 
@@ -106,13 +109,16 @@ static void fillHubPoints(
     const unsigned camera_count = static_cast<unsigned>(cameras.size());
     for (auto& vertex : mesh_project->vertices)
     {
-        for (auto& position : vertex->positions)
+        if (vertex->id != -1)
         {
-            Camera::Ptr used_camera = nullptr;
-            if (position->camera_id == current_camera->id)
+            for (auto& position : vertex->positions)
             {
-                vertices.push_back({ vertex->id, position->x, position->y });
-                break;
+                Camera::Ptr used_camera = nullptr;
+                if (position->camera_id == current_camera->id)
+                {
+                    vertices.push_back({ vertex->id, position->x, position->y });
+                    break;
+                }
             }
         }
     }
@@ -153,12 +159,15 @@ static void fillVertices(
     std::list<VertexProjectionInfo> vertices;
     for (auto& vertex : mesh_project->vertices)
     {
-        for (auto& position : vertex->positions)
+        if (vertex->id != -1)
         {
-            Camera::Ptr used_camera = getCamera(mesh_project, position->camera_id);
-            if (used_camera)
+            for (auto& position : vertex->positions)
             {
-                vertices.push_back({ used_camera, vertex->id, position->x, position->y });
+                Camera::Ptr used_camera = getCamera(mesh_project, position->camera_id);
+                if (used_camera)
+                {
+                    vertices.push_back({ used_camera, vertex->id, position->x, position->y });
+                }
             }
         }
     }

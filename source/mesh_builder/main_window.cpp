@@ -298,6 +298,7 @@ void MainWindow::loadProject(const char* filename)
 {
     mesh_project = loadMeshProject(filename);
     mesh_project->file_name = filename;
+    initCurrentVariables();
 
     updateProject();
 
@@ -341,8 +342,8 @@ void MainWindow::updateActionState()
 {
     remove_photo_act->setEnabled(current_camera ? true : false);
     remove_aux_geom_act->setEnabled(current_aux_box ? true : false);
-    add_current_vertex_act->setEnabled(current_camera && current_vertex);
     remove_vertex_act->setEnabled(current_vertex ? true : false);
+    add_current_vertex_act->setEnabled(current_camera && current_vertex);
     remove_current_vertex_act->setEnabled(current_vertex_photo_position ? true : false);
     remove_triangle_act->setEnabled(current_triangle ? true : false);
     use_selected_vertex_in_triangle_act->setEnabled(current_vertex && current_triangle && current_triangle_item >= 0 && current_triangle_item <= 2);
@@ -375,7 +376,6 @@ void MainWindow::updateCameraWidgetSize()
         {
             camera_orientation_window->resize(QSize(camera_available_width, static_cast<int>(camera_available_width / photo_aspect)));
         }
-        camera_orientation_widget->updatePhotoTexture();
         camera_orientation_widget->update();
 
         camera_scale_x = static_cast<double>(photo_width) / camera_orientation_widget->width();
@@ -634,6 +634,8 @@ void MainWindow::addTriangleListWidgetItem(const Triangle::Ptr& triangle)
 
 void MainWindow::fillCurrentTriangleListWidget()
 {
+    current_triangle_list_widget->clear();
+    current_triangle_item = -1;
     if (current_triangle)
     {
         addCurrentTriangleListWidgetItem(current_triangle->vertices[0]);
@@ -711,21 +713,65 @@ Triangle::Ptr MainWindow::getTriangle(int row_index) const
     return nullptr;
 }
 
+void MainWindow::initCurrentVariables()
+{
+    current_camera = nullptr;
+    current_aux_box = nullptr;
+    current_vertex = nullptr;
+    current_vertex_photo_position = nullptr;
+    current_triangle = nullptr;
+    current_triangle_item = -1;
+}
+
+bool MainWindow::closeProject()
+{
+    if (mesh_project && mesh_project->dirty)
+    {
+        QMessageBox msg_box;
+        msg_box.setText("The project has been modified.");
+        msg_box.setWindowTitle("Gkm-World Mesh-Builder");
+        msg_box.setInformativeText("Do you want to save your changes?");
+        msg_box.setStandardButtons(QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+        msg_box.setDefaultButton(QMessageBox::Save);
+        int ret = msg_box.exec();
+        switch (ret)
+        {
+        case QMessageBox::Save:
+            onSaveProject();
+            return true;
+        case QMessageBox::Discard:
+            return true;
+        case QMessageBox::Cancel:
+            return false;
+        default:
+            return false;
+        }
+    }
+    return true;
+}
+
 void MainWindow::onNewProject()
 {
-    mesh_project = std::make_shared<MeshProject>();
-    projectAddAuxBox(mesh_project);
-    updateProject();
-    mesh_project->dirty = false;
-    updateWindowTitle();
+    if (closeProject())
+    {
+        mesh_project = std::make_shared<MeshProject>();
+        initCurrentVariables();
+        projectAddAuxBox(mesh_project);
+        updateProject();
+        mesh_project->dirty = false;
+        updateWindowTitle();
+    }
 }
 
 void MainWindow::onOpenProject()
 {
-    QString filename = QFileDialog::getOpenFileName(this, "Select Mesh-Builder project", QDir::currentPath(), "Mesh-Builder projects (*.gmb)");
-    if (!filename.isNull() && fileExists(filename.toStdString()))
+    if (closeProject())
     {
-        loadProject(filename.toStdString().c_str());
+        QString filename = QFileDialog::getOpenFileName(this, "Select Mesh-Builder project", QDir::currentPath(), "Mesh-Builder projects (*.gmb)");
+        if (!filename.isNull() && fileExists(filename.toStdString()))
+        {
+            loadProject(filename.toStdString().c_str());
+        }
     }
 }
 
@@ -773,9 +819,6 @@ void MainWindow::onAddPhoto()
         addPhotoListWidgetItem(current_camera);
         photo_list_widget->setCurrentRow(photo_list_widget->count() - 1);
 
-        updateCameraWidget();
-        updateCameraWidgetSize();
-        updateWindowTitle();
         updateActionState();
     }
 }
@@ -798,17 +841,22 @@ void MainWindow::onRemovePhoto()
         photoSaveSelection();
         qDeleteAll(selected_items);
         photoRestoreSelection();
+
+        updateActionState();
     }
 }
 
 void MainWindow::onAddAuxBox()
 {
-    projectAddAuxBox(mesh_project);
+    current_aux_box = projectAddAuxBox(mesh_project);
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    addAuxGeometryListWidgetItem(current_aux_box);
+    aux_geometry_list_widget->setCurrentRow(aux_geometry_list_widget->count() - 1);
+
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
+    updateActionState();
 }
 
 void MainWindow::onRemoveAuxGeom()
@@ -817,20 +865,24 @@ void MainWindow::onRemoveAuxGeom()
     auto selected_items = aux_geometry_list_widget->selectedItems();
     dirtyProject();
 
-    saveSelection();
+    auxGeometrySaveSelection();
     qDeleteAll(selected_items);
-    updateProject();
-    restoreSelection();
+    auxGeometryRestoreSelection();
+
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
+    updateActionState();
 }
 
 void MainWindow::onAddVertex()
 {
-    projectAddVertex(mesh_project);
+    current_vertex = projectAddVertex(mesh_project);
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    addVertexListWidgetItem(current_vertex);
+    vertex_list_widget->setCurrentRow(vertex_list_widget->count() - 1);
+
+    updateActionState();
 }
 
 void MainWindow::onRemoveVertex()
@@ -839,20 +891,27 @@ void MainWindow::onRemoveVertex()
     auto selected_items = vertex_list_widget->selectedItems();
     dirtyProject();
 
-    saveSelection();
+    vertexSaveSelection();
     qDeleteAll(selected_items);
-    updateProject();
-    restoreSelection();
+    vertexRestoreSelection();
+
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
+    updateActionState();
 }
 
 void MainWindow::onAddCurrentVertex()
 {
-    projectAddCurrentVertex(mesh_project, current_camera, current_vertex);
+    current_vertex_photo_position = projectAddCurrentVertex(mesh_project, current_camera, current_vertex);
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    addCurrentVertexListWidgetItem(current_vertex_photo_position);
+    current_vertex_list_widget->setCurrentRow(current_vertex_list_widget->count() - 1);
+
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
+
+    updateActionState();
 }
 
 void MainWindow::onRemoveCurrentVertex()
@@ -861,32 +920,42 @@ void MainWindow::onRemoveCurrentVertex()
     auto selected_items = current_vertex_list_widget->selectedItems();
     dirtyProject();
 
-    saveSelection();
+    currentVertexSaveSelection();
     qDeleteAll(selected_items);
-    updateProject();
-    restoreSelection();
+    currentVertexRestoreSelection();
+
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
+    updateActionState();
 }
 
 void MainWindow::onAddTriangle()
 {
-    projectAddTriangle(mesh_project);
+    current_triangle = projectAddTriangle(mesh_project);
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    addTriangleListWidgetItem(current_triangle);
+    triangle_list_widget->setCurrentRow(triangle_list_widget->count() - 1);
+
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
+
+    updateActionState();
 }
 
 void MainWindow::onRemoveTriangle()
 {
     projectRemoveTriangle(mesh_project, current_triangle);
-    auto selected_items = current_vertex_list_widget->selectedItems();
+    auto selected_items = triangle_list_widget->selectedItems();
     dirtyProject();
 
-    saveSelection();
+    triangleSaveSelection();
     qDeleteAll(selected_items);
-    updateProject();
-    restoreSelection();
+    triangleRestoreSelection();
+
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
+    updateActionState();
 }
 
 void MainWindow::onUseVertex()
@@ -894,9 +963,12 @@ void MainWindow::onUseVertex()
     projectUseVertex(mesh_project, current_triangle, current_triangle_item, current_vertex);
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
+    currentTriangleSaveSelection();
+    fillCurrentTriangleListWidget();
+    currentTriangleRestoreSelection();
+    updateActionState();
 }
 
 void MainWindow::onBuildMesh()
@@ -922,6 +994,7 @@ void MainWindow::onSetOutputFile()
     {
         mesh_project->output_file_name = filename.toStdString();
         dirtyProject();
+        updateActionState();
     }
 }
 
@@ -929,38 +1002,14 @@ void MainWindow::onLockedChanged(int state)
 {
     current_camera->locked = state == Qt::Checked;
     dirtyProject();
-
-    saveSelection();
-    updateProject();
-    restoreSelection();
 }
 
 void MainWindow::onRotationChanged(int rotation_index)
 {
-    int new_rotation = 0;
-    switch (rotation_index)
-    {
-    default:
-    case 0:
-        new_rotation = 0;
-        break;
-    case 1:
-        new_rotation = 90;
-        break;
-    case 2:
-        new_rotation = 180;
-        break;
-    case 3:
-        new_rotation = 270;
-        break;
-    }
-    current_camera->rotation = new_rotation;
+    cameraSetRotationFromIndex(current_camera, rotation_index);
     dirtyProject();
 
-    saveSelection();
-    updateProject();
     updateCameraWidgetSize();
-    restoreSelection();
 }
 
 void MainWindow::onFovChanged(double value)
@@ -968,9 +1017,7 @@ void MainWindow::onFovChanged(double value)
     current_camera->fov = value;
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onAuxBoxPosXChanged(double value)
@@ -978,9 +1025,8 @@ void MainWindow::onAuxBoxPosXChanged(double value)
     current_aux_box->position.x() = value;
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onAuxBoxPosYChanged(double value)
@@ -988,9 +1034,8 @@ void MainWindow::onAuxBoxPosYChanged(double value)
     current_aux_box->position.y() = value;
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onAuxBoxPosZChanged(double value)
@@ -998,9 +1043,8 @@ void MainWindow::onAuxBoxPosZChanged(double value)
     current_aux_box->position.z() = value;
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onAuxBoxSizeXChanged(double value)
@@ -1008,9 +1052,8 @@ void MainWindow::onAuxBoxSizeXChanged(double value)
     current_aux_box->size.x() = value;
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onAuxBoxSizeYChanged(double value)
@@ -1018,9 +1061,8 @@ void MainWindow::onAuxBoxSizeYChanged(double value)
     current_aux_box->size.y() = value;
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onAuxBoxSizeZChanged(double value)
@@ -1028,9 +1070,8 @@ void MainWindow::onAuxBoxSizeZChanged(double value)
     current_aux_box->size.z() = value;
     dirtyProject();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    camera_orientation_widget->updateLineSetGeometry();
+    camera_orientation_widget->update();
 }
 
 void MainWindow::onPhotoSelected(const QItemSelection& selected, const QItemSelection& deselected)
@@ -1075,6 +1116,7 @@ void MainWindow::onAuxGeometrySelected(const QItemSelection& selected, const QIt
             aux_geometry_list_widget->itemWidget(aux_geometry_list_widget->item(prev_index))->setEnabled(false);
         }
     }
+    updateActionState();
 }
 
 void MainWindow::onVertexSelected(const QItemSelection& selected, const QItemSelection& deselected)
@@ -1082,9 +1124,7 @@ void MainWindow::onVertexSelected(const QItemSelection& selected, const QItemSel
     const int index = vertex_list_widget->currentRow();
     current_vertex = getVertex(index);
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    updateActionState();
 }
 
 void MainWindow::onCurrentVertexSelected(const QItemSelection& selected, const QItemSelection& deselected)
@@ -1092,9 +1132,7 @@ void MainWindow::onCurrentVertexSelected(const QItemSelection& selected, const Q
     const int index = current_vertex_list_widget->currentRow();
     current_vertex_photo_position = getCurrentVertex(index);
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    updateActionState();
 }
 
 void MainWindow::onTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected)
@@ -1102,43 +1140,26 @@ void MainWindow::onTriangleSelected(const QItemSelection& selected, const QItemS
     const int index = triangle_list_widget->currentRow();
     current_triangle = getTriangle(index);
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    fillCurrentTriangleListWidget();
+    updateActionState();
 }
 
 void MainWindow::onCurrentTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected)
 {
     current_triangle_item = current_triangle_list_widget->currentRow();
 
-    saveSelection();
-    updateProject();
-    restoreSelection();
+    updateActionState();
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    if (mesh_project->dirty)
+    if (closeProject())
     {
-        QMessageBox msg_box;
-        msg_box.setText("The project has been modified.");
-        msg_box.setWindowTitle("Gkm-World Mesh-Builder");
-        msg_box.setInformativeText("Do you want to save your changes?");
-        msg_box.setStandardButtons(QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
-        msg_box.setDefaultButton(QMessageBox::Save);
-        int ret = msg_box.exec();
-        switch (ret)
-        {
-        case QMessageBox::Save:
-            onSaveProject();
-        case QMessageBox::Discard:
-            event->accept();
-            break;
-        case QMessageBox::Cancel:
-            event->ignore();
-        default:
-            break;
-        }
+        event->accept();
+    }
+    else
+    {
+        event->ignore();
     }
 }
 

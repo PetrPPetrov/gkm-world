@@ -45,6 +45,28 @@ int cameraGetRotationIndex(const Camera::Ptr& camera)
     }
 }
 
+void cameraSetRotationFromIndex(const Camera::Ptr& camera, int rotation_index)
+{
+    int new_rotation = 0;
+    switch (rotation_index)
+    {
+    default:
+    case 0:
+        new_rotation = 0;
+        break;
+    case 1:
+        new_rotation = 90;
+        break;
+    case 2:
+        new_rotation = 180;
+        break;
+    case 3:
+        new_rotation = 270;
+        break;
+    }
+    camera->rotation = new_rotation;
+}
+
 static std::string loadToken(const std::string& expected_line, std::ifstream& file_in)
 {
     std::string read_line;
@@ -79,6 +101,20 @@ static void saveEigenVector3d(const Eigen::Vector3d& vector, std::ofstream& file
     file_out << vector.z() << "\n";
 }
 
+static void loadString(std::string& value, std::ifstream& file_in)
+{
+    file_in >> value;
+    if (value == "null")
+    {
+        value = "";
+    }
+}
+
+static void saveString(std::string& value, std::ofstream& file_out)
+{
+    file_out << (value.empty() ? "null" : value) << "\n";
+}
+
 static AuxBox::Ptr loadAuxBox(std::ifstream& file_in)
 {
     auto box = std::make_shared<AuxBox>();
@@ -93,7 +129,7 @@ static AuxBox::Ptr loadAuxBox(std::ifstream& file_in)
 
 static void saveAuxBox(const AuxBox::Ptr& box, std::ofstream& file_out)
 {
-    file_out << "aux_geometry_box\n";
+    file_out << "aux_box\n";
     file_out << "id\n" << box->id << "\n";
     file_out << "position\n";
     saveEigenVector3d(box->position, file_out);
@@ -107,7 +143,7 @@ static Camera::Ptr loadCamera(std::ifstream& file_in)
     loadToken("id", file_in);
     file_in >> camera->id;
     loadToken("photo_image_path", file_in);
-    file_in >> camera->photo_image_path;
+    loadString(camera->photo_image_path, file_in);
     loadToken("viewer_pos", file_in);
     loadEigenVector3d(camera->viewer_pos, file_in);
     loadToken("viewer_target", file_in);
@@ -128,8 +164,9 @@ static Camera::Ptr loadCamera(std::ifstream& file_in)
 static void saveCamera(const Camera::Ptr& camera, std::ofstream& file_out)
 {
     file_out << "camera\n";
-    file_out << "id" << camera->id << "\n";
-    file_out << "photo_image_path\n" << camera->photo_image_path << "\n";
+    file_out << "id\n" << camera->id << "\n";
+    file_out << "photo_image_path\n";
+    saveString(camera->photo_image_path, file_out);
     file_out << "viewer_pos\n";
     saveEigenVector3d(camera->viewer_pos, file_out);
     file_out << "viewer_target\n";
@@ -230,7 +267,7 @@ MeshProject::Ptr loadMeshProject(const std::string& file_name)
         std::getline(file_in, next_token);
         if (next_token == "output_file_name")
         {
-            file_in >> project->output_file_name;
+            loadString(project->output_file_name, file_in);
         }
         else if (next_token == "camera")
         {
@@ -257,7 +294,8 @@ void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_na
 {
     std::ofstream file_out(file_name);
     file_out << "# Gkm-World Mesh Builder project file\n";
-    file_out << "output_file_name\n" << project->output_file_name << "\n";
+    file_out << "output_file_name\n";
+    saveString(project->output_file_name, file_out);
     for (auto& camera : project->cameras)
     {
         saveCamera(camera, file_out);
@@ -344,7 +382,7 @@ void projectRemovePhoto(const MeshProject::Ptr& project, const Camera::Ptr& came
     }
 }
 
-void projectAddAuxBox(const MeshProject::Ptr& project)
+AuxBox::Ptr projectAddAuxBox(const MeshProject::Ptr& project)
 {
     auto& boxes = project->aux_geometry->boxes;
     const unsigned count = static_cast<unsigned>(boxes.size());
@@ -367,6 +405,7 @@ void projectAddAuxBox(const MeshProject::Ptr& project)
 
     new_box->position = Eigen::Vector3d(0, 0, 0);
     new_box->size = Eigen::Vector3d(1, 1, 1);
+    return new_box;
 }
 
 void projectRemoveAuxBox(const MeshProject::Ptr& project, const AuxBox::Ptr& aux_box)
@@ -374,7 +413,7 @@ void projectRemoveAuxBox(const MeshProject::Ptr& project, const AuxBox::Ptr& aux
     aux_box->id = -1;
 }
 
-void projectAddVertex(const MeshProject::Ptr& project)
+Vertex::Ptr projectAddVertex(const MeshProject::Ptr& project)
 {
     auto& vertices = project->vertices;
     const unsigned count = static_cast<unsigned>(vertices.size());
@@ -391,10 +430,11 @@ void projectAddVertex(const MeshProject::Ptr& project)
     }
     if (!new_vertex)
     {
-        auto new_vertex = std::make_shared<Vertex>();
+        new_vertex = std::make_shared<Vertex>();
         new_vertex->id = static_cast<int>(count);
         vertices.push_back(new_vertex);
     }
+    return new_vertex;
 }
 
 void projectRemoveVertex(const MeshProject::Ptr& project, const Vertex::Ptr& vertex)
@@ -402,13 +442,16 @@ void projectRemoveVertex(const MeshProject::Ptr& project, const Vertex::Ptr& ver
     vertex->id = -1;
 }
 
-void projectAddCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex)
+VertexPhotoPosition::Ptr projectAddCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex)
 {
     auto new_position_info = std::make_shared<VertexPhotoPosition>();
     new_position_info->vertex_id = vertex->id;
     new_position_info->camera_id = camera->id;
+    new_position_info->x = cameraGetWidth(camera) / 2;
+    new_position_info->y = cameraGetHeight(camera) / 2;
     camera->positions.push_back(new_position_info);
     vertex->positions.push_back(new_position_info);
+    return new_position_info;
 }
 
 void projectRemoveCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex)
@@ -441,7 +484,7 @@ void projectRemoveCurrentVertex(const MeshProject::Ptr& project, const Camera::P
     }
 }
 
-void projectAddTriangle(const MeshProject::Ptr& project)
+Triangle::Ptr projectAddTriangle(const MeshProject::Ptr& project)
 {
     auto& triangles = project->triangles;
     const unsigned count = static_cast<unsigned>(triangles.size());
@@ -461,10 +504,11 @@ void projectAddTriangle(const MeshProject::Ptr& project)
     }
     if (!new_triangle)
     {
-        auto new_triangle = std::make_shared<Triangle>();
+        new_triangle = std::make_shared<Triangle>();
         new_triangle->id = count;
         triangles.push_back(new_triangle);
     }
+    return new_triangle;
 }
 
 void projectRemoveTriangle(const MeshProject::Ptr& project, const Triangle::Ptr& triangle)

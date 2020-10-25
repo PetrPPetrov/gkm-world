@@ -73,6 +73,8 @@ private:
     VertexPhotoPosition::Ptr getCurrentVertex(int row_index) const;
     Triangle::Ptr getTriangle(int row_index) const;
 
+    void initCurrentVariables();
+    bool closeProject();
     void onNewProject();
     void onOpenProject();
     void onSaveProject();

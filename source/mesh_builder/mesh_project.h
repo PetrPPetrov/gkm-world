@@ -73,6 +73,7 @@ struct Camera
 int cameraGetWidth(const Camera::Ptr& camera);
 int cameraGetHeight(const Camera::Ptr& camera);
 int cameraGetRotationIndex(const Camera::Ptr& camera);
+void cameraSetRotationFromIndex(const Camera::Ptr& camera, int rotation_index);
 
 struct MeshProject
 {
@@ -97,16 +98,16 @@ Camera::Ptr projectGetCamera(const MeshProject::Ptr& project, int camera_id);
 Camera::Ptr projectAddPhoto(const MeshProject::Ptr& project, const char* filename);
 void projectRemovePhoto(const MeshProject::Ptr& project, const Camera::Ptr& camera);
 
-void projectAddAuxBox(const MeshProject::Ptr& project);
+AuxBox::Ptr projectAddAuxBox(const MeshProject::Ptr& project);
 void projectRemoveAuxBox(const MeshProject::Ptr& project, const AuxBox::Ptr& aux_box);
 
-void projectAddVertex(const MeshProject::Ptr& project);
+Vertex::Ptr projectAddVertex(const MeshProject::Ptr& project);
 void projectRemoveVertex(const MeshProject::Ptr& project, const Vertex::Ptr& vertex);
 
-void projectAddCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex);
+VertexPhotoPosition::Ptr projectAddCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex);
 void projectRemoveCurrentVertex(const MeshProject::Ptr& project, const Camera::Ptr& camera, const Vertex::Ptr& vertex);
 
-void projectAddTriangle(const MeshProject::Ptr& project);
+Triangle::Ptr projectAddTriangle(const MeshProject::Ptr& project);
 void projectRemoveTriangle(const MeshProject::Ptr& project, const Triangle::Ptr& triangle);
 
 void projectUseVertex(const MeshProject::Ptr& project, const Triangle::Ptr& triangle, int triangle_item, const Vertex::Ptr& vertex);

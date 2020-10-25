@@ -122,11 +122,6 @@ static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, cons
 
 void buildMesh(const MeshProject::Ptr& mesh_project)
 {
-    if (mesh_project->output_file_name.empty())
-    {
-        return;
-    }
-
     Mesh::Ptr new_mesh = std::make_shared<Mesh>();
     const size_t source_vertex_count = mesh_project->vertices.size();
     new_mesh->vertices.reserve(source_vertex_count);
