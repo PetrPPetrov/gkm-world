@@ -38,6 +38,7 @@ private:
 
 public:
     void updateWindowTitle();
+    VertexPhotoPosition::Ptr getCurrentVertexPhotoPosition() const;
     void setVertexPosition(QPointF position);
 
 protected:
@@ -73,7 +74,6 @@ private:
     VertexPhotoPosition::Ptr getCurrentVertex(int row_index) const;
     Triangle::Ptr getTriangle(int row_index) const;
 
-    void initCurrentVariables();
     bool closeProject();
     void onNewProject();
     void onOpenProject();

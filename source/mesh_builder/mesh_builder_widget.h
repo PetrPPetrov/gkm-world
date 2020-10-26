@@ -41,6 +41,7 @@ private:
     void setDefaultCamera();
     void updateCameraInfo();
     void resetNavigation();
+    void setVertexPhotoPosition(VertexPhotoPosition* vertex_photo_position, const QPointF& position);
 
 private:
     MeshProject::Ptr mesh_project;

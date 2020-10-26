@@ -205,8 +205,14 @@ void MainWindow::updateWindowTitle()
     setWindowTitle(dirty_flag + file_name + QString(" - Gkm-World Mesh-Builder"));
 }
 
+VertexPhotoPosition::Ptr MainWindow::getCurrentVertexPhotoPosition() const
+{
+    return current_vertex_photo_position;
+}
+
 void MainWindow::setVertexPosition(QPointF position)
 {
+    current_vertex_photo_position->x = position.x() * ;
     //const int camera_index = photo_list_widget->currentRow();
     //if (camera_index >= 0)
     //{
@@ -298,7 +304,6 @@ void MainWindow::loadProject(const char* filename)
 {
     mesh_project = loadMeshProject(filename);
     mesh_project->file_name = filename;
-    initCurrentVariables();
 
     updateProject();
 
@@ -399,6 +404,7 @@ void MainWindow::fillPhotoListWidget()
 {
     photo_list_widget->clear();
     photo_list_item_to_camera.clear();
+    current_camera = nullptr;
     for (auto camera_info : mesh_project->cameras)
     {
         addPhotoListWidgetItem(camera_info);
@@ -452,6 +458,7 @@ void MainWindow::fillAuxGeometryListWidget()
 {
     aux_geometry_list_widget->clear();
     aux_geom_list_item_to_box.clear();
+    current_aux_box = nullptr;
     for (auto aux_box : mesh_project->aux_geometry->boxes)
     {
         if (aux_box->id != -1)
@@ -550,6 +557,7 @@ void MainWindow::fillVertexListWidget()
 {
     vertex_list_widget->clear();
     vertex_list_item_to_vertex.clear();
+    current_vertex = nullptr;
     for (auto vertex : mesh_project->vertices)
     {
         if (vertex->id != -1)
@@ -576,6 +584,7 @@ void MainWindow::fillCurrentVertexListWidget()
 {
     current_vertex_list_widget->clear();
     current_vertex_list_item_to_vertex_position.clear();
+    current_vertex_photo_position = nullptr;
     if (current_camera)
     {
         for (auto& vertex_position : current_camera->positions)
@@ -610,6 +619,7 @@ void MainWindow::fillTriangleListWidget()
 {
     triangle_list_widget->clear();
     triangle_list_item_to_triangle.clear();
+    current_triangle = nullptr;
     for (auto triangle : mesh_project->triangles)
     {
         if (triangle->id != -1)
@@ -713,16 +723,6 @@ Triangle::Ptr MainWindow::getTriangle(int row_index) const
     return nullptr;
 }
 
-void MainWindow::initCurrentVariables()
-{
-    current_camera = nullptr;
-    current_aux_box = nullptr;
-    current_vertex = nullptr;
-    current_vertex_photo_position = nullptr;
-    current_triangle = nullptr;
-    current_triangle_item = -1;
-}
-
 bool MainWindow::closeProject()
 {
     if (mesh_project && mesh_project->dirty)
@@ -755,7 +755,6 @@ void MainWindow::onNewProject()
     if (closeProject())
     {
         mesh_project = std::make_shared<MeshProject>();
-        initCurrentVariables();
         projectAddAuxBox(mesh_project);
         updateProject();
         mesh_project->dirty = false;
