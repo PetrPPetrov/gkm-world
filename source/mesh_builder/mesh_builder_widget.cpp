@@ -508,18 +508,19 @@ void MeshBuilderWidget::setVertexPhotoPosition(VertexPhotoPosition* vertex_photo
     const double screen_right = photo_y_high * viewport_aspect;
     const double screen_width = std::fabs(screen_left) + std::fabs(screen_right);
     const double scale_x = screen_width / viewport_width;
+
     double local_x = position.x();
     double local_y = position.y();
     local_x -= (viewport_width / 2);
+    local_y = viewport_height - local_y;
     local_y -= (viewport_height / 2);
-    double photo_y = local_y * scale_y;
     double photo_x = local_x * scale_x;
+    double photo_y = local_y * scale_y;
 
     const double photo_left = static_cast<double>(photo_x_low);
-    const double photo_right = static_cast<double>(photo_x_low);
+    const double photo_right = static_cast<double>(photo_x_high);
     const double effective_photo_left = std::max(photo_left, screen_left);
     const double effective_photo_right = std::min(photo_right, screen_right);
-    const double effective_photo_width = std::fabs(effective_photo_right) + std::fabs(effective_photo_left);
     if (photo_x < effective_photo_left)
     {
         photo_x = effective_photo_left;
@@ -530,6 +531,10 @@ void MeshBuilderWidget::setVertexPhotoPosition(VertexPhotoPosition* vertex_photo
     }
     photo_x -= photo_x_low;
     photo_y -= photo_y_low;
-    
-    //ortho_projection.ortho(photo_y_low * viewport_aspect, photo_y_high * viewport_aspect, photo_y_low, photo_y_high, 0.125f, 2048.0f);
+
+    vertex_photo_position->x = static_cast<int>(photo_x);
+    vertex_photo_position->y = static_cast<int>(photo_y);
+    g_main_window->updateCurrentVertexPhotoPosition();
+    updateLineSetGeometry();
+    update();
 }

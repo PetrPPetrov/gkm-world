@@ -210,50 +210,13 @@ VertexPhotoPosition::Ptr MainWindow::getCurrentVertexPhotoPosition() const
     return current_vertex_photo_position;
 }
 
-void MainWindow::setVertexPosition(QPointF position)
+void MainWindow::updateCurrentVertexPhotoPosition()
 {
-    current_vertex_photo_position->x = position.x() * ;
-    //const int camera_index = photo_list_widget->currentRow();
-    //if (camera_index >= 0)
-    //{
-    //    auto selected_vertex = getVertex(vertex_list_widget->currentRow());
-    //    if (selected_vertex)
-    //    {
-    //        int photo_width = camera_info->width();
-    //        int photo_height = camera_info->height();
-
-    //        bool found = false;
-    //        for (auto& vertex_position : selected_vertex->positions)
-    //        {
-    //            if (vertex_position.camera_index == camera_index)
-    //            {
-    //                vertex_position.x = position.x() * camera_scale_x;
-    //                vertex_position.y = photo_height - position.y() * camera_scale_y;
-    //                found = true;
-    //                break;
-    //            }
-    //        }
-    //        if (!found)
-    //        {
-    //            if (selected_vertex->positions.size() < 2)
-    //            {
-    //                VertexPositionInfo new_vertex_position_info;
-    //                new_vertex_position_info.camera_index = camera_index;
-    //                new_vertex_position_info.x = position.x() * camera_scale_x;
-    //                new_vertex_position_info.y = photo_height - position.y() * camera_scale_y;
-    //                selected_vertex->positions.push_back(new_vertex_position_info);
-    //            }
-    //            else
-    //            {
-    //                log_widget->appendPlainText(QString("Vertex #%1 has 2 binding positions").arg(selected_vertex->id));
-    //            }
-    //        }
-    //        fillVertexPositionInfoWidget();
-    //        camera_orientation_widget->updateLineSetGeometry();
-    //        camera_orientation_widget->update();
-    //        dirtyProject();
-    //    }
-    //}
+    QWidget* item_widget = current_vertex_list_widget->itemWidget(current_vertex_list_widget->currentItem());
+    QLabel* label_x = dynamic_cast<QLabel*>(item_widget->layout()->itemAt(1)->widget());
+    QLabel* label_y = dynamic_cast<QLabel*>(item_widget->layout()->itemAt(2)->widget());
+    label_x->setText(QString("X %1").arg(current_vertex_photo_position->x));
+    label_y->setText(QString("Y %1").arg(current_vertex_photo_position->y));
 }
 
 void MainWindow::showEvent(QShowEvent* event)
@@ -382,15 +345,10 @@ void MainWindow::updateCameraWidgetSize()
             camera_orientation_window->resize(QSize(camera_available_width, static_cast<int>(camera_available_width / photo_aspect)));
         }
         camera_orientation_widget->update();
-
-        camera_scale_x = static_cast<double>(photo_width) / camera_orientation_widget->width();
-        camera_scale_y = static_cast<double>(photo_height) / camera_orientation_widget->height();
     }
     else
     {
         camera_orientation_window->resize(QSize(camera_available_width, camera_available_height));
-        camera_scale_x = 1.0;
-        camera_scale_y = 1.0;
     }
 }
 
@@ -1008,6 +966,7 @@ void MainWindow::onRotationChanged(int rotation_index)
     cameraSetRotationFromIndex(current_camera, rotation_index);
     dirtyProject();
 
+    updateCameraWidget();
     updateCameraWidgetSize();
 }
 

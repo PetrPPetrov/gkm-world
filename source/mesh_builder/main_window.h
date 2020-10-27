@@ -39,7 +39,7 @@ private:
 public:
     void updateWindowTitle();
     VertexPhotoPosition::Ptr getCurrentVertexPhotoPosition() const;
-    void setVertexPosition(QPointF position);
+    void updateCurrentVertexPhotoPosition();
 
 protected:
     void showEvent(QShowEvent* event) override;
@@ -172,8 +172,6 @@ private:
     const int camera_minimum_height = 128;
     int camera_available_width = 300;
     int camera_available_height = 200;
-    double camera_scale_x = 1.0;
-    double camera_scale_y = 1.0;
 
     QPlainTextEdit* log_widget = nullptr;
     QMdiSubWindow* log_window = nullptr;
