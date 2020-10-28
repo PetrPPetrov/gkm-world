@@ -296,7 +296,7 @@ void MeshBuilderWidget::paintGL()
     }
 
     QMatrix4x4 projection_matrix;
-    projection_matrix.perspective(fov, static_cast<float>(viewport_aspect), 0.125f, 1024.0f);
+    projection_matrix.perspective(fov, static_cast<float>(viewport_aspect), 0.125f, 2048.0f);
     QMatrix4x4 view_matrix;
     view_matrix.lookAt(viewer_pos, viewer_target, viewer_up);
     QMatrix4x4 mvp_matrix = projection_matrix * view_matrix;
@@ -350,8 +350,8 @@ void MeshBuilderWidget::mouseMoveEvent(QMouseEvent* event)
         QPointF current_point = event->localPos();
         double delta_x = previous_point.x() - current_point.x();
         double delta_y = current_point.y() - previous_point.y();
-        double x_rotation_angle = delta_x / width() * 180.0f;
-        double y_rotation_angle = delta_y / height() * 180.0f;
+        double x_rotation_angle = delta_x / width() * 180.0;
+        double y_rotation_angle = delta_y / height() * 180.0;
         auto user_position = viewer_previous_pos - viewer_previous_target;
         QMatrix4x4 rotation_x;
         rotation_x.rotate(x_rotation_angle, viewer_previous_up);
@@ -445,7 +445,14 @@ void MeshBuilderWidget::wheelEvent(QWheelEvent* event)
     }
 
     QPoint delta = event->angleDelta();
-    rotation_radius += delta.y() / 1000.0f * rotation_radius;
+    double result_delta = delta.y() / 1000.0 * rotation_radius;
+    if (event->modifiers() & Qt::ControlModifier)
+    {
+        result_delta /= 20.0;
+    }
+
+    rotation_radius += result_delta;
+
     if (rotation_radius < minimum_rotation_radius)
     {
         rotation_radius = minimum_rotation_radius;

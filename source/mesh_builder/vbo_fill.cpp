@@ -105,34 +105,37 @@ static void fillHubPoints(
     hub_points_line_set_vbo_start = static_cast<int>(vbo.size());
 
     std::list<VertexInfo> vertices;
-    auto& cameras = mesh_project->cameras;
-    const unsigned camera_count = static_cast<unsigned>(cameras.size());
-    for (auto& vertex : mesh_project->vertices)
+    if (current_camera)
     {
-        if (vertex->id != -1)
+        auto& cameras = mesh_project->cameras;
+        const unsigned camera_count = static_cast<unsigned>(cameras.size());
+        for (auto& vertex : mesh_project->vertices)
         {
-            for (auto& position : vertex->positions)
+            if (vertex->id != -1)
             {
-                Camera::Ptr used_camera = nullptr;
-                if (position->camera_id == current_camera->id)
+                for (auto& position : vertex->positions)
                 {
-                    vertices.push_back({ vertex->id, position->x, position->y });
-                    break;
+                    Camera::Ptr used_camera = nullptr;
+                    if (position->camera_id == current_camera->id)
+                    {
+                        vertices.push_back({ vertex->id, position->x, position->y });
+                        break;
+                    }
                 }
             }
         }
-    }
-    vbo.reserve(vbo.size() + vertices.size() * g_hud_point_vbo_size);
-    for (auto& vertex : vertices)
-    {
-        for (size_t i = 0; i < g_hud_point_vbo_size; ++i)
+        vbo.reserve(vbo.size() + vertices.size() * g_hud_point_vbo_size);
+        for (auto& vertex : vertices)
         {
-            VertexPositionColor cur_vertex = g_hud_point_vbo[i];
-            cur_vertex.x += photo_x_low + vertex.x;
-            cur_vertex.y += photo_y_low + vertex.y; // TODO: Change color
-            cur_vertex.z = -1.0f;
-            cur_vertex.abgr = ColorHasher::getColor(vertex.id);
-            vbo.push_back(cur_vertex);
+            for (size_t i = 0; i < g_hud_point_vbo_size; ++i)
+            {
+                VertexPositionColor cur_vertex = g_hud_point_vbo[i];
+                cur_vertex.x += photo_x_low + vertex.x;
+                cur_vertex.y += photo_y_low + vertex.y; // TODO: Change color
+                cur_vertex.z = -1.0f;
+                cur_vertex.abgr = ColorHasher::getColor(vertex.id);
+                vbo.push_back(cur_vertex);
+            }
         }
     }
     hub_points_line_set_vbo_size = static_cast<int>(vbo.size()) - hub_points_line_set_vbo_start;

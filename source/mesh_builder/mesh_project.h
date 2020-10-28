@@ -7,6 +7,7 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+#include <array>
 #include "common.h"
 
 struct AuxBox
@@ -47,8 +48,10 @@ struct Triangle
 {
     typedef std::shared_ptr<Triangle> Ptr;
 
+    constexpr static unsigned char vertex_count = 3;
+
     int id = -1;
-    int vertices[3] = { -1, -1, -1 };
+    std::array<int, vertex_count> vertices = { -1, -1, -1 };
 };
 
 struct Camera

@@ -1,6 +1,7 @@
 // Copyright 2018-2020 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
+#include <cstdint>
 #include <vector>
 #include "build_mesh.h"
 #include "global_parameters.h"
@@ -83,7 +84,7 @@ void calculateVertexLinePoints(
 {
     const int camera_width = cameraGetWidth(camera);
     const int camera_height = cameraGetHeight(camera);
-    const double camera_aspect = static_cast<double>(camera_width / camera_height);
+    const double camera_aspect = static_cast<double>(camera_width) / camera_height;
     const double forward_offset = 16.0;
     const double full_offset_y = forward_offset * tan(GRAD_TO_RAD * camera->fov / 2.0);
     const double full_offset_x = full_offset_y * camera_aspect;
@@ -101,12 +102,17 @@ void calculateVertexLinePoints(
     finish = end_vertex_line;
 }
 
+typedef Eigen::Matrix<std::uint32_t, Triangle::vertex_count, 1> Vector3u;
+
 struct Mesh
 {
     typedef std::shared_ptr<Mesh> Ptr;
 
     std::vector<Eigen::Vector3d> vertices;
-    std::vector<size_t> old_to_new_id_map;
+    std::vector<size_t> old_to_new_vertex_id_map;
+
+    std::vector<Vector3u> triangles;
+    //std::vector<size_t> old_to_new_triangle_id_map;
 };
 
 static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, const std::string& mesh_project_filename)
@@ -118,6 +124,10 @@ static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, cons
     {
         file_out << "v " << vertex.x() << " " << vertex.y() << " " << vertex.z() << "\n";
     }
+    for (auto& triangle : mesh->triangles)
+    {
+        file_out << "f " << triangle.x() + 1 << " " << triangle.y() + 1 << " " << triangle.z() + 1 << "\n";
+    }
 }
 
 void buildMesh(const MeshProject::Ptr& mesh_project)
@@ -125,7 +135,7 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
     Mesh::Ptr new_mesh = std::make_shared<Mesh>();
     const size_t source_vertex_count = mesh_project->vertices.size();
     new_mesh->vertices.reserve(source_vertex_count);
-    new_mesh->old_to_new_id_map.resize(source_vertex_count, source_vertex_count);
+    new_mesh->old_to_new_vertex_id_map.resize(source_vertex_count, source_vertex_count);
 
     for (size_t i = 0; i < source_vertex_count; ++i)
     {
@@ -156,9 +166,43 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
             if (calculateLineLineIntersect(p1, p2, p3, p4, pa, pb, mua, mub))
             {
                 Eigen::Vector3d vertex_point = (pa + pb) / 2.0;
-                new_mesh->old_to_new_id_map[i] = new_mesh->vertices.size();
+                new_mesh->old_to_new_vertex_id_map[i] = new_mesh->vertices.size();
                 new_mesh->vertices.push_back(vertex_point);
             }
+        }
+    }
+
+    const size_t source_triangle_count = mesh_project->triangles.size();
+    new_mesh->triangles.reserve(source_triangle_count);
+    //new_mesh->old_to_new_vertex_id_map.resize(source_triangle_count, source_triangle_count);
+    for (size_t i = 0; i < source_triangle_count; ++i)
+    {
+        const Triangle& triangle = *mesh_project->triangles[i];
+        bool all_vertices_are_ok = true;
+        Vector3u new_vertex_indices;
+
+        for (unsigned char j = 0; j < Triangle::vertex_count; ++j)
+        {
+            bool vertex_ok = false;
+            const int old_vertex_id = triangle.vertices[j];
+            const size_t old_vertex_id_size_t = static_cast<size_t>(old_vertex_id);
+            size_t new_vertex_id;
+            if (old_vertex_id >= 0 && old_vertex_id_size_t < new_mesh->old_to_new_vertex_id_map.size())
+            {
+                new_vertex_id = new_mesh->old_to_new_vertex_id_map[old_vertex_id_size_t];
+                if (new_vertex_id >= source_vertex_count)
+                {
+                    all_vertices_are_ok = false;
+                    break;
+                }
+                new_vertex_indices[j] = static_cast<std::uint32_t>(new_vertex_id);
+            }
+        }
+
+        if (all_vertices_are_ok)
+        {
+            //new_mesh->old_to_new_triangle_id_map[i] = new_mesh->triangles.size();
+            new_mesh->triangles.push_back(new_vertex_indices);
         }
     }
 
