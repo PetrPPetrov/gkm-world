@@ -110,6 +110,7 @@ struct Mesh
 
     std::vector<Eigen::Vector3d> vertices;
     std::vector<size_t> old_to_new_vertex_id_map;
+    std::vector<size_t> new_to_old_vertex_id_map;
 
     std::vector<Vector3u> triangles;
     //std::vector<size_t> old_to_new_triangle_id_map;
@@ -130,13 +131,12 @@ static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, cons
     }
 }
 
-void buildMesh(const MeshProject::Ptr& mesh_project)
+void calculateVertices(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
-    Mesh::Ptr new_mesh = std::make_shared<Mesh>();
     const size_t source_vertex_count = mesh_project->vertices.size();
     new_mesh->vertices.reserve(source_vertex_count);
     new_mesh->old_to_new_vertex_id_map.resize(source_vertex_count, source_vertex_count);
-
+    new_mesh->new_to_old_vertex_id_map.resize(source_vertex_count, source_vertex_count);
     for (size_t i = 0; i < source_vertex_count; ++i)
     {
         const auto& vertex = mesh_project->vertices[i];
@@ -167,11 +167,16 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
             {
                 Eigen::Vector3d vertex_point = (pa + pb) / 2.0;
                 new_mesh->old_to_new_vertex_id_map[i] = new_mesh->vertices.size();
+                new_mesh->new_to_old_vertex_id_map[new_mesh->vertices.size()] = i;
                 new_mesh->vertices.push_back(vertex_point);
             }
         }
     }
+}
 
+void mapTriangles(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
+{
+    const size_t source_vertex_count = mesh_project->vertices.size();
     const size_t source_triangle_count = mesh_project->triangles.size();
     new_mesh->triangles.reserve(source_triangle_count);
     //new_mesh->old_to_new_vertex_id_map.resize(source_triangle_count, source_triangle_count);
@@ -205,6 +210,47 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
             new_mesh->triangles.push_back(new_vertex_indices);
         }
     }
+}
+
+void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
+{
+    const size_t new_triangle_count = new_mesh->triangles.size();
+    for (size_t i = 0; i < new_triangle_count; ++i)
+    {
+        Vector3u cur_triangle = new_mesh->triangles[i];
+
+        const Eigen::Vector3d v0 = new_mesh->vertices[cur_triangle.x()];
+        const Eigen::Vector3d v1 = new_mesh->vertices[cur_triangle.y()];
+        const Eigen::Vector3d v2 = new_mesh->vertices[cur_triangle.z()];
+
+        const double d01 = (v1 - v0).norm();
+        const double d12 = (v2 - v1).norm();
+        const double d02 = (v2 - v0).norm();
+
+        const int v0_p0_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[0]->x;
+        const int v0_p0_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[0]->y;
+        const int v0_p1_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[1]->x;
+        const int v0_p1_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[1]->y;
+
+        const int v1_p0_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.y()]]->positions[0]->x;
+        const int v1_p0_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.y()]]->positions[0]->y;
+        const int v1_p1_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.y()]]->positions[1]->x;
+        const int v1_p1_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.y()]]->positions[1]->y;
+
+        const int v2_p0_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[0]->x;
+        const int v2_p0_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[0]->y;
+        const int v2_p1_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[1]->x;
+        const int v2_p1_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[1]->y;
+    }
+}
+
+void buildMesh(const MeshProject::Ptr& mesh_project)
+{
+    Mesh::Ptr new_mesh = std::make_shared<Mesh>();
+
+    calculateVertices(mesh_project, new_mesh);
+    mapTriangles(mesh_project, new_mesh);
+    buildTexture(mesh_project, new_mesh);
 
     saveMeshObj(mesh_project->output_file_name, new_mesh, mesh_project->file_name);
 }
