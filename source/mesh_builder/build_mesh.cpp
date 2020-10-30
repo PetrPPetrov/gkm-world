@@ -212,6 +212,49 @@ void mapTriangles(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
     }
 }
 
+class ComputationTriangle
+{
+    Eigen::Vector3d v0;
+    Eigen::Vector3d v1;
+    Eigen::Vector3d v2;
+
+    Eigen::Vector3d x_axis;
+    Eigen::Vector3d y_axis;
+
+public:
+    ComputationTriangle(const Eigen::Vector3d& v0_, const Eigen::Vector3d& v1_, const Eigen::Vector3d& v2_)
+    {
+        const double d01 = (v1_ - v0_).norm();
+        const double d12 = (v2_ - v1_).norm();
+        const double d02 = (v2_ - v0_).norm();
+
+        if (d01 >= d12 && d01 >= d02)
+        {
+            v0 = v0_;
+            v1 = v1_;
+            v2 = v2_;
+        }
+        else if (d12 >= d01 && d12 >= d02)
+        {
+            v0 = v1_;
+            v1 = v2_;
+            v2 = v0_;
+        }
+        else
+        {
+            v0 = v2_;
+            v1 = v0_;
+            v2 = v1_;
+        }
+
+        x_axis = (v1 - v0).normalized();
+        const Eigen::Vector3d v2_rel = v2 - v0;
+        const double v2_x_coord = v2_rel.dot(x_axis);
+        const Eigen::Vector3d v2_base = x_axis * v2_x_coord;
+        y_axis = (v2_rel - v2_base).normalized();
+    }
+};
+
 void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
     const size_t new_triangle_count = new_mesh->triangles.size();
@@ -241,6 +284,34 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
         const int v2_p0_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[0]->y;
         const int v2_p1_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[1]->x;
         const int v2_p1_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[1]->y;
+
+        const Eigen::Vector3d v0_p0(v0_p0_x, v0_p0_y, 0);
+        const Eigen::Vector3d v0_p1(v0_p1_x, v0_p1_y, 0);
+
+        const Eigen::Vector3d v1_p0(v1_p0_x, v1_p0_y, 0);
+        const Eigen::Vector3d v1_p1(v1_p1_x, v1_p1_y, 0);
+
+        const Eigen::Vector3d v2_p0(v2_p0_x, v2_p0_y, 0);
+        const Eigen::Vector3d v2_p1(v2_p1_x, v2_p1_y, 0);
+
+        const double d01_p0 = (v1_p0 - v0_p0).norm();
+        const double d12_p0 = (v2_p0 - v1_p0).norm();
+        const double d02_p0 = (v2_p0 - v0_p0).norm();
+
+        const double d01_p1 = (v1_p1 - v0_p1).norm();
+        const double d12_p1 = (v2_p1 - v1_p1).norm();
+        const double d02_p1 = (v2_p1 - v0_p1).norm();
+
+        const double picture0_d01_density = d01_p0 / d01;
+        const double picture1_d01_density = d01_p1 / d01;
+
+        const double picture0_d12_density = d12_p0 / d12;
+        const double picture1_d12_density = d12_p1 / d12;
+
+        const double picture0_d02_density = d02_p0 / d02;
+        const double picture1_d02_density = d02_p1 / d02;
+
+        const double maximum_density = std::max({ picture0_d01_density, picture1_d01_density, picture0_d12_density, picture1_d12_density, picture0_d02_density, picture1_d02_density });
     }
 }
 
