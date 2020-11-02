@@ -214,44 +214,121 @@ void mapTriangles(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
 
 class ComputationTriangle
 {
-    Eigen::Vector3d v0;
-    Eigen::Vector3d v1;
-    Eigen::Vector3d v2;
+    Eigen::Vector3d sv[3];
+    Eigen::Vector3d v[3];
+    unsigned new_to_old[3];
+
+    Eigen::Vector3d x_axis_oblique;
+    Eigen::Vector3d y_axis_oblique;
+
+    Eigen::Vector2d x_axis_oblique_uv;
+    Eigen::Vector2d y_axis_oblique_uv;
 
     Eigen::Vector3d x_axis;
     Eigen::Vector3d y_axis;
 
-public:
-    ComputationTriangle(const Eigen::Vector3d& v0_, const Eigen::Vector3d& v1_, const Eigen::Vector3d& v2_)
+    Eigen::Vector2d uv[3];
+    Eigen::Vector2d uv_min;
+    Eigen::Vector2d uv_max;
+
+    Eigen::Vector2d solveRectangularCoordinates(const Eigen::Vector3d& vec) const
     {
-        const double d01 = (v1_ - v0_).norm();
-        const double d12 = (v2_ - v1_).norm();
-        const double d02 = (v2_ - v0_).norm();
+        const double u = x_axis.dot(vec);
+        const double v = y_axis.dot(vec);
+        return Eigen::Vector2d(u, v);
+    }
+
+    Eigen::Vector2d solveObliqueCoordinates(const Eigen::Vector2d& uv) const
+    {
+        const double v = -uv.y() / y_axis_oblique_uv.y();
+        const Eigen::Vector2d temp = uv + x_axis_oblique_uv * v + y_axis_oblique_uv * v;
+        const double u = temp.norm();
+        return Eigen::Vector2d(u, v);
+    }
+
+    Eigen::Vector2d solveObliqueCoordinates(const Eigen::Vector3d& vec) const
+    {
+        const Eigen::Vector2d uv = solveRectangularCoordinates(vec);
+        return solveObliqueCoordinates(uv);
+    }
+
+public:
+    ComputationTriangle(const Eigen::Vector3d sv_[3])
+    {
+        sv[0] = sv_[0];
+        sv[1] = sv_[1];
+        sv[2] = sv_[2];
+
+        const double d01 = (sv[1] - sv[0]).norm();
+        const double d12 = (sv[2] - sv[1]).norm();
+        const double d02 = (sv[2] - sv[0]).norm();
 
         if (d01 >= d12 && d01 >= d02)
         {
-            v0 = v0_;
-            v1 = v1_;
-            v2 = v2_;
+            v[0] = sv[0];
+            v[1] = sv[1];
+            v[2] = sv[2];
+            new_to_old[0] = 0;
+            new_to_old[1] = 1;
+            new_to_old[2] = 2;
         }
         else if (d12 >= d01 && d12 >= d02)
         {
-            v0 = v1_;
-            v1 = v2_;
-            v2 = v0_;
+            v[0] = sv[1];
+            v[1] = sv[2];
+            v[2] = sv[0];
+            new_to_old[0] = 1;
+            new_to_old[1] = 2;
+            new_to_old[2] = 0;
         }
         else
         {
-            v0 = v2_;
-            v1 = v0_;
-            v2 = v1_;
+            v[0] = sv[2];
+            v[1] = sv[0];
+            v[2] = sv[1];
+            new_to_old[0] = 2;
+            new_to_old[1] = 0;
+            new_to_old[2] = 1;
         }
 
-        x_axis = (v1 - v0).normalized();
-        const Eigen::Vector3d v2_rel = v2 - v0;
+        x_axis_oblique = v[1] - v[0];
+        y_axis_oblique = v[2] - v[0];
+
+        x_axis = (v[1] - v[0]).normalized();
+        const Eigen::Vector3d v2_rel = v[2] - v[0];
         const double v2_x_coord = v2_rel.dot(x_axis);
         const Eigen::Vector3d v2_base = x_axis * v2_x_coord;
         y_axis = (v2_rel - v2_base).normalized();
+
+        x_axis_oblique_uv = solveRectangularCoordinates(x_axis_oblique);
+        y_axis_oblique_uv = solveRectangularCoordinates(y_axis_oblique);
+
+        uv[0] = Eigen::Vector2d(0, 0);
+        uv[1] = Eigen::Vector2d((v[1] - v[0]).dot(x_axis), 0);
+        uv[2] = Eigen::Vector2d(v2_x_coord, v2_rel.dot(y_axis));
+        uv_min = uv[0];
+        uv_max = uv[0];
+
+        for (unsigned i = 0; i < 3; ++i)
+        {
+            const Eigen::Vector2d cur_uv = uv[i];
+            if (cur_uv.x() < uv_min.x())
+            {
+                uv_min.x() = cur_uv.x();
+            }
+            if (cur_uv.y() < uv_min.y())
+            {
+                uv_min.y() = cur_uv.y();
+            }
+            if (cur_uv.x() > uv_max.x())
+            {
+                uv_max.x() = cur_uv.x();
+            }
+            if (cur_uv.y() > uv_max.y())
+            {
+                uv_max.y() = cur_uv.y();
+            }
+        }
     }
 };
 
@@ -262,13 +339,16 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
     {
         Vector3u cur_triangle = new_mesh->triangles[i];
 
-        const Eigen::Vector3d v0 = new_mesh->vertices[cur_triangle.x()];
-        const Eigen::Vector3d v1 = new_mesh->vertices[cur_triangle.y()];
-        const Eigen::Vector3d v2 = new_mesh->vertices[cur_triangle.z()];
+        Eigen::Vector3d v[3];
+        v[0] = new_mesh->vertices[cur_triangle.x()];
+        v[1] = new_mesh->vertices[cur_triangle.y()];
+        v[2] = new_mesh->vertices[cur_triangle.z()];
 
-        const double d01 = (v1 - v0).norm();
-        const double d12 = (v2 - v1).norm();
-        const double d02 = (v2 - v0).norm();
+        ComputationTriangle comp_triangle(v);
+
+        const double d01 = (v[1] - v[0]).norm();
+        const double d12 = (v[2] - v[1]).norm();
+        const double d02 = (v[2] - v[0]).norm();
 
         const int v0_p0_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[0]->x;
         const int v0_p0_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[0]->y;
