@@ -2,6 +2,7 @@
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #include <cstdint>
+#include <cmath>
 #include <vector>
 #include "build_mesh.h"
 #include "global_parameters.h"
@@ -212,11 +213,74 @@ void mapTriangles(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
     }
 }
 
+static inline double calculateTriangleSquare(const Eigen::Vector2d& v0, const Eigen::Vector2d& v1, const Eigen::Vector2d& v2)
+{
+    Eigen::Vector2d base_vec = v1 - v0;
+    const double base = base_vec.norm();
+    base_vec.normalize();
+
+    const Eigen::Vector2d v2_rel = v2 - v0;
+    const double v2_base_distance = v2_rel.dot(base_vec);
+    const Eigen::Vector2d v2_base_point = base_vec * v2_base_distance;
+    const double h = (v2_rel - v2_base_point).norm();
+    return base * h / 2;
+}
+
+static inline double calculateCellSquare(const Eigen::Vector2d& ll, const Eigen::Vector2d& lr, const Eigen::Vector2d& ul, const Eigen::Vector2d& ur)
+{
+    double result = 0.0;
+    result += calculateTriangleSquare(ll, lr, ur);
+    result += calculateTriangleSquare(ll, ur, ul);
+    return result;
+}
+
+static inline double sign(const Eigen::Vector2d& p1, const Eigen::Vector2d& p2, const Eigen::Vector2d& p3)
+{
+    return (p1.x() - p3.x()) * (p2.y() - p3.y()) - (p2.x() - p3.x()) * (p1.y() - p3.y());
+}
+
+bool isPointInTriangle(const Eigen::Vector2d& pt, const Eigen::Vector2d& v1, const Eigen::Vector2d& v2, const Eigen::Vector2d& v3)
+{
+    double d1, d2, d3;
+    bool has_neg, has_pos;
+
+    d1 = sign(pt, v1, v2);
+    d2 = sign(pt, v2, v3);
+    d3 = sign(pt, v3, v1);
+
+    has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+    has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+    return !(has_neg && has_pos);
+}
+
+class PictureTriangle
+{
+    Eigen::Vector2d v[3];
+
+    Eigen::Vector2d x_axis_oblique;
+    Eigen::Vector2d y_axis_oblique;
+
+public:
+    PictureTriangle(const Eigen::Vector2d sv[3], const unsigned new_to_old[3])
+    {
+        v[0] = sv[new_to_old[0]];
+        v[1] = sv[new_to_old[1]];
+        v[2] = sv[new_to_old[2]];
+
+        x_axis_oblique = v[1] - v[0];
+        y_axis_oblique = v[2] - v[0];
+    }
+
+    Eigen::Vector2d calculatePointInObliqueCoordinateSystem(const Eigen::Vector2d& uv) const
+    {
+        return v[0] + x_axis_oblique * uv.x() + y_axis_oblique * uv.y();
+    }
+};
+
 class ComputationTriangle
 {
-    Eigen::Vector3d sv[3];
     Eigen::Vector3d v[3];
-    unsigned new_to_old[3];
 
     Eigen::Vector3d x_axis_oblique;
     Eigen::Vector3d y_axis_oblique;
@@ -241,7 +305,7 @@ class ComputationTriangle
     Eigen::Vector2d solveObliqueCoordinates(const Eigen::Vector2d& uv) const
     {
         const double v = -uv.y() / y_axis_oblique_uv.y();
-        const Eigen::Vector2d temp = uv + x_axis_oblique_uv * v + y_axis_oblique_uv * v;
+        const Eigen::Vector2d temp = uv + y_axis_oblique_uv * v;
         const double u = temp.norm();
         return Eigen::Vector2d(u, v);
     }
@@ -253,12 +317,10 @@ class ComputationTriangle
     }
 
 public:
-    ComputationTriangle(const Eigen::Vector3d sv_[3])
-    {
-        sv[0] = sv_[0];
-        sv[1] = sv_[1];
-        sv[2] = sv_[2];
+    unsigned new_to_old[3];
 
+    ComputationTriangle(const Eigen::Vector3d sv[3])
+    {
         const double d01 = (sv[1] - sv[0]).norm();
         const double d12 = (sv[2] - sv[1]).norm();
         const double d02 = (sv[2] - sv[0]).norm();
@@ -300,7 +362,7 @@ public:
         const Eigen::Vector3d v2_base = x_axis * v2_x_coord;
         y_axis = (v2_rel - v2_base).normalized();
 
-        x_axis_oblique_uv = solveRectangularCoordinates(x_axis_oblique);
+        x_axis_oblique_uv = Eigen::Vector2d(x_axis_oblique.dot(x_axis), 0);
         y_axis_oblique_uv = solveRectangularCoordinates(y_axis_oblique);
 
         uv[0] = Eigen::Vector2d(0, 0);
@@ -327,6 +389,72 @@ public:
             if (cur_uv.y() > uv_max.y())
             {
                 uv_max.y() = cur_uv.y();
+            }
+        }
+    }
+
+    void build(double density, const PictureTriangle& picture0_triangle, const PictureTriangle& picture1_triangle)
+    {
+        const double uv_width = uv_max.x() - uv_min.x();
+        const double uv_height = uv_max.y() - uv_min.y();
+
+        const double pixel_width_count = ceil(uv_width * density);
+        const double pixel_height_count = ceil(uv_height * density);
+        const unsigned pixel_count_w = static_cast<unsigned>(pixel_width_count);
+        const unsigned pixel_count_h = static_cast<unsigned>(pixel_height_count);
+
+        const double pixel_width = uv_width / pixel_width_count;
+        const double pixel_height = uv_height / pixel_height_count;
+        const double pixel_width2 = pixel_width / 2;
+        const double pixel_height2 = pixel_height / 2;
+
+        for (unsigned x = 0; x < pixel_count_w; ++x)
+        {
+            for (unsigned y = 0; y < pixel_count_h; ++y)
+            {
+                const double u_lo = uv_min.x() + pixel_width * x;
+                const double u_hi = uv_min.x() + pixel_width * (x + 1);
+                const double v_lo = uv_min.y() + pixel_height * y;
+                const double v_hi = uv_min.y() + pixel_height * (y + 1);
+                const double u_center = u_lo + pixel_width2;
+                const double v_center = v_lo + pixel_height2;
+
+                const Eigen::Vector2d ll_corner_uv(u_lo, v_lo);
+                const Eigen::Vector2d lr_corner_uv(u_hi, v_lo);
+                const Eigen::Vector2d ul_corner_uv(u_lo, v_hi);
+                const Eigen::Vector2d ur_corner_uv(u_hi, v_hi);
+
+                if (!isPointInTriangle(ll_corner_uv, uv[0], uv[1], uv[2]) &&
+                    !isPointInTriangle(lr_corner_uv, uv[0], uv[1], uv[2]) &&
+                    !isPointInTriangle(ul_corner_uv, uv[0], uv[1], uv[2]) &&
+                    !isPointInTriangle(ur_corner_uv, uv[0], uv[1], uv[2]))
+                {
+                    continue;
+                }
+
+                const Eigen::Vector2d ll_corner = solveObliqueCoordinates(ll_corner_uv);
+                const Eigen::Vector2d lr_corner = solveObliqueCoordinates(lr_corner_uv);
+                const Eigen::Vector2d ul_corner = solveObliqueCoordinates(ul_corner_uv);
+                const Eigen::Vector2d ur_corner = solveObliqueCoordinates(ur_corner_uv);
+                const Eigen::Vector2d center = solveObliqueCoordinates(Eigen::Vector2d(u_center, v_center));
+
+                const Eigen::Vector2d ll_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
+                const Eigen::Vector2d lr_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
+                const Eigen::Vector2d ul_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
+                const Eigen::Vector2d ur_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
+                const Eigen::Vector2d center_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(center);
+                const double pixel_p0_square = calculateCellSquare(ll_corner_p0, lr_corner_p0, ul_corner_p0, ur_corner_p0);
+
+                const Eigen::Vector2d ll_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
+                const Eigen::Vector2d lr_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
+                const Eigen::Vector2d ul_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
+                const Eigen::Vector2d ur_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
+                const Eigen::Vector2d center_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(center);
+                const double pixel_p1_square = calculateCellSquare(ll_corner_p1, lr_corner_p1, ul_corner_p1, ur_corner_p1);
+
+                // Select picture where the current pixel has a higher square
+                const PictureTriangle& selected_pciture_triange = (pixel_p0_square > pixel_p1_square) ? picture0_triangle : picture1_triangle;
+                // TODO: Generate pixel
             }
         }
     }
@@ -392,6 +520,21 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
         const double picture1_d02_density = d02_p1 / d02;
 
         const double maximum_density = std::max({ picture0_d01_density, picture1_d01_density, picture0_d12_density, picture1_d12_density, picture0_d02_density, picture1_d02_density });
+
+        Eigen::Vector2d picture0_tr[3];
+        picture0_tr[0] = Eigen::Vector2d(v0_p0_x, v0_p0_y);
+        picture0_tr[1] = Eigen::Vector2d(v1_p0_x, v1_p0_y);
+        picture0_tr[2] = Eigen::Vector2d(v2_p0_x, v2_p0_y);
+
+        Eigen::Vector2d picture1_tr[3];
+        picture1_tr[0] = Eigen::Vector2d(v0_p1_x, v0_p1_y);
+        picture1_tr[1] = Eigen::Vector2d(v1_p1_x, v1_p1_y);
+        picture1_tr[2] = Eigen::Vector2d(v2_p1_x, v2_p1_y);
+
+        PictureTriangle picture0_triangle(picture0_tr, comp_triangle.new_to_old);
+        PictureTriangle picture1_triangle(picture1_tr, comp_triangle.new_to_old);
+
+        comp_triangle.build(maximum_density, picture0_triangle, picture1_triangle);
     }
 }
 
