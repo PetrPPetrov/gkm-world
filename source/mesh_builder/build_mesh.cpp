@@ -67,18 +67,6 @@ static inline bool calculateLineLineIntersect(
     return true;
 }
 
-Camera::Ptr getCamera(const MeshProject::Ptr& mesh_project, int camera_index)
-{
-    auto& cameras = mesh_project->cameras;
-    const int camera_count = static_cast<int>(cameras.size());
-    Camera::Ptr used_camera = nullptr;
-    if (camera_index >= 0 && camera_index < camera_count)
-    {
-        used_camera = cameras[camera_index];
-    }
-    return used_camera;
-}
-
 void calculateVertexLinePoints(
     const Camera::Ptr& camera, int x, int y,
     Eigen::Vector3d& start, Eigen::Vector3d& finish)
@@ -151,13 +139,13 @@ void calculateVertices(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& ne
             Eigen::Vector3d p1;
             Eigen::Vector3d p2;
             calculateVertexLinePoints(
-                getCamera(mesh_project, vertex->positions[0]->camera_id),
+                projectGetCamera(mesh_project, vertex->positions[0]->camera_id),
                 vertex->positions[0]->x, vertex->positions[0]->y, p1, p2
             );
             Eigen::Vector3d p3;
             Eigen::Vector3d p4;
             calculateVertexLinePoints(
-                getCamera(mesh_project, vertex->positions[1]->camera_id),
+                projectGetCamera(mesh_project, vertex->positions[1]->camera_id),
                 vertex->positions[1]->x, vertex->positions[1]->y, p3, p4
             );
             Eigen::Vector3d pa;
@@ -239,7 +227,7 @@ static inline double sign(const Eigen::Vector2d& p1, const Eigen::Vector2d& p2, 
     return (p1.x() - p3.x()) * (p2.y() - p3.y()) - (p2.x() - p3.x()) * (p1.y() - p3.y());
 }
 
-bool isPointInTriangle(const Eigen::Vector2d& pt, const Eigen::Vector2d& v1, const Eigen::Vector2d& v2, const Eigen::Vector2d& v3)
+static inline bool isPointInTriangle(const Eigen::Vector2d& pt, const Eigen::Vector2d& v1, const Eigen::Vector2d& v2, const Eigen::Vector2d& v3)
 {
     double d1, d2, d3;
     bool has_neg, has_pos;
@@ -254,15 +242,106 @@ bool isPointInTriangle(const Eigen::Vector2d& pt, const Eigen::Vector2d& v1, con
     return !(has_neg && has_pos);
 }
 
+static inline std::uint32_t getPixel(const ImagePtr& image, const Eigen::Vector2d& pixel)
+{
+    double left = floor(pixel.x());
+    double right = ceil(pixel.x());
+    double bottom = floor(pixel.y());
+    double top = ceil(pixel.y());
+
+    auto check_bounds = [&]()
+    {
+        if (left <= 0.0)
+        {
+            left = 0.0;
+        }
+        if (right <= 0.0)
+        {
+            right = 0.0;
+        }
+        if (left >= image->width())
+        {
+            left = static_cast<double>(image->width()) - 1;
+        }
+        if (right >= image->width())
+        {
+            right = static_cast<double>(image->width()) - 1;
+        }
+
+        if (bottom <= 0.0)
+        {
+            bottom = 0.0;
+        }
+        if (top <= 0.0)
+        {
+            top = 0.0;
+        }
+        if (bottom >= image->height())
+        {
+            bottom = static_cast<double>(image->height()) - 1;
+        }
+        if (right >= image->height())
+        {
+            right = static_cast<double>(image->height()) - 1;
+        }
+    };
+
+    check_bounds();
+    if (right <= left)
+    {
+        left = right + 1;
+    }
+    if (top <= bottom)
+    {
+        top = bottom + 1;
+    }
+    check_bounds();
+
+    if (right <= left || top <= bottom)
+    {
+        // Can not interpolate
+        return image->pixel(static_cast<int>(left), static_cast<int>(bottom));
+    }
+
+    if (pixel.x() < left || pixel.x() > right || pixel.y() < bottom || pixel.y() > top)
+    {
+        // Can not interpolate
+        return image->pixel(static_cast<int>(left), static_cast<int>(bottom));
+    }
+
+    const double distance_to_left = pixel.x() - left;
+    const double distance_to_right = right - pixel.x();
+    const double distance_to_bottom = pixel.y() - bottom;
+    const double distance_to_top = top - pixel.y();
+
+    const double lower_left_square = distance_to_left * distance_to_bottom;
+    const double lower_right_square = distance_to_right * distance_to_bottom;
+    const double upper_left_square = distance_to_left * distance_to_top;
+    const double upper_right_square = distance_to_right * distance_to_top;
+
+    std::uint32_t lower_left_pixel = image->pixel(static_cast<int>(left), static_cast<int>(bottom));
+    std::uint32_t lower_right_pixel = image->pixel(static_cast<int>(right), static_cast<int>(bottom));
+    std::uint32_t upper_left_pixel = image->pixel(static_cast<int>(left), static_cast<int>(top));
+    std::uint32_t upper_right_pixel = image->pixel(static_cast<int>(right), static_cast<int>(top));
+
+    const double lower_left_weight = upper_right_square;
+    const double lower_right_weight = upper_left_square;
+    const double upper_left_weight = lower_right_square;
+    const double upper_right_weight = lower_left_square;
+
+    return lower_left_pixel;
+}
+
 class PictureTriangle
 {
     Eigen::Vector2d v[3];
 
     Eigen::Vector2d x_axis_oblique;
     Eigen::Vector2d y_axis_oblique;
+    ImagePtr image;
 
 public:
-    PictureTriangle(const Eigen::Vector2d sv[3], const unsigned new_to_old[3])
+    PictureTriangle(const Eigen::Vector2d sv[3], const unsigned new_to_old[3], const ImagePtr& image_)
     {
         v[0] = sv[new_to_old[0]];
         v[1] = sv[new_to_old[1]];
@@ -270,6 +349,7 @@ public:
 
         x_axis_oblique = v[1] - v[0];
         y_axis_oblique = v[2] - v[0];
+        image = image_;
     }
 
     Eigen::Vector2d calculatePointInObliqueCoordinateSystem(const Eigen::Vector2d& uv) const
@@ -454,7 +534,9 @@ public:
 
                 // Select picture where the current pixel has a higher square
                 const PictureTriangle& selected_pciture_triange = (pixel_p0_square > pixel_p1_square) ? picture0_triangle : picture1_triangle;
+
                 // TODO: Generate pixel
+
             }
         }
     }
@@ -478,20 +560,58 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
         const double d12 = (v[2] - v[1]).norm();
         const double d02 = (v[2] - v[0]).norm();
 
-        const int v0_p0_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[0]->x;
-        const int v0_p0_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[0]->y;
-        const int v0_p1_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[1]->x;
-        const int v0_p1_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.x()]]->positions[1]->y;
+        const size_t old_vertex0_id = new_mesh->new_to_old_vertex_id_map[cur_triangle.x()];
+        const size_t old_vertex1_id = new_mesh->new_to_old_vertex_id_map[cur_triangle.y()];
+        const size_t old_vertex2_id = new_mesh->new_to_old_vertex_id_map[cur_triangle.z()];
 
-        const int v1_p0_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.y()]]->positions[0]->x;
-        const int v1_p0_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.y()]]->positions[0]->y;
-        const int v1_p1_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.y()]]->positions[1]->x;
-        const int v1_p1_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.y()]]->positions[1]->y;
+        auto vertex0_info = mesh_project->vertices[old_vertex0_id];
+        const unsigned camera0_id = vertex0_info->positions[0]->camera_id;
+        const unsigned camera1_id = vertex0_info->positions[1]->camera_id;
 
-        const int v2_p0_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[0]->x;
-        const int v2_p0_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[0]->y;
-        const int v2_p1_x = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[1]->x;
-        const int v2_p1_y = mesh_project->vertices[new_mesh->new_to_old_vertex_id_map[cur_triangle.z()]]->positions[1]->y;
+        const int v0_p0_x = vertex0_info->positions[0]->x;
+        const int v0_p0_y = vertex0_info->positions[0]->y;
+        const int v0_p1_x = vertex0_info->positions[1]->x;
+        const int v0_p1_y = vertex0_info->positions[1]->y;
+
+        auto vertex1_info = mesh_project->vertices[old_vertex1_id];
+        unsigned v1_pos0_index = 0;
+        unsigned v1_pos1_index = 1;
+        if (vertex1_info->positions[1]->camera_id == camera0_id)
+        {
+            v1_pos0_index = 1;
+            v1_pos1_index = 0;
+        }
+        const int v1_p0_x = vertex1_info->positions[v1_pos0_index]->x;
+        const int v1_p0_y = vertex1_info->positions[v1_pos0_index]->y;
+        const int v1_p1_x = vertex1_info->positions[v1_pos1_index]->x;
+        const int v1_p1_y = vertex1_info->positions[v1_pos1_index]->y;
+        const unsigned v1_camera0_id = vertex1_info->positions[v1_pos0_index]->camera_id;
+        const unsigned v1_camera1_id = vertex1_info->positions[v1_pos1_index]->camera_id;
+        if (v1_camera0_id != camera0_id || v1_camera1_id != camera1_id)
+        {
+            // Oops! Different cameras, skipping this triangle
+            continue;
+        }
+
+        auto vertex2_info = mesh_project->vertices[old_vertex2_id];
+        unsigned v2_pos0_index = 0;
+        unsigned v2_pos1_index = 1;
+        if (vertex2_info->positions[1]->camera_id == camera1_id)
+        {
+            v2_pos0_index = 1;
+            v2_pos1_index = 0;
+        }
+        const int v2_p0_x = vertex2_info->positions[0]->x;
+        const int v2_p0_y = vertex2_info->positions[0]->y;
+        const int v2_p1_x = vertex2_info->positions[1]->x;
+        const int v2_p1_y = vertex2_info->positions[1]->y;
+        const unsigned v2_camera0_id = vertex2_info->positions[v2_pos0_index]->camera_id;
+        const unsigned v2_camera1_id = vertex2_info->positions[v2_pos1_index]->camera_id;
+        if (v2_camera0_id != camera0_id || v2_camera1_id != camera1_id)
+        {
+            // Oops! Different cameras, skipping this triangle
+            continue;
+        }
 
         const Eigen::Vector3d v0_p0(v0_p0_x, v0_p0_y, 0);
         const Eigen::Vector3d v0_p1(v0_p1_x, v0_p1_y, 0);
@@ -531,8 +651,11 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
         picture1_tr[1] = Eigen::Vector2d(v1_p1_x, v1_p1_y);
         picture1_tr[2] = Eigen::Vector2d(v2_p1_x, v2_p1_y);
 
-        PictureTriangle picture0_triangle(picture0_tr, comp_triangle.new_to_old);
-        PictureTriangle picture1_triangle(picture1_tr, comp_triangle.new_to_old);
+        Camera::Ptr camera0 = projectGetCamera(mesh_project, camera0_id);
+        Camera::Ptr camera1 = projectGetCamera(mesh_project, camera1_id);
+
+        PictureTriangle picture0_triangle(picture0_tr, comp_triangle.new_to_old, camera0->photo_image);
+        PictureTriangle picture1_triangle(picture1_tr, comp_triangle.new_to_old, camera1->photo_image);
 
         comp_triangle.build(maximum_density, picture0_triangle, picture1_triangle);
     }
