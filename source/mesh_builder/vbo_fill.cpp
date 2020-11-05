@@ -166,7 +166,7 @@ static void fillVertices(
         {
             for (auto& position : vertex->positions)
             {
-                Camera::Ptr used_camera = getCamera(mesh_project, position->camera_id);
+                Camera::Ptr used_camera = projectGetCamera(mesh_project, position->camera_id);
                 if (used_camera)
                 {
                     vertices.push_back({ used_camera, vertex->id, position->x, position->y });
