@@ -485,6 +485,8 @@ public:
         const unsigned pixel_count_w = static_cast<unsigned>(pixel_width_count);
         const unsigned pixel_count_h = static_cast<unsigned>(pixel_height_count);
 
+        std::vector<std::uint32_t> subimage_data(pixel_count_w * pixel_count_h);
+
         const double pixel_width = uv_width / pixel_width_count;
         const double pixel_height = uv_height / pixel_height_count;
         const double pixel_width2 = pixel_width / 2;
@@ -539,9 +541,14 @@ public:
                 const Eigen::Vector2d& selected_center = (pixel_p0_square > pixel_p1_square) ? center_p0 : center_p1;
 
                 QRgb new_pixel = getPixel(selected_picture_triange.getImage(), selected_center);
-                // TODO: generate new sub-texture
+                subimage_data[y * pixel_count_w + x] = new_pixel;
             }
         }
+
+        QImage subimage(reinterpret_cast<const unsigned char*>(&subimage_data[0]), pixel_count_w, pixel_count_h, QImage::Format_ARGB32);
+        static int image_counter = 0;
+        std::string file_name = "subimage_" + std::to_string(image_counter++) + ".png";
+        subimage.save(QString(file_name.c_str()), "PNG");
     }
 };
 
@@ -599,7 +606,7 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
         auto vertex2_info = mesh_project->vertices[old_vertex2_id];
         unsigned v2_pos0_index = 0;
         unsigned v2_pos1_index = 1;
-        if (vertex2_info->positions[1]->camera_id == camera1_id)
+        if (vertex2_info->positions[1]->camera_id == camera0_id)
         {
             v2_pos0_index = 1;
             v2_pos1_index = 0;
@@ -642,7 +649,9 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
         const double picture0_d02_density = d02_p0 / d02;
         const double picture1_d02_density = d02_p1 / d02;
 
-        const double maximum_density = std::max({ picture0_d01_density, picture1_d01_density, picture0_d12_density, picture1_d12_density, picture0_d02_density, picture1_d02_density });
+        //const double density = std::max({ picture0_d01_density, picture1_d01_density, picture0_d12_density, picture1_d12_density, picture0_d02_density, picture1_d02_density });
+        //const double density = (picture0_d01_density + picture1_d01_density + picture0_d12_density + picture1_d12_density + picture0_d02_density + picture1_d02_density) / 6.0;
+        const double density = 256.0;
 
         Eigen::Vector2d picture0_tr[3];
         picture0_tr[0] = Eigen::Vector2d(v0_p0_x, v0_p0_y);
@@ -660,7 +669,7 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
         PictureTriangle picture0_triangle(picture0_tr, comp_triangle.new_to_old, camera0->photo_image);
         PictureTriangle picture1_triangle(picture1_tr, comp_triangle.new_to_old, camera1->photo_image);
 
-        comp_triangle.build(maximum_density, picture0_triangle, picture1_triangle);
+        comp_triangle.build(density, picture0_triangle, picture1_triangle);
     }
 }
 
