@@ -246,6 +246,7 @@ static inline bool isPointInTriangle(const Eigen::Vector2d& pt, const Eigen::Vec
 static inline QRgb getPixel(const ImagePtr& image, const Eigen::Vector2d& source_pixel)
 {
     Eigen::Vector2d pixel = source_pixel;
+    pixel.y() = static_cast<double>(image->height()) - 1 - pixel.y();
     bool increase_right = false;
     bool decrease_left = false;
     bool increase_top = false;
@@ -386,9 +387,12 @@ class ComputationTriangle
 
     Eigen::Vector2d solveObliqueCoordinates(const Eigen::Vector2d& uv) const
     {
-        const double v = -uv.y() / y_axis_oblique_uv.y();
-        const Eigen::Vector2d temp = uv + y_axis_oblique_uv * v;
-        const double u = temp.norm();
+        const double t = -uv.y() / y_axis_oblique_uv.y();
+        const Eigen::Vector2d temp = uv + y_axis_oblique_uv * t;
+        const double u = temp.dot(x_axis_oblique_uv) / x_axis_oblique_uv.squaredNorm();
+        const double v = (uv - temp).dot(y_axis_oblique_uv) / y_axis_oblique_uv.squaredNorm();
+        // For debug only
+        //const Eigen::Vector2d restored_uv = x_axis_oblique_uv * u + y_axis_oblique_uv * v;
         return Eigen::Vector2d(u, v);
     }
 
@@ -485,7 +489,7 @@ public:
         const unsigned pixel_count_w = static_cast<unsigned>(pixel_width_count);
         const unsigned pixel_count_h = static_cast<unsigned>(pixel_height_count);
 
-        std::vector<std::uint32_t> subimage_data(pixel_count_w * pixel_count_h);
+        std::vector<std::uint32_t> subimage_data(static_cast<size_t>(pixel_count_w) * pixel_count_h);
 
         const double pixel_width = uv_width / pixel_width_count;
         const double pixel_height = uv_height / pixel_height_count;
@@ -496,10 +500,12 @@ public:
         {
             for (unsigned y = 0; y < pixel_count_h; ++y)
             {
-                const double u_lo = uv_min.x() + pixel_width * x;
-                const double u_hi = uv_min.x() + pixel_width * (x + 1);
-                const double v_lo = uv_min.y() + pixel_height * y;
-                const double v_hi = uv_min.y() + pixel_height * (y + 1);
+                const double dx = static_cast<double>(x);
+                const double dy = static_cast<double>(y);
+                const double u_lo = uv_min.x() + pixel_width * dx;
+                const double u_hi = uv_min.x() + pixel_width * (dx + 1);
+                const double v_lo = uv_min.y() + pixel_height * dy;
+                const double v_hi = uv_min.y() + pixel_height * (dy + 1);
                 const double u_center = u_lo + pixel_width2;
                 const double v_center = v_lo + pixel_height2;
 
@@ -541,11 +547,11 @@ public:
                 const Eigen::Vector2d& selected_center = (pixel_p0_square > pixel_p1_square) ? center_p0 : center_p1;
 
                 QRgb new_pixel = getPixel(selected_picture_triange.getImage(), selected_center);
-                subimage_data[y * pixel_count_w + x] = new_pixel;
+                subimage_data[(static_cast<size_t>(pixel_count_h) - 1 - y) * pixel_count_w + x] = new_pixel;
             }
         }
 
-        QImage subimage(reinterpret_cast<const unsigned char*>(&subimage_data[0]), pixel_count_w, pixel_count_h, QImage::Format_ARGB32);
+        QImage subimage(reinterpret_cast<const unsigned char*>(&subimage_data[0]), pixel_count_w, pixel_count_h, QImage::Format_RGB32);
         static int image_counter = 0;
         std::string file_name = "subimage_" + std::to_string(image_counter++) + ".png";
         subimage.save(QString(file_name.c_str()), "PNG");
