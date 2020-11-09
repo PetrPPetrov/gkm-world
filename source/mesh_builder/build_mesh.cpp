@@ -5,7 +5,9 @@
 #include <cmath>
 #include <vector>
 #include <QRgb>
+#include "mesh.h"
 #include "build_mesh.h"
+#include "texture_atlas.h"
 #include "global_parameters.h"
 
 constexpr static double EPSILON = 0.001;
@@ -91,20 +93,6 @@ void calculateVertexLinePoints(
     start = camera->viewer_pos;
     finish = end_vertex_line;
 }
-
-typedef Eigen::Matrix<std::uint32_t, Triangle::vertex_count, 1> Vector3u;
-
-struct Mesh
-{
-    typedef std::shared_ptr<Mesh> Ptr;
-
-    std::vector<Eigen::Vector3d> vertices;
-    std::vector<size_t> old_to_new_vertex_id_map;
-    std::vector<size_t> new_to_old_vertex_id_map;
-
-    std::vector<Vector3u> triangles;
-    //std::vector<size_t> old_to_new_triangle_id_map;
-};
 
 static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, const std::string& mesh_project_filename)
 {
@@ -363,6 +351,9 @@ public:
 
 class ComputationTriangle
 {
+    size_t triangle_index;
+    Vector3u triangle;
+
     Eigen::Vector3d v[3];
 
     Eigen::Vector3d x_axis_oblique;
@@ -405,158 +396,163 @@ class ComputationTriangle
 public:
     unsigned new_to_old[3];
 
-    ComputationTriangle(const Eigen::Vector3d sv[3])
-    {
-        const double d01 = (sv[1] - sv[0]).norm();
-        const double d12 = (sv[2] - sv[1]).norm();
-        const double d02 = (sv[2] - sv[0]).norm();
+    ComputationTriangle(size_t triangle_index, Vector3u triangle, const Eigen::Vector3d sv[3]);
 
-        if (d01 >= d12 && d01 >= d02)
-        {
-            v[0] = sv[0];
-            v[1] = sv[1];
-            v[2] = sv[2];
-            new_to_old[0] = 0;
-            new_to_old[1] = 1;
-            new_to_old[2] = 2;
-        }
-        else if (d12 >= d01 && d12 >= d02)
-        {
-            v[0] = sv[1];
-            v[1] = sv[2];
-            v[2] = sv[0];
-            new_to_old[0] = 1;
-            new_to_old[1] = 2;
-            new_to_old[2] = 0;
-        }
-        else
-        {
-            v[0] = sv[2];
-            v[1] = sv[0];
-            v[2] = sv[1];
-            new_to_old[0] = 2;
-            new_to_old[1] = 0;
-            new_to_old[2] = 1;
-        }
-
-        x_axis_oblique = v[1] - v[0];
-        y_axis_oblique = v[2] - v[0];
-
-        x_axis = (v[1] - v[0]).normalized();
-        const Eigen::Vector3d v2_rel = v[2] - v[0];
-        const double v2_x_coord = v2_rel.dot(x_axis);
-        const Eigen::Vector3d v2_base = x_axis * v2_x_coord;
-        y_axis = (v2_rel - v2_base).normalized();
-
-        x_axis_oblique_uv = Eigen::Vector2d(x_axis_oblique.dot(x_axis), 0);
-        y_axis_oblique_uv = solveRectangularCoordinates(y_axis_oblique);
-
-        uv[0] = Eigen::Vector2d(0, 0);
-        uv[1] = Eigen::Vector2d((v[1] - v[0]).dot(x_axis), 0);
-        uv[2] = Eigen::Vector2d(v2_x_coord, v2_rel.dot(y_axis));
-        uv_min = uv[0];
-        uv_max = uv[0];
-
-        for (unsigned i = 0; i < 3; ++i)
-        {
-            const Eigen::Vector2d cur_uv = uv[i];
-            if (cur_uv.x() < uv_min.x())
-            {
-                uv_min.x() = cur_uv.x();
-            }
-            if (cur_uv.y() < uv_min.y())
-            {
-                uv_min.y() = cur_uv.y();
-            }
-            if (cur_uv.x() > uv_max.x())
-            {
-                uv_max.x() = cur_uv.x();
-            }
-            if (cur_uv.y() > uv_max.y())
-            {
-                uv_max.y() = cur_uv.y();
-            }
-        }
-    }
-
-    void build(double density, const PictureTriangle& picture0_triangle, const PictureTriangle& picture1_triangle)
-    {
-        const double uv_width = uv_max.x() - uv_min.x();
-        const double uv_height = uv_max.y() - uv_min.y();
-
-        const double pixel_width_count = ceil(uv_width * density);
-        const double pixel_height_count = ceil(uv_height * density);
-        const unsigned pixel_count_w = static_cast<unsigned>(pixel_width_count);
-        const unsigned pixel_count_h = static_cast<unsigned>(pixel_height_count);
-
-        std::vector<std::uint32_t> subimage_data(static_cast<size_t>(pixel_count_w) * pixel_count_h);
-
-        const double pixel_width = uv_width / pixel_width_count;
-        const double pixel_height = uv_height / pixel_height_count;
-        const double pixel_width2 = pixel_width / 2;
-        const double pixel_height2 = pixel_height / 2;
-
-        for (unsigned x = 0; x < pixel_count_w; ++x)
-        {
-            for (unsigned y = 0; y < pixel_count_h; ++y)
-            {
-                const double dx = static_cast<double>(x);
-                const double dy = static_cast<double>(y);
-                const double u_lo = uv_min.x() + pixel_width * dx;
-                const double u_hi = uv_min.x() + pixel_width * (dx + 1);
-                const double v_lo = uv_min.y() + pixel_height * dy;
-                const double v_hi = uv_min.y() + pixel_height * (dy + 1);
-                const double u_center = u_lo + pixel_width2;
-                const double v_center = v_lo + pixel_height2;
-
-                const Eigen::Vector2d ll_corner_uv(u_lo, v_lo);
-                const Eigen::Vector2d lr_corner_uv(u_hi, v_lo);
-                const Eigen::Vector2d ul_corner_uv(u_lo, v_hi);
-                const Eigen::Vector2d ur_corner_uv(u_hi, v_hi);
-
-                if (!isPointInTriangle(ll_corner_uv, uv[0], uv[1], uv[2]) &&
-                    !isPointInTriangle(lr_corner_uv, uv[0], uv[1], uv[2]) &&
-                    !isPointInTriangle(ul_corner_uv, uv[0], uv[1], uv[2]) &&
-                    !isPointInTriangle(ur_corner_uv, uv[0], uv[1], uv[2]))
-                {
-                    continue;
-                }
-
-                const Eigen::Vector2d ll_corner = solveObliqueCoordinates(ll_corner_uv);
-                const Eigen::Vector2d lr_corner = solveObliqueCoordinates(lr_corner_uv);
-                const Eigen::Vector2d ul_corner = solveObliqueCoordinates(ul_corner_uv);
-                const Eigen::Vector2d ur_corner = solveObliqueCoordinates(ur_corner_uv);
-                const Eigen::Vector2d center = solveObliqueCoordinates(Eigen::Vector2d(u_center, v_center));
-
-                const Eigen::Vector2d ll_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
-                const Eigen::Vector2d lr_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
-                const Eigen::Vector2d ul_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
-                const Eigen::Vector2d ur_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
-                const Eigen::Vector2d center_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(center);
-                const double pixel_p0_square = calculateCellSquare(ll_corner_p0, lr_corner_p0, ul_corner_p0, ur_corner_p0);
-
-                const Eigen::Vector2d ll_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
-                const Eigen::Vector2d lr_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
-                const Eigen::Vector2d ul_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
-                const Eigen::Vector2d ur_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
-                const Eigen::Vector2d center_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(center);
-                const double pixel_p1_square = calculateCellSquare(ll_corner_p1, lr_corner_p1, ul_corner_p1, ur_corner_p1);
-
-                // Select picture where the current pixel has a higher square
-                const PictureTriangle& selected_picture_triange = (pixel_p0_square > pixel_p1_square) ? picture0_triangle : picture1_triangle;
-                const Eigen::Vector2d& selected_center = (pixel_p0_square > pixel_p1_square) ? center_p0 : center_p1;
-
-                QRgb new_pixel = getPixel(selected_picture_triange.getImage(), selected_center);
-                subimage_data[(static_cast<size_t>(pixel_count_h) - 1 - y) * pixel_count_w + x] = new_pixel;
-            }
-        }
-
-        QImage subimage(reinterpret_cast<const unsigned char*>(&subimage_data[0]), pixel_count_w, pixel_count_h, QImage::Format_RGB32);
-        static int image_counter = 0;
-        std::string file_name = "subimage_" + std::to_string(image_counter++) + ".png";
-        subimage.save(QString(file_name.c_str()), "PNG");
-    }
+    void build(double density, const PictureTriangle& picture0_triangle, const PictureTriangle& picture1_triangle);
 };
+
+ComputationTriangle::ComputationTriangle(size_t triangle_index_, Vector3u triangle_, const Eigen::Vector3d sv[3])
+{
+    triangle_index = triangle_index_;
+    const double d01 = (sv[1] - sv[0]).norm();
+    const double d12 = (sv[2] - sv[1]).norm();
+    const double d02 = (sv[2] - sv[0]).norm();
+
+    if (d01 >= d12 && d01 >= d02)
+    {
+        v[0] = sv[0];
+        v[1] = sv[1];
+        v[2] = sv[2];
+        new_to_old[0] = 0;
+        new_to_old[1] = 1;
+        new_to_old[2] = 2;
+    }
+    else if (d12 >= d01 && d12 >= d02)
+    {
+        v[0] = sv[1];
+        v[1] = sv[2];
+        v[2] = sv[0];
+        new_to_old[0] = 1;
+        new_to_old[1] = 2;
+        new_to_old[2] = 0;
+    }
+    else
+    {
+        v[0] = sv[2];
+        v[1] = sv[0];
+        v[2] = sv[1];
+        new_to_old[0] = 2;
+        new_to_old[1] = 0;
+        new_to_old[2] = 1;
+    }
+    triangle[0] = triangle_[new_to_old[0]];
+    triangle[1] = triangle_[new_to_old[1]];
+    triangle[2] = triangle_[new_to_old[2]];
+
+    x_axis_oblique = v[1] - v[0];
+    y_axis_oblique = v[2] - v[0];
+
+    x_axis = (v[1] - v[0]).normalized();
+    const Eigen::Vector3d v2_rel = v[2] - v[0];
+    const double v2_x_coord = v2_rel.dot(x_axis);
+    const Eigen::Vector3d v2_base = x_axis * v2_x_coord;
+    y_axis = (v2_rel - v2_base).normalized();
+
+    x_axis_oblique_uv = Eigen::Vector2d(x_axis_oblique.dot(x_axis), 0);
+    y_axis_oblique_uv = solveRectangularCoordinates(y_axis_oblique);
+
+    uv[0] = Eigen::Vector2d(0, 0);
+    uv[1] = Eigen::Vector2d((v[1] - v[0]).dot(x_axis), 0);
+    uv[2] = Eigen::Vector2d(v2_x_coord, v2_rel.dot(y_axis));
+    uv_min = uv[0];
+    uv_max = uv[0];
+
+    for (unsigned i = 0; i < 3; ++i)
+    {
+        const Eigen::Vector2d cur_uv = uv[i];
+        if (cur_uv.x() < uv_min.x())
+        {
+            uv_min.x() = cur_uv.x();
+        }
+        if (cur_uv.y() < uv_min.y())
+        {
+            uv_min.y() = cur_uv.y();
+        }
+        if (cur_uv.x() > uv_max.x())
+        {
+            uv_max.x() = cur_uv.x();
+        }
+        if (cur_uv.y() > uv_max.y())
+        {
+            uv_max.y() = cur_uv.y();
+        }
+    }
+}
+
+void ComputationTriangle::build(double density, const PictureTriangle& picture0_triangle, const PictureTriangle& picture1_triangle)
+{
+    const double uv_width = uv_max.x() - uv_min.x();
+    const double uv_height = uv_max.y() - uv_min.y();
+
+    const double pixel_width_count = ceil(uv_width * density);
+    const double pixel_height_count = ceil(uv_height * density);
+    const unsigned pixel_count_w = static_cast<unsigned>(pixel_width_count);
+    const unsigned pixel_count_h = static_cast<unsigned>(pixel_height_count);
+
+    TriangleTexture::Ptr texture = std::make_shared<TriangleTexture>(triangle_index, triangle, pixel_count_w, pixel_count_h);
+
+    const double pixel_width = uv_width / pixel_width_count;
+    const double pixel_height = uv_height / pixel_height_count;
+    const double pixel_width2 = pixel_width / 2;
+    const double pixel_height2 = pixel_height / 2;
+
+    for (unsigned x = 0; x < pixel_count_w; ++x)
+    {
+        for (unsigned y = 0; y < pixel_count_h; ++y)
+        {
+            const double dx = static_cast<double>(x);
+            const double dy = static_cast<double>(y);
+            const double u_lo = uv_min.x() + pixel_width * dx;
+            const double u_hi = uv_min.x() + pixel_width * (dx + 1);
+            const double v_lo = uv_min.y() + pixel_height * dy;
+            const double v_hi = uv_min.y() + pixel_height * (dy + 1);
+            const double u_center = u_lo + pixel_width2;
+            const double v_center = v_lo + pixel_height2;
+
+            const Eigen::Vector2d ll_corner_uv(u_lo, v_lo);
+            const Eigen::Vector2d lr_corner_uv(u_hi, v_lo);
+            const Eigen::Vector2d ul_corner_uv(u_lo, v_hi);
+            const Eigen::Vector2d ur_corner_uv(u_hi, v_hi);
+
+            if (!isPointInTriangle(ll_corner_uv, uv[0], uv[1], uv[2]) &&
+                !isPointInTriangle(lr_corner_uv, uv[0], uv[1], uv[2]) &&
+                !isPointInTriangle(ul_corner_uv, uv[0], uv[1], uv[2]) &&
+                !isPointInTriangle(ur_corner_uv, uv[0], uv[1], uv[2]))
+            {
+                continue;
+            }
+
+            const Eigen::Vector2d ll_corner = solveObliqueCoordinates(ll_corner_uv);
+            const Eigen::Vector2d lr_corner = solveObliqueCoordinates(lr_corner_uv);
+            const Eigen::Vector2d ul_corner = solveObliqueCoordinates(ul_corner_uv);
+            const Eigen::Vector2d ur_corner = solveObliqueCoordinates(ur_corner_uv);
+            const Eigen::Vector2d center = solveObliqueCoordinates(Eigen::Vector2d(u_center, v_center));
+
+            const Eigen::Vector2d ll_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
+            const Eigen::Vector2d lr_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
+            const Eigen::Vector2d ul_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
+            const Eigen::Vector2d ur_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
+            const Eigen::Vector2d center_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(center);
+            const double pixel_p0_square = calculateCellSquare(ll_corner_p0, lr_corner_p0, ul_corner_p0, ur_corner_p0);
+
+            const Eigen::Vector2d ll_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
+            const Eigen::Vector2d lr_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
+            const Eigen::Vector2d ul_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
+            const Eigen::Vector2d ur_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
+            const Eigen::Vector2d center_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(center);
+            const double pixel_p1_square = calculateCellSquare(ll_corner_p1, lr_corner_p1, ul_corner_p1, ur_corner_p1);
+
+            // Select picture where the current pixel has a higher square
+            const PictureTriangle& selected_picture_triange = (pixel_p0_square > pixel_p1_square) ? picture0_triangle : picture1_triangle;
+            const Eigen::Vector2d& selected_center = (pixel_p0_square > pixel_p1_square) ? center_p0 : center_p1;
+
+            QRgb new_pixel = getPixel(selected_picture_triange.getImage(), selected_center);
+            texture->setPixel(x, y, new_pixel);
+        }
+    }
+
+    texture->save();
+}
 
 void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
@@ -570,7 +566,7 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
         v[1] = new_mesh->vertices[cur_triangle.y()];
         v[2] = new_mesh->vertices[cur_triangle.z()];
 
-        ComputationTriangle comp_triangle(v);
+        ComputationTriangle comp_triangle(i, cur_triangle, v);
 
         const double d01 = (v[1] - v[0]).norm();
         const double d12 = (v[2] - v[1]).norm();
