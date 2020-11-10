@@ -398,7 +398,7 @@ public:
 
     ComputationTriangle(size_t triangle_index, Vector3u triangle, const Eigen::Vector3d sv[3]);
 
-    void build(double density, const PictureTriangle& picture0_triangle, const PictureTriangle& picture1_triangle);
+    TriangleTexture::Ptr buildTexture(double density, const PictureTriangle& picture0_triangle, const PictureTriangle& picture1_triangle);
 };
 
 ComputationTriangle::ComputationTriangle(size_t triangle_index_, Vector3u triangle_, const Eigen::Vector3d sv[3])
@@ -479,7 +479,7 @@ ComputationTriangle::ComputationTriangle(size_t triangle_index_, Vector3u triang
     }
 }
 
-void ComputationTriangle::build(double density, const PictureTriangle& picture0_triangle, const PictureTriangle& picture1_triangle)
+TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const PictureTriangle& picture0_triangle, const PictureTriangle& picture1_triangle)
 {
     const double uv_width = uv_max.x() - uv_min.x();
     const double uv_height = uv_max.y() - uv_min.y();
@@ -551,11 +551,21 @@ void ComputationTriangle::build(double density, const PictureTriangle& picture0_
         }
     }
 
+    for (unsigned i = 0; i < 3; ++i)
+    {
+        texture->texture_coordinates[i].x() = uv[i].x() / pixel_width_count;
+        texture->texture_coordinates[i].y() = uv[i].y() / pixel_height_count;
+    }
+
+    // For debug only
     texture->save();
+    return texture;
 }
 
 void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
+    TextureAtlas::Ptr texture_atlas = std::make_shared<TextureAtlas>(mesh_project, new_mesh);
+
     const size_t new_triangle_count = new_mesh->triangles.size();
     for (size_t i = 0; i < new_triangle_count; ++i)
     {
@@ -671,7 +681,7 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
         PictureTriangle picture0_triangle(picture0_tr, comp_triangle.new_to_old, camera0->photo_image);
         PictureTriangle picture1_triangle(picture1_tr, comp_triangle.new_to_old, camera1->photo_image);
 
-        comp_triangle.build(density, picture0_triangle, picture1_triangle);
+        texture_atlas->addTriangleTexture(comp_triangle.buildTexture(density, picture0_triangle, picture1_triangle));
     }
 }
 

@@ -38,6 +38,8 @@ class TextureAtlas
     Mesh::Ptr mesh;
 
 public:
+    typedef std::shared_ptr<TextureAtlas> Ptr;
+
     TextureAtlas(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& mesh);
 
     void addTriangleTexture(const TriangleTexture::Ptr& triangle_texture);
