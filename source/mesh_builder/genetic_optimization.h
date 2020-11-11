@@ -12,13 +12,22 @@
 typedef boost::polygon::point_data<int> NfpPoint;
 typedef boost::polygon::rectangle_data<int> NfpRectange;
 typedef boost::polygon::polygon_set_data<int> NfpPolygonSet;
-typedef boost::polygon::polygon_with_holes_data<int> NfpPolygon;
+typedef boost::polygon::polygon_data<int> NfpPolygon;
 typedef std::pair<NfpPoint, NfpPoint> NfpEdge;
+
+typedef std::shared_ptr<NfpPolygonSet> NfpPolygonSetPtr;
+
+constexpr static double SCALE = 256.0;
+constexpr static size_t POPULATION_SIZE = 128;
+constexpr static size_t MUTATION_RATE = 10;
 
 struct Gene
 {
     size_t triangle_texture_index;
     size_t rotation_index;
+    size_t max_rotation_index;
+    NfpPoint placement;
+    bool placed = false;
 };
 
 struct Individual

@@ -24,6 +24,8 @@ public:
     typedef std::shared_ptr<TriangleTexture> Ptr;
 
     TriangleTexture(size_t triangle_index, Vector3u triangle, unsigned width, unsigned height);
+    unsigned getWidth() const;
+    unsigned getHeight() const;
     void setPixel(unsigned x, unsigned y, std::uint32_t value);
     std::uint32_t getPixel(unsigned x, unsigned y) const;
     void save() const;

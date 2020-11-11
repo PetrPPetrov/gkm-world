@@ -16,6 +16,16 @@ TriangleTexture::TriangleTexture(size_t triangle_index_, Vector3u triangle_, uns
     height = height_;
 }
 
+unsigned TriangleTexture::getWidth() const
+{
+    return width;
+}
+
+unsigned TriangleTexture::getHeight() const
+{
+    return height;
+}
+
 void TriangleTexture::setPixel(unsigned x, unsigned y, std::uint32_t value)
 {
     image_data[getIndex(x, y)] = value;
