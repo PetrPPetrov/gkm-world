@@ -2,30 +2,19 @@
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #include <unordered_set>
+#include "global_parameters.h"
 #include "genetic_optimization.h"
 
-static inline void toPolygon(const TriangleTexture::Ptr& triangle_texture, NfpPolygon& polygon)
-{
-    std::vector<NfpPoint> points;
-    points.reserve(3);
-    for (unsigned i = 0; i < 3; ++i)
-    {
-        const int x = static_cast<int>(SCALE * triangle_texture->texture_coordinates[i].x() * triangle_texture->getWidth());
-        const int y = static_cast<int>(SCALE * triangle_texture->texture_coordinates[i].y() * triangle_texture->getHeight());
-        points.push_back(NfpPoint(x, y));
-    }
-    boost::polygon::set_points(polygon, points.begin(), points.end());
-}
-
-static inline void toPolygonSet(const TriangleTexture::Ptr& triangle_texture, NfpPolygonSet& polygons)
+static inline void toPolygonSet(const TriangleTexture::Ptr& triangle_texture, double rotation_angle, NfpPolygonSet& polygons)
 {
     polygons.clear();
     std::vector<NfpPoint> points;
     points.reserve(3);
     for (unsigned i = 0; i < 3; ++i)
     {
-        const int x = static_cast<int>(SCALE * triangle_texture->texture_coordinates[i].x() * triangle_texture->getWidth());
-        const int y = static_cast<int>(SCALE * triangle_texture->texture_coordinates[i].y() * triangle_texture->getHeight());
+        const Eigen::Vector2d tex_coord = Eigen::Rotation2Dd(rotation_angle) * triangle_texture->texture_coordinates[i];
+        const int x = static_cast<int>(SCALE * tex_coord.x());
+        const int y = static_cast<int>(SCALE * tex_coord.y());
         points.push_back(NfpPoint(x, y));
     }
     NfpPolygon polygon;
@@ -78,18 +67,6 @@ static inline void convolveTwoPointSequences(NfpPolygonSet& result, Iterator1 ab
 }
 
 template <typename Iterator>
-static inline void convolvePointSequenceWithPolygon(NfpPolygonSet& result, Iterator b, Iterator e, const NfpPolygon& polygon)
-{
-    using namespace boost::polygon;
-    convolveTwoPointSequences(result, b, e, begin_points(polygon), end_points(polygon));
-    for (polygon_with_holes_traits<NfpPolygon>::iterator_holes_type itrh = begin_holes(polygon);
-        itrh != end_holes(polygon); ++itrh)
-    {
-        convolveTwoPointSequences(result, b, e, begin_points(*itrh), end_points(*itrh));
-    }
-}
-
-template <typename Iterator>
 static inline void convolvePointSequenceWithPolygons(NfpPolygonSet& result, Iterator b, Iterator e, const std::vector<NfpPolygon>& polygons)
 {
     using namespace boost::polygon;
@@ -102,27 +79,6 @@ static inline void convolvePointSequenceWithPolygons(NfpPolygonSet& result, Iter
             convolveTwoPointSequences(result, b, e, begin_points(*itrh), end_points(*itrh));
         }
     }
-}
-
-static inline void convolveTwoPolygons(NfpPolygonSet& result, const NfpPolygon& a, NfpPolygon b)
-{
-    using namespace boost::polygon;
-    result.clear();
-
-    scale(b, -1.0); // To detect NFP we need negative coordinates of polygon b
-
-    convolvePointSequenceWithPolygon(result, begin_points(a), end_points(a), b);
-    for (polygon_with_holes_traits<NfpPolygon>::iterator_holes_type itrh = begin_holes(a);
-        itrh != end_holes(a); ++itrh)
-    {
-        convolvePointSequenceWithPolygon(result, begin_points(*itrh),
-            end_points(*itrh), b);
-    }
-
-    NfpPolygon tmp_poly = a;
-    result.insert(convolve(tmp_poly, *(begin_points(b))));
-    tmp_poly = b;
-    result.insert(convolve(tmp_poly, *(begin_points(a))));
 }
 
 static inline void convolveTwoPolygonSets(NfpPolygonSet& result, const NfpPolygonSet& a, const NfpPolygonSet& b)
@@ -159,15 +115,8 @@ static inline void convolveTwoPolygonSets(NfpPolygonSet& result, const NfpPolygo
     }
 }
 
-static inline const NfpPolygonSet& cachedOuterNfp(const NfpPolygonSetPtr& a, const NfpPolygonSetPtr& b, int effective_protection_offset)
+const NfpPolygonSet& GeneticOptimization::cachedOuterNfp(const NfpPolygonSetPtr& a, const NfpPolygonSetPtr& b, int effective_protection_offset)
 {
-    struct OuterNfp
-    {
-        NfpPolygonSetPtr result;
-        int effective_protection_offset = 0.0;
-    };
-    static std::map<std::pair<NfpPolygonSet*, NfpPolygonSet*>, OuterNfp> outer_nfp_cache;
-
     auto key = std::make_pair(a.get(), b.get());
     auto fit = outer_nfp_cache.find(key);
     if (fit == outer_nfp_cache.end())
@@ -203,8 +152,8 @@ static inline const NfpPolygonSet& cachedOuterNfp(const NfpPolygonSetPtr& a, con
 Pair GeneticOptimization::getRandomPair() const
 {
     const size_t max_random = POPULATION_SIZE * POPULATION_SIZE;
-    std::vector<Individual::Ptr> result;
-    result.reserve(2);
+    Pair result = { nullptr };
+    unsigned result_index = 0;
     while (result.size() < 2)
     {
         size_t index = 0;
@@ -214,24 +163,23 @@ Pair GeneticOptimization::getRandomPair() const
             {
                 if (uniform(engine) % max_random < 2 * (POPULATION_SIZE - index))
                 {
-                    result.push_back(individual);
-                    if (result.size() >= 2)
+                    result[result_index++] = individual;
+                    if (result_index >= 2)
                     {
-                        goto finish; // Yep! I'm using goto statement!
+                        return result;
                     }
                 }
             }
             ++index;
         }
     }
-finish:
-    return std::make_pair(result[0], result[1]);
+    return result;
 }
 
 Pair GeneticOptimization::mate(const Pair& pair) const
 {
-    const Individual::Ptr& male = pair.first;
-    const Individual::Ptr& female = pair.first;
+    const Individual::Ptr& male = pair[0];
+    const Individual::Ptr& female = pair[1];
 
     const size_t genes_count = male->genotype.size();
     const size_t genes_cross_area_size = genes_count * 80 / 10; // 80%
@@ -275,7 +223,7 @@ Pair GeneticOptimization::mate(const Pair& pair) const
         }
     }
 
-    return std::make_pair(female_based_child, male_based_child);
+    return { female_based_child, male_based_child };
 }
 
 void GeneticOptimization::mutate(const Individual::Ptr& individual) const
@@ -285,7 +233,7 @@ void GeneticOptimization::mutate(const Individual::Ptr& individual) const
         if (uniform(engine) % 100 < MUTATION_RATE)
         {
             Gene& gene = individual->genotype[i];
-            gene.rotation_index = uniform(engine) % gene.max_rotation_index;
+            gene.rotation_index = uniform(engine) % ROTATION_COUNT;
         }
         if (uniform(engine) % 100 < MUTATION_RATE)
         {
@@ -301,6 +249,49 @@ void GeneticOptimization::mutate(const Individual::Ptr& individual) const
 
 GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>& triangle_textures, const Mesh::Ptr& mesh) : engine(std::random_device()())
 {
+    triangle_texture_information.reserve(triangle_textures.size());
+
+    const double rotation_step = 360.0 / ROTATION_COUNT * GRAD_TO_RAD;
+    for (size_t i = 0; i < triangle_textures.size(); ++i)
+    {
+        auto new_information = std::make_shared<TriangleTextureInformation>();
+        triangle_texture_information.push_back(new_information);
+        new_information->variations.reserve(ROTATION_COUNT);
+
+        for (size_t j = 0; j < ROTATION_COUNT; ++j)
+        {
+            auto new_variation = std::make_shared<TriangleTextureVariation>();
+            new_information->variations.push_back(new_variation);
+            new_variation->rotation_angle = rotation_step * j;
+            NfpPolygonSetPtr new_polygon = std::make_shared<NfpPolygonSet>();
+            toPolygonSet(triangle_textures[i], new_variation->rotation_angle, new_variation->polygon);
+        }
+    }
+
+    std::vector<TriangleTexture::Ptr> sorted_triangle_textures = triangle_textures; // Perform copy
+    std::sort(sorted_triangle_textures.begin(), sorted_triangle_textures.end(), [](const TriangleTexture::Ptr& a, const TriangleTexture::Ptr& b)
+        {
+            return a->area > b->area;
+        });
+
+    auto adam = std::make_shared<Individual>();
+    adam->genotype.reserve(sorted_triangle_textures.size());
+    for (auto& triangle_info : sorted_triangle_textures)
+    {
+        Gene new_gene;
+        new_gene.triangle_texture_index = triangle_info->getTriangleIndex();
+        new_gene.rotation_index = uniform(engine) % ROTATION_COUNT;
+        adam->genotype.push_back(new_gene);
+    }
+    population.push_back(adam);
+
+    while (population.size() < POPULATION_SIZE)
+    {
+        auto eva = std::make_shared<Individual>();
+        *eva = *adam;
+        mutate(eva);
+        population.push_back(eva);
+    }
 }
 
 void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual) const
@@ -309,17 +300,45 @@ void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual) co
 
 void GeneticOptimization::calculatePenalties() const
 {
+    for (auto& individual : population)
+    {
+        calculatePenalty(individual);
+    }
 }
 
 void GeneticOptimization::sort()
 {
+    population.sort([](const Individual::Ptr& a, const Individual::Ptr& b)
+        {
+            return a->penalty < b->penalty;
+        });
 }
 
 void GeneticOptimization::nextGeneration()
 {
+    std::list<Individual::Ptr> next_population;
+    next_population.push_back(getBest());
+    while (next_population.size() < POPULATION_SIZE)
+    {
+        auto pair = getRandomPair();
+        Pair children = mate(pair);
+        for (auto& child : children)
+        {
+            if (next_population.size() < POPULATION_SIZE)
+            {
+                mutate(child);
+                next_population.push_back(child);
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+    population = next_population;
 }
 
 Individual::Ptr GeneticOptimization::getBest() const
 {
-    return nullptr;
+    return *population.begin();
 }

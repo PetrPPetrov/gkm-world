@@ -553,9 +553,9 @@ TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const Pic
 
     for (unsigned i = 0; i < 3; ++i)
     {
-        texture->texture_coordinates[i].x() = uv[i].x() / pixel_width_count;
-        texture->texture_coordinates[i].y() = uv[i].y() / pixel_height_count;
+        texture->texture_coordinates[i] = uv[i];
     }
+    texture->area = calculateTriangleSquare(uv[0], uv[1], uv[2]);
 
     // For debug only
     texture->save();

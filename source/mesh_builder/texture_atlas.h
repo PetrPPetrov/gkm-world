@@ -28,8 +28,10 @@ public:
     unsigned getHeight() const;
     void setPixel(unsigned x, unsigned y, std::uint32_t value);
     std::uint32_t getPixel(unsigned x, unsigned y) const;
+    size_t getTriangleIndex() const;
     void save() const;
 
+    double area = 0.0;
     Eigen::Vector2d texture_coordinates[3];
 };
 

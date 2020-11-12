@@ -36,6 +36,11 @@ std::uint32_t TriangleTexture::getPixel(unsigned x, unsigned y) const
     return image_data[getIndex(x, y)];
 }
 
+size_t TriangleTexture::getTriangleIndex() const
+{
+    return triangle_index;
+}
+
 void TriangleTexture::save() const
 {
     QImage subimage(reinterpret_cast<const unsigned char*>(&image_data[0]), width, height, QImage::Format_RGB32);
