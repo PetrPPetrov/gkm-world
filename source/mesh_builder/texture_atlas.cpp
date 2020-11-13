@@ -1,6 +1,7 @@
 // Copyright 2018-2020 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
+#include "genetic_optimization.h"
 #include "texture_atlas.h"
 
 size_t TriangleTexture::getIndex(unsigned x, unsigned y) const
@@ -62,5 +63,30 @@ void TextureAtlas::addTriangleTexture(const TriangleTexture::Ptr& triangle_textu
 
 void TextureAtlas::build()
 {
-    // TODO:
+    auto genetic_algorithm = std::make_shared<GeneticOptimization>(triangle_textures, mesh);
+
+    size_t generation_count = 0;
+    Individual::Ptr best = nullptr;
+    while (true)
+    {
+        genetic_algorithm->calculatePenalties();
+        genetic_algorithm->sort();
+        best = genetic_algorithm->getBest();
+        genetic_algorithm->nextGeneration();
+        ++generation_count;
+        if (generation_count > 100)
+        {
+            break;
+        }
+    }
+
+    // TODO: Generate final texture atlas texture
+    //QImage image("path/to/image/img.png");
+    //QPainter painter(&image);
+    //QPen pen;
+    //pen.setWidth(20);
+    //pen.setColor(Qt::red);
+    //painter.setPen(pen);
+    //painter.drawPoint(5, 5);
+    //painter.end();
 }

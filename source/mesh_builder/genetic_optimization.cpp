@@ -5,6 +5,35 @@
 #include "global_parameters.h"
 #include "genetic_optimization.h"
 
+template<typename ProcessPointFunc>
+static inline void iterateAllPoints(const NfpPolygon& polygon, ProcessPointFunc& process_point)
+{
+    using namespace boost::polygon;
+    for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
+    {
+        process_point(*point_it);
+    }
+    for (polygon_with_holes_traits<NfpPolygon>::iterator_holes_type it = begin_holes(polygon);
+        it != end_holes(polygon); ++it)
+    {
+        for (auto& point_it = begin_points(*it); point_it != end_points(*it); ++point_it)
+        {
+            process_point(*point_it);
+        }
+    }
+}
+
+template<typename ProcessPointFunc>
+static inline void iterateAllPoints(const NfpPolygonSet& polygon_set, ProcessPointFunc& process_point)
+{
+    std::vector<NfpPolygon> polygons;
+    polygon_set.get(polygons);
+    for (auto& polygon : polygons)
+    {
+        iterateAllPoints(polygon, process_point);
+    }
+}
+
 static inline void toPolygonSet(const TriangleTexture::Ptr& triangle_texture, double rotation_angle, NfpPolygonSet& polygons)
 {
     polygons.clear();
@@ -263,8 +292,8 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
             auto new_variation = std::make_shared<TriangleTextureVariation>();
             new_information->variations.push_back(new_variation);
             new_variation->rotation_angle = rotation_step * j;
-            NfpPolygonSetPtr new_polygon = std::make_shared<NfpPolygonSet>();
-            toPolygonSet(triangle_textures[i], new_variation->rotation_angle, new_variation->polygon);
+            new_variation->polygon = std::make_shared<NfpPolygonSet>();
+            toPolygonSet(triangle_textures[i], new_variation->rotation_angle, *new_variation->polygon);
         }
     }
 
@@ -294,11 +323,99 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
     }
 }
 
-void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual) const
+void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
 {
+    if (individual->penalty)
+    {
+        // If this individual already contains some calculated
+        // penalty then use the calculated penalty.
+        // This happens for best individual who goes
+        // to the next generation without any mutations.
+        return;
+    }
+
+    using namespace boost::polygon;
+    using namespace boost::polygon::operators;
+
+    bool first_iteration = true;
+    NfpPolygonSet accumulated_geometry;
+    for (size_t gene_index = 0; gene_index < individual->genotype.size(); ++gene_index)
+    {
+        Gene& gene = individual->genotype[gene_index];
+        gene.placed = false;
+        const NfpPolygonSetPtr& cur_gene_geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->polygon;
+        std::vector<NfpPolygon> cur_gene_polygons;
+        cur_gene_geometry->get(cur_gene_polygons);
+
+        if (first_iteration)
+        {
+            // Place the first triangle texture at (0,0) position
+            gene.placement = NfpPoint(0, 0);
+            gene.placed = true;
+            first_iteration = false;
+            accumulated_geometry += *cur_gene_geometry;
+            continue;
+        }
+
+        NfpPolygonSet result_nfp;
+        for (size_t prev_gene_index = 0; prev_gene_index < gene_index; ++prev_gene_index)
+        {
+            const Gene& prev_gene = individual->genotype[prev_gene_index];
+            if (prev_gene.placed)
+            {
+                const NfpPolygonSetPtr& prev_gene_geometry = triangle_texture_information[prev_gene.triangle_texture_index]->variations[prev_gene.rotation_index]->polygon;
+                const NfpPolygonSet& outer_nfp = cachedOuterNfp(prev_gene_geometry, cur_gene_geometry, EFFECTIVE_PROTECTION_OFFSET);
+
+                std::vector<NfpPolygon> outer_nfp_polygons;
+                outer_nfp.get(outer_nfp_polygons);
+                for (auto& outer_nfp_polygon : outer_nfp_polygons)
+                {
+                    // Move outer NFP according the current triangle texture placement
+                    move(outer_nfp_polygon, HORIZONTAL, x(prev_gene.placement));
+                    move(outer_nfp_polygon, VERTICAL, y(prev_gene.placement));
+                    result_nfp += outer_nfp_polygon; // Union of all part NFP
+                }
+            }
+        }
+
+        size_t min_local_penalty = 0;
+        iterateAllPoints(result_nfp,
+            [&min_local_penalty, &gene, &accumulated_geometry, &cur_gene_polygons](const NfpPoint& point)
+            {
+                NfpPolygonSet new_geometry = accumulated_geometry;
+                for (auto& cur_gene_polygon : cur_gene_polygons)
+                {
+                    NfpPolygon new_cur_gene_polygon = cur_gene_polygon;
+                    move(new_cur_gene_polygon, HORIZONTAL, x(point));
+                    move(new_cur_gene_polygon, VERTICAL, y(point));
+                    new_geometry += new_cur_gene_polygon;
+                }
+                NfpRectange bounding_box;
+                extents(bounding_box, new_geometry);
+                const size_t cur_local_penalty = static_cast<size_t>(area(bounding_box));
+
+                if (!gene.placed || cur_local_penalty < min_local_penalty)
+                {
+                    gene.placement = point;
+                    gene.placed = true;
+                    min_local_penalty = cur_local_penalty;
+                }
+            }
+        );
+
+        assert(gene.placed);
+        for (auto& cur_gene_polygon : cur_gene_polygons)
+        {
+            move(cur_gene_polygon, HORIZONTAL, x(gene.placement));
+            move(cur_gene_polygon, VERTICAL, y(gene.placement));
+            accumulated_geometry += cur_gene_polygon;
+        }
+
+        individual->penalty = min_local_penalty;
+    }
 }
 
-void GeneticOptimization::calculatePenalties() const
+void GeneticOptimization::calculatePenalties()
 {
     for (auto& individual : population)
     {
