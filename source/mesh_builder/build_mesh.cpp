@@ -553,7 +553,7 @@ TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const Pic
 
     for (unsigned i = 0; i < 3; ++i)
     {
-        texture->texture_coordinates[i] = uv[i];
+        texture->texture_coordinates[i] = uv[i] * density;
     }
     texture->area = calculateTriangleSquare(uv[0], uv[1], uv[2]);
 
@@ -663,7 +663,7 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
 
         //const double density = std::max({ picture0_d01_density, picture1_d01_density, picture0_d12_density, picture1_d12_density, picture0_d02_density, picture1_d02_density });
         //const double density = (picture0_d01_density + picture1_d01_density + picture0_d12_density + picture1_d12_density + picture0_d02_density + picture1_d02_density) / 6.0;
-        const double density = 256.0;
+        const double density = 64.0;
 
         Eigen::Vector2d picture0_tr[3];
         picture0_tr[0] = Eigen::Vector2d(v0_p0_x, v0_p0_y);
@@ -683,6 +683,8 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
 
         texture_atlas->addTriangleTexture(comp_triangle.buildTexture(density, picture0_triangle, picture1_triangle));
     }
+
+    texture_atlas->build();
 }
 
 void buildMesh(const MeshProject::Ptr& mesh_project)

@@ -1,6 +1,8 @@
 // Copyright 2018-2020 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
+#include <QPainter>
+#include <QImage>
 #include "genetic_optimization.h"
 #include "texture_atlas.h"
 
@@ -74,19 +76,62 @@ void TextureAtlas::build()
         best = genetic_algorithm->getBest();
         genetic_algorithm->nextGeneration();
         ++generation_count;
-        if (generation_count > 100)
+        if (generation_count > 10)
         {
             break;
         }
     }
 
-    // TODO: Generate final texture atlas texture
-    //QImage image("path/to/image/img.png");
-    //QPainter painter(&image);
-    //QPen pen;
-    //pen.setWidth(20);
-    //pen.setColor(Qt::red);
-    //painter.setPen(pen);
-    //painter.drawPoint(5, 5);
-    //painter.end();
+    if (best)
+    {
+        const double x_lo = xl(best->bounding_box);
+        const double x_hi = xh(best->bounding_box);
+        const double y_lo = yl(best->bounding_box);
+        const double y_hi = yh(best->bounding_box);
+        const double x_size = x_hi - x_lo;
+        const double y_size = y_hi - y_lo;
+        const int texture_atlas_width = static_cast<int>(x_size / SCALE);
+        const int texture_atlas_height = static_cast<int>(y_size / SCALE);
+
+        // For debug only
+        QImage image(texture_atlas_width, texture_atlas_height, QImage::Format::Format_RGB888);
+        QPainter painter(&image);
+        QPen pen;
+        pen.setWidth(1);
+        pen.setColor(Qt::red);
+        painter.setPen(pen);
+        const auto& triangle_texture_information = genetic_algorithm->getTriangleTextureInformation();
+        for (auto& gene : best->genotype)
+        {
+            using namespace boost::polygon;
+            using namespace boost::polygon::operators;
+
+            assert(gene.placed);
+            auto geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->polygon;
+            std::vector<NfpPolygon> polygons;
+            geometry->get(polygons);
+            for (auto& polygon : polygons)
+            {
+                move(polygon, HORIZONTAL, x(gene.placement));
+                move(polygon, VERTICAL, y(gene.placement));
+                bool first_point = true;
+                QPainterPath path_to_draw;
+                for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
+                {
+                    if (first_point)
+                    {
+                        path_to_draw.moveTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
+                        first_point = false;
+                    }
+                    else
+                    {
+                        path_to_draw.lineTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
+                    }
+                }
+                painter.drawPath(path_to_draw);
+            }
+        }
+        painter.end();
+        image.save("atlas.png", "PNG");
+    }
 }

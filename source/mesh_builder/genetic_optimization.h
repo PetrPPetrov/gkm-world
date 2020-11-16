@@ -54,10 +54,11 @@ struct Individual
 
     std::vector<Gene> genotype;
     size_t penalty = 0;
+    NfpRectange bounding_box;
 };
 typedef std::array<Individual::Ptr, 2> Pair;
 
-struct OuterNfp
+struct Nfp
 {
     NfpPolygonSetPtr result;
     int effective_protection_offset = 0;
@@ -67,12 +68,12 @@ class GeneticOptimization
 {
     std::vector<TriangleTextureInformation::Ptr> triangle_texture_information;
     std::list<Individual::Ptr> population;
-    std::map<std::pair<NfpPolygonSet*, NfpPolygonSet*>, OuterNfp> outer_nfp_cache;
+    std::map<std::pair<NfpPolygonSet*, NfpPolygonSet*>, Nfp> nfp_cache;
 
     mutable std::mt19937 engine;
     mutable std::uniform_int_distribution<size_t> uniform;
 
-    const NfpPolygonSet& cachedOuterNfp(const NfpPolygonSetPtr& a, const NfpPolygonSetPtr& b, int effective_protection_offset);
+    const NfpPolygonSet& cachedNfp(const NfpPolygonSetPtr& a, const NfpPolygonSetPtr& b, int effective_protection_offset);
     Pair getRandomPair() const;
     Pair mate(const Pair& pair) const;
     void mutate(const Individual::Ptr& individual) const;
@@ -86,4 +87,5 @@ public:
     void sort();
     void nextGeneration();
     Individual::Ptr getBest() const;
+    const std::vector<TriangleTextureInformation::Ptr>& getTriangleTextureInformation() const;
 };

@@ -144,30 +144,30 @@ static inline void convolveTwoPolygonSets(NfpPolygonSet& result, const NfpPolygo
     }
 }
 
-const NfpPolygonSet& GeneticOptimization::cachedOuterNfp(const NfpPolygonSetPtr& a, const NfpPolygonSetPtr& b, int effective_protection_offset)
+const NfpPolygonSet& GeneticOptimization::cachedNfp(const NfpPolygonSetPtr& a, const NfpPolygonSetPtr& b, int effective_protection_offset)
 {
     auto key = std::make_pair(a.get(), b.get());
-    auto fit = outer_nfp_cache.find(key);
-    if (fit == outer_nfp_cache.end())
+    auto fit = nfp_cache.find(key);
+    if (fit == nfp_cache.end())
     {
-        auto outer_nfp = std::make_shared<NfpPolygonSet>();
+        auto nfp = std::make_shared<NfpPolygonSet>();
 
         if (effective_protection_offset > 0)
         {
             NfpPolygonSet a_for_bloating = *a;
             a_for_bloating.bloat(effective_protection_offset);
-            convolveTwoPolygonSets(*outer_nfp, a_for_bloating, *b);
+            convolveTwoPolygonSets(*nfp, a_for_bloating, *b);
         }
         else
         {
-            convolveTwoPolygonSets(*outer_nfp, *a, *b);
+            convolveTwoPolygonSets(*nfp, *a, *b);
         }
 
-        OuterNfp outer_nfp_info;
-        outer_nfp_info.result = outer_nfp;
-        outer_nfp_info.effective_protection_offset = effective_protection_offset;
+        Nfp nfp_info;
+        nfp_info.result = nfp;
+        nfp_info.effective_protection_offset = effective_protection_offset;
 
-        fit = outer_nfp_cache.emplace(key, outer_nfp_info).first;
+        fit = nfp_cache.emplace(key, nfp_info).first;
     }
     if (fit->second.effective_protection_offset != effective_protection_offset)
     {
@@ -183,7 +183,7 @@ Pair GeneticOptimization::getRandomPair() const
     const size_t max_random = POPULATION_SIZE * POPULATION_SIZE;
     Pair result = { nullptr };
     unsigned result_index = 0;
-    while (result.size() < 2)
+    while (result_index < 2)
     {
         size_t index = 0;
         for (auto individual : population)
@@ -364,16 +364,16 @@ void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
             if (prev_gene.placed)
             {
                 const NfpPolygonSetPtr& prev_gene_geometry = triangle_texture_information[prev_gene.triangle_texture_index]->variations[prev_gene.rotation_index]->polygon;
-                const NfpPolygonSet& outer_nfp = cachedOuterNfp(prev_gene_geometry, cur_gene_geometry, EFFECTIVE_PROTECTION_OFFSET);
+                const NfpPolygonSet& nfp = cachedNfp(prev_gene_geometry, cur_gene_geometry, EFFECTIVE_PROTECTION_OFFSET);
 
-                std::vector<NfpPolygon> outer_nfp_polygons;
-                outer_nfp.get(outer_nfp_polygons);
-                for (auto& outer_nfp_polygon : outer_nfp_polygons)
+                std::vector<NfpPolygon> nfp_polygons;
+                nfp.get(nfp_polygons);
+                for (auto& nfp_polygon : nfp_polygons)
                 {
-                    // Move outer NFP according the current triangle texture placement
-                    move(outer_nfp_polygon, HORIZONTAL, x(prev_gene.placement));
-                    move(outer_nfp_polygon, VERTICAL, y(prev_gene.placement));
-                    result_nfp += outer_nfp_polygon; // Union of all part NFP
+                    // Move NFP according the current triangle texture placement
+                    move(nfp_polygon, HORIZONTAL, x(prev_gene.placement));
+                    move(nfp_polygon, VERTICAL, y(prev_gene.placement));
+                    result_nfp += nfp_polygon; // Union of all part NFP
                 }
             }
         }
@@ -413,6 +413,7 @@ void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
 
         individual->penalty = min_local_penalty;
     }
+    extents(individual->bounding_box, accumulated_geometry);
 }
 
 void GeneticOptimization::calculatePenalties()
@@ -458,4 +459,9 @@ void GeneticOptimization::nextGeneration()
 Individual::Ptr GeneticOptimization::getBest() const
 {
     return *population.begin();
+}
+
+const std::vector<TriangleTextureInformation::Ptr>& GeneticOptimization::getTriangleTextureInformation() const
+{
+    return triangle_texture_information;
 }
