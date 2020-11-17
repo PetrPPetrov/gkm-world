@@ -12,6 +12,7 @@
 
 class TriangleTexture
 {
+    // TODO: use Texture class instead
     std::vector<std::uint32_t> image_data;
     unsigned width;
     unsigned height;
@@ -37,6 +38,7 @@ public:
 
 class TextureAtlas
 {
+    // TODO: add Texture class
     std::vector<TriangleTexture::Ptr> triangle_textures;
     MeshProject::Ptr mesh_project;
     Mesh::Ptr mesh;

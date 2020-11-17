@@ -231,6 +231,7 @@ static inline bool isPointInTriangle(const Eigen::Vector2d& pt, const Eigen::Vec
     return !(has_neg && has_pos);
 }
 
+// TODO: replace by Texture class
 static inline QRgb getPixel(const ImagePtr& image, const Eigen::Vector2d& source_pixel)
 {
     Eigen::Vector2d pixel = source_pixel;

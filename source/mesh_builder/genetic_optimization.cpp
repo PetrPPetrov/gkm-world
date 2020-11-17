@@ -294,6 +294,9 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
             new_variation->rotation_angle = rotation_step * j;
             new_variation->polygon = std::make_shared<NfpPolygonSet>();
             toPolygonSet(triangle_textures[i], new_variation->rotation_angle, *new_variation->polygon);
+            new_variation->bloated_polygon = std::make_shared<NfpPolygonSet>();
+            *new_variation->bloated_polygon = *new_variation->polygon;
+            new_variation->bloated_polygon->bloat(PROTECTION_OFFSET * SCALE / 2.0);
         }
     }
 

@@ -3,6 +3,7 @@
 
 #include <QPainter>
 #include <QImage>
+#include "global_parameters.h"
 #include "genetic_optimization.h"
 #include "texture_atlas.h"
 
@@ -100,6 +101,7 @@ void TextureAtlas::build()
         pen.setWidth(1);
         pen.setColor(Qt::red);
         painter.setPen(pen);
+
         const auto& triangle_texture_information = genetic_algorithm->getTriangleTextureInformation();
         for (auto& gene : best->genotype)
         {
@@ -107,29 +109,98 @@ void TextureAtlas::build()
             using namespace boost::polygon::operators;
 
             assert(gene.placed);
-            auto geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->polygon;
-            std::vector<NfpPolygon> polygons;
-            geometry->get(polygons);
-            for (auto& polygon : polygons)
+
+            TriangleTexture::Ptr triangle_texture = triangle_textures[gene.triangle_texture_index];
+            auto geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->bloated_polygon;
+
+            NfpPolygonSet real_polygon_set;
             {
-                move(polygon, HORIZONTAL, x(gene.placement));
-                move(polygon, VERTICAL, y(gene.placement));
-                bool first_point = true;
-                QPainterPath path_to_draw;
-                for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
+                std::vector<NfpPolygon> polygons;
+                geometry->get(polygons);
+                for (auto& polygon : polygons)
                 {
-                    if (first_point)
+                    move(polygon, HORIZONTAL, x(gene.placement));
+                    move(polygon, VERTICAL, y(gene.placement));
+                    real_polygon_set += polygon;
+                }
+            }
+
+            NfpRectange cur_bounding_box;
+            extents(cur_bounding_box, real_polygon_set);
+
+            std::vector<NfpPolygon> real_polygons;
+            real_polygon_set.get(real_polygons);
+
+            const int cur_x_lo = static_cast<int>(floor(xl(cur_bounding_box)) / SCALE);
+            const int cur_x_hi = static_cast<int>(ceil(xh(cur_bounding_box)) / SCALE);
+            const int cur_y_lo = static_cast<int>(floor(yl(cur_bounding_box)) / SCALE);
+            const int cur_y_hi = static_cast<int>(ceil(yh(cur_bounding_box)) / SCALE);
+            const int cur_x_size = cur_x_hi - cur_x_lo;
+            const int cur_y_size = cur_y_hi - cur_y_lo;
+
+            const double rotation_step = 360.0 / ROTATION_COUNT * GRAD_TO_RAD;
+            Eigen::Rotation2Dd negative_rotation(-rotation_step * gene.rotation_index);
+            for (int x = 0; x < cur_x_size; ++x)
+            {
+                for (int y = 0; y < cur_y_size; ++y)
+                {
+                    const int cur_x = cur_x_lo + x;
+                    const int cur_y = cur_y_lo + y;
+                    NfpPoint cur_point(static_cast<int>(SCALE * cur_x), static_cast<int>(SCALE * cur_y));
+                    bool inside = false;
+                    for (size_t i = 0; i < real_polygons.size(); ++i)
                     {
-                        path_to_draw.moveTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
-                        first_point = false;
+                        if (contains(real_polygons[i], cur_point, true))
+                        {
+                            inside = true;
+                            break;
+                        }
                     }
-                    else
+                    if (inside)
                     {
-                        path_to_draw.lineTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
+                        Eigen::Vector2d cur_point(cur_x, cur_y);
+                        Eigen::Vector2d cur_relative_point = cur_point - Eigen::Vector2d(gene.placement.x(), gene.placement.y());
+                        Eigen::Vector2d original_relative_point0 = negative_rotation * cur_relative_point;
+
+                        if (original_relative_point0.x() >= 0.0 && original_relative_point0.y() >= 0.0 &&
+                            original_relative_point0.x() <= triangle_texture->getWidth() && original_relative_point0.y() <= triangle_texture->getHeight())
+                        {
+                            NfpPoint original_relative_point(static_cast<int>(SCALE * original_relative_point0.x()), static_cast<int>(SCALE * original_relative_point0.y()));
+
+                            auto original_geometry = triangle_texture_information[gene.triangle_texture_index]->variations[0]->bloated_polygon;
+                            std::vector<NfpPolygon> original_polygons;
+                            original_geometry->get(original_polygons);
+                            bool inside = false;
+                            for (size_t i = 0; i < original_polygons.size(); ++i)
+                            {
+                                if (contains(original_polygons[i], original_relative_point, true))
+                                {
+                                    inside = true;
+                                    break;
+                                }
+                            }
+
+                        }
                     }
                 }
-                painter.drawPath(path_to_draw);
             }
+
+            //    bool first_point = true;
+            //    QPainterPath path_to_draw;
+            //    for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
+            //    {
+            //        if (first_point)
+            //        {
+            //            path_to_draw.moveTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
+            //            first_point = false;
+            //        }
+            //        else
+            //        {
+            //            path_to_draw.lineTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
+            //        }
+            //    }
+            //    painter.drawPath(path_to_draw);
+            //}
         }
         painter.end();
         image.save("atlas.png", "PNG");

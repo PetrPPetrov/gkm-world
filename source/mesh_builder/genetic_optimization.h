@@ -30,6 +30,8 @@ struct TriangleTextureVariation
     typedef std::shared_ptr<TriangleTextureVariation> Ptr;
 
     NfpPolygonSetPtr polygon;
+    NfpPolygonSetPtr bloated_polygon;
+    // TODO: introduce std::vector<NfpPolygon> for speed-up
     double rotation_angle;
 };
 
