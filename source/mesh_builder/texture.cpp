@@ -67,7 +67,6 @@ static inline std::uint32_t packRgba(int r, int g, int b, int a)
 std::uint32_t Texture::getInterpolatedPixel(const Eigen::Vector2d& xy) const
 {
     Eigen::Vector2d pixel = xy;
-    pixel.y() = static_cast<double>(height) - 1 - pixel.y();
     bool increase_right = false;
     bool decrease_left = false;
     bool increase_top = false;
@@ -83,14 +82,14 @@ std::uint32_t Texture::getInterpolatedPixel(const Eigen::Vector2d& xy) const
         pixel.y() = 0.0;
         increase_top = true;
     }
-    if (pixel.x() >= static_cast<double>(width))
+    if (pixel.x() >= static_cast<double>(width - 1))
     {
-        pixel.x() = static_cast<double>(width);
+        pixel.x() = static_cast<double>(width - 1);
         decrease_left = true;
     }
-    if (pixel.y() >= static_cast<double>(height))
+    if (pixel.y() >= static_cast<double>(height - 1))
     {
-        pixel.y() = static_cast<double>(height);
+        pixel.y() = static_cast<double>(height - 1);
         decrease_bottom = true;
     }
 

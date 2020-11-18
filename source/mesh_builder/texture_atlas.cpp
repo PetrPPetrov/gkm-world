@@ -165,16 +165,25 @@ void TextureAtlas::build()
                     }
                     if (inside)
                     {
+                        //if (gene.triangle_texture_index == 0)
+                        //{
+                        //    texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, 0xffff0000);
+                        //}
+                        //else
+                        //{
+                        //    texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, 0xff00ff00);
+                        //}
                         Eigen::Vector2d cur_point(cur_point0.x(), cur_point0.y());
                         Eigen::Vector2d cur_relative_point = cur_point - Eigen::Vector2d(gene.placement.x(), gene.placement.y());
-                        Eigen::Vector2d original_relative_point = (negative_rotation * cur_relative_point) / SCALE;
+                        Eigen::Vector2d original_relative_point0 = negative_rotation * cur_relative_point;
+                        Eigen::Vector2d original_relative_point = original_relative_point0 / SCALE;
 
-                        if (original_relative_point.x() >= 0.0 && original_relative_point.y() >= 0.0 &&
-                            original_relative_point.x() <= texture_fragment->getWidth() && original_relative_point.y() <= texture_fragment->getHeight())
-                        {
+                        //if (original_relative_point.x() >= 0.0 && original_relative_point.y() >= 0.0 &&
+                        //    original_relative_point.x() <= texture_fragment->getWidth() && original_relative_point.y() <= texture_fragment->getHeight())
+                        //{
                             std::uint32_t pixel = texture_fragment->getInterpolatedPixel(original_relative_point);
                             texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, pixel);
-                        }
+                        //}
                     }
                 }
             }
