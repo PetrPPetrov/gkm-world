@@ -490,7 +490,8 @@ TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const Pic
     const unsigned pixel_count_w = static_cast<unsigned>(pixel_width_count);
     const unsigned pixel_count_h = static_cast<unsigned>(pixel_height_count);
 
-    TriangleTexture::Ptr texture = std::make_shared<TriangleTexture>(triangle_index, triangle, pixel_count_w, pixel_count_h);
+    TriangleTexture::Ptr triangle_texture = std::make_shared<TriangleTexture>(triangle_index, triangle, pixel_count_w, pixel_count_h);
+    Texture::Ptr texture = triangle_texture->getTexture();
 
     const double pixel_width = uv_width / pixel_width_count;
     const double pixel_height = uv_height / pixel_height_count;
@@ -554,13 +555,13 @@ TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const Pic
 
     for (unsigned i = 0; i < 3; ++i)
     {
-        texture->texture_coordinates[i] = uv[i] * density;
+        triangle_texture->texture_coordinates[i] = uv[i] * density;
     }
-    texture->area = calculateTriangleSquare(uv[0], uv[1], uv[2]);
+    triangle_texture->area = calculateTriangleSquare(uv[0], uv[1], uv[2]);
 
     // For debug only
-    texture->save();
-    return texture;
+    triangle_texture->save();
+    return triangle_texture;
 }
 
 void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)

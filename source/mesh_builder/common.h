@@ -37,3 +37,9 @@ inline bool fileExists(const std::string& filename)
         return false;
     }
 }
+
+
+// TODO:
+// Switch to use turbojpeg and Texture class instead of QImage
+// Remove rotation parameter at all
+// Also cache std::vector<NfpPolygon> for speed, not only NfpPolygonSet

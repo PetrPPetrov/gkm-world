@@ -7,37 +7,15 @@
 #include "genetic_optimization.h"
 #include "texture_atlas.h"
 
-size_t TriangleTexture::getIndex(unsigned x, unsigned y) const
-{
-    return (static_cast<size_t>(height) - 1 - y) * width + x;
-}
-
-TriangleTexture::TriangleTexture(size_t triangle_index_, Vector3u triangle_, unsigned width_, unsigned height_) : image_data(static_cast<size_t>(width_) * height_)
+TriangleTexture::TriangleTexture(size_t triangle_index_, Vector3u triangle_, unsigned width, unsigned height) : texture(std::make_shared<Texture>(width, height))
 {
     triangle_index = triangle_index_;
     triangle = triangle;
-    width = width_;
-    height = height_;
 }
 
-unsigned TriangleTexture::getWidth() const
+Texture::Ptr TriangleTexture::getTexture() const
 {
-    return width;
-}
-
-unsigned TriangleTexture::getHeight() const
-{
-    return height;
-}
-
-void TriangleTexture::setPixel(unsigned x, unsigned y, std::uint32_t value)
-{
-    image_data[getIndex(x, y)] = value;
-}
-
-std::uint32_t TriangleTexture::getPixel(unsigned x, unsigned y) const
-{
-    return image_data[getIndex(x, y)];
+    return texture;
 }
 
 size_t TriangleTexture::getTriangleIndex() const
@@ -47,9 +25,8 @@ size_t TriangleTexture::getTriangleIndex() const
 
 void TriangleTexture::save() const
 {
-    QImage subimage(reinterpret_cast<const unsigned char*>(&image_data[0]), width, height, QImage::Format_RGB32);
     std::string file_name = "subimage_" + std::to_string(triangle_index) + ".png";
-    subimage.save(QString(file_name.c_str()), "PNG");
+    texture->savePng(file_name.c_str());
 }
 
 TextureAtlas::TextureAtlas(const MeshProject::Ptr& mesh_project_, const Mesh::Ptr& mesh_)
@@ -85,14 +62,21 @@ void TextureAtlas::build()
 
     if (best)
     {
-        const double x_lo = xl(best->bounding_box);
-        const double x_hi = xh(best->bounding_box);
-        const double y_lo = yl(best->bounding_box);
-        const double y_hi = yh(best->bounding_box);
-        const double x_size = x_hi - x_lo;
-        const double y_size = y_hi - y_lo;
-        const int texture_atlas_width = static_cast<int>(x_size / SCALE);
-        const int texture_atlas_height = static_cast<int>(y_size / SCALE);
+        const int x_lo_in_pixel = static_cast<int>(floor(xl(best->bounding_box) / SCALE) - PROTECTION_OFFSET);
+        const int x_hi_in_pixel = static_cast<int>(ceil(xh(best->bounding_box) / SCALE) + PROTECTION_OFFSET);
+        const int y_lo_in_pixel = static_cast<int>(floor(yl(best->bounding_box) / SCALE) - PROTECTION_OFFSET);
+        const int y_hi_in_pixel = static_cast<int>(ceil(yh(best->bounding_box) / SCALE) + PROTECTION_OFFSET);
+
+        const int x_lo = static_cast<int>(x_lo_in_pixel * SCALE);
+        const int x_hi = static_cast<int>(x_hi_in_pixel * SCALE);
+        const int y_lo = static_cast<int>(y_lo_in_pixel * SCALE);
+        const int y_hi = static_cast<int>(y_hi_in_pixel * SCALE);
+
+        const int x_size_in_pixel = x_hi_in_pixel - x_lo_in_pixel;
+        const int y_size_in_pixel = y_hi_in_pixel - y_lo_in_pixel;
+        const unsigned texture_atlas_width = static_cast<unsigned>(x_size_in_pixel);
+        const unsigned texture_atlas_height = static_cast<unsigned>(y_size_in_pixel);
+        texture_atlas = std::make_shared<Texture>(texture_atlas_width, texture_atlas_height);
 
         // For debug only
         QImage image(texture_atlas_width, texture_atlas_height, QImage::Format::Format_RGB888);
@@ -111,6 +95,7 @@ void TextureAtlas::build()
             assert(gene.placed);
 
             TriangleTexture::Ptr triangle_texture = triangle_textures[gene.triangle_texture_index];
+            Texture::Ptr texture_fragment = triangle_texture->getTexture();
             auto geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->bloated_polygon;
 
             NfpPolygonSet real_polygon_set;
@@ -122,6 +107,22 @@ void TextureAtlas::build()
                     move(polygon, HORIZONTAL, x(gene.placement));
                     move(polygon, VERTICAL, y(gene.placement));
                     real_polygon_set += polygon;
+
+                    bool first_point = true;
+                    QPainterPath path_to_draw;
+                    for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
+                    {
+                        if (first_point)
+                        {
+                            path_to_draw.moveTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
+                            first_point = false;
+                        }
+                        else
+                        {
+                            path_to_draw.lineTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
+                        }
+                    }
+                    painter.drawPath(path_to_draw);
                 }
             }
 
@@ -131,26 +132,32 @@ void TextureAtlas::build()
             std::vector<NfpPolygon> real_polygons;
             real_polygon_set.get(real_polygons);
 
-            const int cur_x_lo = static_cast<int>(floor(xl(cur_bounding_box)) / SCALE);
-            const int cur_x_hi = static_cast<int>(ceil(xh(cur_bounding_box)) / SCALE);
-            const int cur_y_lo = static_cast<int>(floor(yl(cur_bounding_box)) / SCALE);
-            const int cur_y_hi = static_cast<int>(ceil(yh(cur_bounding_box)) / SCALE);
-            const int cur_x_size = cur_x_hi - cur_x_lo;
-            const int cur_y_size = cur_y_hi - cur_y_lo;
+            const int cur_x_lo_in_pixel = static_cast<int>(floor(xl(cur_bounding_box) / SCALE));
+            const int cur_x_hi_in_pixel = static_cast<int>(ceil(xh(cur_bounding_box) / SCALE));
+            const int cur_y_lo_in_pixel = static_cast<int>(floor(yl(cur_bounding_box) / SCALE));
+            const int cur_y_hi_in_pixel = static_cast<int>(ceil(yh(cur_bounding_box) / SCALE));
+
+            const int cur_x_lo = static_cast<int>(cur_x_lo_in_pixel  * SCALE);
+            const int cur_x_hi = static_cast<int>(cur_x_hi_in_pixel  * SCALE);
+            const int cur_y_lo = static_cast<int>(cur_y_lo_in_pixel  * SCALE);
+            const int cur_y_hi = static_cast<int>(cur_y_hi_in_pixel  * SCALE);
+
+            const int cur_x_size_in_pixel = cur_x_hi_in_pixel - cur_x_lo_in_pixel;
+            const int cur_y_size_in_pixel = cur_y_hi_in_pixel - cur_y_lo_in_pixel;
 
             const double rotation_step = 360.0 / ROTATION_COUNT * GRAD_TO_RAD;
             Eigen::Rotation2Dd negative_rotation(-rotation_step * gene.rotation_index);
-            for (int x = 0; x < cur_x_size; ++x)
+            for (int x = 0; x < cur_x_size_in_pixel; ++x)
             {
-                for (int y = 0; y < cur_y_size; ++y)
+                for (int y = 0; y < cur_y_size_in_pixel; ++y)
                 {
-                    const int cur_x = cur_x_lo + x;
-                    const int cur_y = cur_y_lo + y;
-                    NfpPoint cur_point(static_cast<int>(SCALE * cur_x), static_cast<int>(SCALE * cur_y));
+                    const int cur_x_in_pixel = cur_x_lo_in_pixel + x;
+                    const int cur_y_in_pixel = cur_y_lo_in_pixel + y;
+                    NfpPoint cur_point0(static_cast<int>(SCALE * cur_x_in_pixel), static_cast<int>(SCALE * cur_y_in_pixel));
                     bool inside = false;
                     for (size_t i = 0; i < real_polygons.size(); ++i)
                     {
-                        if (contains(real_polygons[i], cur_point, true))
+                        if (contains(real_polygons[i], cur_point0, true))
                         {
                             inside = true;
                             break;
@@ -158,51 +165,24 @@ void TextureAtlas::build()
                     }
                     if (inside)
                     {
-                        Eigen::Vector2d cur_point(cur_x, cur_y);
+                        Eigen::Vector2d cur_point(cur_point0.x(), cur_point0.y());
                         Eigen::Vector2d cur_relative_point = cur_point - Eigen::Vector2d(gene.placement.x(), gene.placement.y());
-                        Eigen::Vector2d original_relative_point0 = negative_rotation * cur_relative_point;
+                        Eigen::Vector2d original_relative_point = (negative_rotation * cur_relative_point) / SCALE;
 
-                        if (original_relative_point0.x() >= 0.0 && original_relative_point0.y() >= 0.0 &&
-                            original_relative_point0.x() <= triangle_texture->getWidth() && original_relative_point0.y() <= triangle_texture->getHeight())
+                        if (original_relative_point.x() >= 0.0 && original_relative_point.y() >= 0.0 &&
+                            original_relative_point.x() <= texture_fragment->getWidth() && original_relative_point.y() <= texture_fragment->getHeight())
                         {
-                            NfpPoint original_relative_point(static_cast<int>(SCALE * original_relative_point0.x()), static_cast<int>(SCALE * original_relative_point0.y()));
-
-                            auto original_geometry = triangle_texture_information[gene.triangle_texture_index]->variations[0]->bloated_polygon;
-                            std::vector<NfpPolygon> original_polygons;
-                            original_geometry->get(original_polygons);
-                            bool inside = false;
-                            for (size_t i = 0; i < original_polygons.size(); ++i)
-                            {
-                                if (contains(original_polygons[i], original_relative_point, true))
-                                {
-                                    inside = true;
-                                    break;
-                                }
-                            }
-
+                            std::uint32_t pixel = texture_fragment->getInterpolatedPixel(original_relative_point);
+                            texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, pixel);
                         }
                     }
                 }
             }
-
-            //    bool first_point = true;
-            //    QPainterPath path_to_draw;
-            //    for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
-            //    {
-            //        if (first_point)
-            //        {
-            //            path_to_draw.moveTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
-            //            first_point = false;
-            //        }
-            //        else
-            //        {
-            //            path_to_draw.lineTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
-            //        }
-            //    }
-            //    painter.drawPath(path_to_draw);
-            //}
         }
+
         painter.end();
         image.save("atlas.png", "PNG");
+
+        texture_atlas->savePng("texture_atlas.png");
     }
 }

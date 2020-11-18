@@ -9,26 +9,19 @@
 #include "common.h"
 #include "mesh_project.h"
 #include "mesh.h"
+#include "texture.h"
 
 class TriangleTexture
 {
-    // TODO: use Texture class instead
-    std::vector<std::uint32_t> image_data;
-    unsigned width;
-    unsigned height;
+    Texture::Ptr texture;
     size_t triangle_index;
     Vector3u triangle;
-
-    size_t getIndex(unsigned x, unsigned y) const;
 
 public:
     typedef std::shared_ptr<TriangleTexture> Ptr;
 
     TriangleTexture(size_t triangle_index, Vector3u triangle, unsigned width, unsigned height);
-    unsigned getWidth() const;
-    unsigned getHeight() const;
-    void setPixel(unsigned x, unsigned y, std::uint32_t value);
-    std::uint32_t getPixel(unsigned x, unsigned y) const;
+    Texture::Ptr getTexture() const;
     size_t getTriangleIndex() const;
     void save() const;
 
@@ -38,7 +31,7 @@ public:
 
 class TextureAtlas
 {
-    // TODO: add Texture class
+    Texture::Ptr texture_atlas;
     std::vector<TriangleTexture::Ptr> triangle_textures;
     MeshProject::Ptr mesh_project;
     Mesh::Ptr mesh;

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include "common.h"
 
 class Texture
 {
@@ -23,5 +24,8 @@ public:
     unsigned getHeight() const;
     void setPixel(unsigned x, unsigned y, std::uint32_t value);
     std::uint32_t getPixel(unsigned x, unsigned y) const;
-    std::uint32_t getInterpolatedPixel(double x, double y) const;
+    std::uint32_t getInterpolatedPixel(const Eigen::Vector2d& xy) const;
+
+    void savePng(const char* file_name) const;
+    void saveJpeg(const char* file_name) const;
 };
