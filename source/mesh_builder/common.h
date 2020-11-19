@@ -40,6 +40,14 @@ inline bool fileExists(const std::string& filename)
 
 
 // TODO:
-// Switch to use turbojpeg and Texture class instead of QImage
 // Remove rotation parameter at all
-// Also cache std::vector<NfpPolygon> for speed, not only NfpPolygonSet
+// Switch to use turbojpeg and Texture class instead of QImage
+// Generate texture .OBJ file
+// Improve nesting by using the shared edges
+// Downsample the generated texture to a desired size (for instance, 1024x1024 or 2048x2048 or 4096x4096)
+// Make progress dialog for mesh building
+// Make ability to cancel mesh building process
+// Introduce some settings dialog box
+// Save settings to a project file
+// GUI tweaks
+// Saving and restoring window layout

@@ -110,14 +110,10 @@ static inline void convolvePointSequenceWithPolygons(NfpPolygonSet& result, Iter
     }
 }
 
-static inline void convolveTwoPolygonSets(NfpPolygonSet& result, const NfpPolygonSet& a, const NfpPolygonSet& b)
+static inline void convolveTwoPolygonSets(NfpPolygonSet& result, const std::vector<NfpPolygon>& a_polygons, std::vector<NfpPolygon> b_polygons)
 {
     using namespace boost::polygon;
     result.clear();
-    std::vector<NfpPolygon> a_polygons;
-    std::vector<NfpPolygon> b_polygons;
-    a.get(a_polygons);
-    b.get(b_polygons);
 
     for (size_t i = 0; i < b_polygons.size(); ++i)
     {
@@ -144,24 +140,27 @@ static inline void convolveTwoPolygonSets(NfpPolygonSet& result, const NfpPolygo
     }
 }
 
-const NfpPolygonSet& GeneticOptimization::cachedNfp(const NfpPolygonSetPtr& a, const NfpPolygonSetPtr& b, int effective_protection_offset)
+const PolygonSet& GeneticOptimization::cachedNfp(const PolygonSetPtr& a, const PolygonSetPtr& b, int effective_protection_offset)
 {
     auto key = std::make_pair(a.get(), b.get());
     auto fit = nfp_cache.find(key);
     if (fit == nfp_cache.end())
     {
-        auto nfp = std::make_shared<NfpPolygonSet>();
+        auto nfp = std::make_shared<PolygonSet>();
 
         if (effective_protection_offset > 0)
         {
-            NfpPolygonSet a_for_bloating = *a;
+            NfpPolygonSet a_for_bloating = a->polygon_set;
             a_for_bloating.bloat(effective_protection_offset);
-            convolveTwoPolygonSets(*nfp, a_for_bloating, *b);
+            std::vector<NfpPolygon> a_polygons;
+            a_for_bloating.get(a_polygons);
+            convolveTwoPolygonSets(nfp->polygon_set, a_polygons, b->polygons);
         }
         else
         {
-            convolveTwoPolygonSets(*nfp, *a, *b);
+            convolveTwoPolygonSets(nfp->polygon_set, a->polygons, b->polygons);
         }
+        nfp->polygon_set.get(nfp->polygons);
 
         Nfp nfp_info;
         nfp_info.result = nfp;
@@ -292,11 +291,15 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
             auto new_variation = std::make_shared<TriangleTextureVariation>();
             new_information->variations.push_back(new_variation);
             new_variation->rotation_angle = rotation_step * j;
-            new_variation->polygon = std::make_shared<NfpPolygonSet>();
-            toPolygonSet(triangle_textures[i], new_variation->rotation_angle, *new_variation->polygon);
-            new_variation->bloated_polygon = std::make_shared<NfpPolygonSet>();
-            *new_variation->bloated_polygon = *new_variation->polygon;
-            new_variation->bloated_polygon->bloat(PROTECTION_OFFSET * SCALE / 2.0);
+
+            new_variation->geometry = std::make_shared<PolygonSet>();
+            toPolygonSet(triangle_textures[i], new_variation->rotation_angle, new_variation->geometry->polygon_set);
+            new_variation->geometry->polygon_set.get(new_variation->geometry->polygons);
+
+            new_variation->bloated_geometry = std::make_shared<PolygonSet>();
+            new_variation->bloated_geometry->polygon_set = new_variation->geometry->polygon_set;
+            new_variation->bloated_geometry->polygon_set.bloat(PROTECTION_OFFSET * SCALE / 2.0);
+            new_variation->bloated_geometry->polygon_set.get(new_variation->bloated_geometry->polygons);
         }
     }
 
@@ -346,9 +349,8 @@ void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
     {
         Gene& gene = individual->genotype[gene_index];
         gene.placed = false;
-        const NfpPolygonSetPtr& cur_gene_geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->polygon;
-        std::vector<NfpPolygon> cur_gene_polygons;
-        cur_gene_geometry->get(cur_gene_polygons);
+        const PolygonSetPtr& cur_gene_geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->geometry;
+        std::vector<NfpPolygon> cur_gene_polygons = cur_gene_geometry->polygons;
 
         if (first_iteration)
         {
@@ -356,7 +358,7 @@ void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
             gene.placement = NfpPoint(0, 0);
             gene.placed = true;
             first_iteration = false;
-            accumulated_geometry += *cur_gene_geometry;
+            accumulated_geometry += cur_gene_geometry->polygon_set;
             continue;
         }
 
@@ -366,17 +368,16 @@ void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
             const Gene& prev_gene = individual->genotype[prev_gene_index];
             if (prev_gene.placed)
             {
-                const NfpPolygonSetPtr& prev_gene_geometry = triangle_texture_information[prev_gene.triangle_texture_index]->variations[prev_gene.rotation_index]->polygon;
-                const NfpPolygonSet& nfp = cachedNfp(prev_gene_geometry, cur_gene_geometry, EFFECTIVE_PROTECTION_OFFSET);
+                const PolygonSetPtr& prev_gene_geometry = triangle_texture_information[prev_gene.triangle_texture_index]->variations[prev_gene.rotation_index]->geometry;
+                const PolygonSet& nfp = cachedNfp(prev_gene_geometry, cur_gene_geometry, EFFECTIVE_PROTECTION_OFFSET);
 
-                std::vector<NfpPolygon> nfp_polygons;
-                nfp.get(nfp_polygons);
-                for (auto& nfp_polygon : nfp_polygons)
+                for (auto& nfp_polygon : nfp.polygons)
                 {
                     // Move NFP according the current triangle texture placement
-                    move(nfp_polygon, HORIZONTAL, x(prev_gene.placement));
-                    move(nfp_polygon, VERTICAL, y(prev_gene.placement));
-                    result_nfp += nfp_polygon; // Union of all part NFP
+                    NfpPolygon new_nfp_polygon = nfp_polygon;
+                    move(new_nfp_polygon, HORIZONTAL, x(prev_gene.placement));
+                    move(new_nfp_polygon, VERTICAL, y(prev_gene.placement));
+                    result_nfp += new_nfp_polygon; // Union of all part NFP
                 }
             }
         }
@@ -409,9 +410,10 @@ void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
         assert(gene.placed);
         for (auto& cur_gene_polygon : cur_gene_polygons)
         {
-            move(cur_gene_polygon, HORIZONTAL, x(gene.placement));
-            move(cur_gene_polygon, VERTICAL, y(gene.placement));
-            accumulated_geometry += cur_gene_polygon;
+            NfpPolygon new_cur_gene_polygon = cur_gene_polygon;
+            move(new_cur_gene_polygon, HORIZONTAL, x(gene.placement));
+            move(new_cur_gene_polygon, VERTICAL, y(gene.placement));
+            accumulated_geometry += new_cur_gene_polygon;
         }
 
         individual->penalty = min_local_penalty;

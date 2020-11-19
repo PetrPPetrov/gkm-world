@@ -96,21 +96,20 @@ void TextureAtlas::build()
 
             TriangleTexture::Ptr triangle_texture = triangle_textures[gene.triangle_texture_index];
             Texture::Ptr texture_fragment = triangle_texture->getTexture();
-            auto geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->bloated_polygon;
+            auto bloated_geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->bloated_geometry;
 
             NfpPolygonSet real_polygon_set;
             {
-                std::vector<NfpPolygon> polygons;
-                geometry->get(polygons);
-                for (auto& polygon : polygons)
+                for (auto& polygon : bloated_geometry->polygons)
                 {
-                    move(polygon, HORIZONTAL, x(gene.placement));
-                    move(polygon, VERTICAL, y(gene.placement));
-                    real_polygon_set += polygon;
+                    NfpPolygon new_polygon = polygon;
+                    move(new_polygon, HORIZONTAL, x(gene.placement));
+                    move(new_polygon, VERTICAL, y(gene.placement));
+                    real_polygon_set += new_polygon;
 
                     bool first_point = true;
                     QPainterPath path_to_draw;
-                    for (auto& point_it = begin_points(polygon); point_it != end_points(polygon); ++point_it)
+                    for (auto& point_it = begin_points(new_polygon); point_it != end_points(new_polygon); ++point_it)
                     {
                         if (first_point)
                         {

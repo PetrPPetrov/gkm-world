@@ -25,13 +25,20 @@ constexpr static size_t ROTATION_COUNT = 8;
 constexpr static size_t POPULATION_SIZE = 128;
 constexpr static size_t MUTATION_RATE = 10;
 
+struct PolygonSet
+{
+    NfpPolygonSet polygon_set;
+    std::vector<NfpPolygon> polygons;
+};
+typedef std::shared_ptr<PolygonSet> PolygonSetPtr;
+
 struct TriangleTextureVariation
 {
     typedef std::shared_ptr<TriangleTextureVariation> Ptr;
 
-    NfpPolygonSetPtr polygon;
-    NfpPolygonSetPtr bloated_polygon;
-    // TODO: introduce std::vector<NfpPolygon> for speed-up
+    PolygonSetPtr geometry;
+    PolygonSetPtr bloated_geometry;
+
     double rotation_angle;
 };
 
@@ -62,7 +69,7 @@ typedef std::array<Individual::Ptr, 2> Pair;
 
 struct Nfp
 {
-    NfpPolygonSetPtr result;
+    PolygonSetPtr result;
     int effective_protection_offset = 0;
 };
 
@@ -70,12 +77,12 @@ class GeneticOptimization
 {
     std::vector<TriangleTextureInformation::Ptr> triangle_texture_information;
     std::list<Individual::Ptr> population;
-    std::map<std::pair<NfpPolygonSet*, NfpPolygonSet*>, Nfp> nfp_cache;
+    std::map<std::pair<PolygonSet*, PolygonSet*>, Nfp> nfp_cache;
 
     mutable std::mt19937 engine;
     mutable std::uniform_int_distribution<size_t> uniform;
 
-    const NfpPolygonSet& cachedNfp(const NfpPolygonSetPtr& a, const NfpPolygonSetPtr& b, int effective_protection_offset);
+    const PolygonSet& cachedNfp(const PolygonSetPtr& a, const PolygonSetPtr& b, int effective_protection_offset);
     Pair getRandomPair() const;
     Pair mate(const Pair& pair) const;
     void mutate(const Individual::Ptr& individual) const;
