@@ -99,13 +99,27 @@ static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, cons
     std::ofstream file_out(filename);
     file_out << "# Gkm-World Mesh Builder OBJ File : '" << mesh_project_filename << "'\n";
     file_out << "# http://gkmsoft.xyz\n";
+    file_out << "newmtl Textured\n";
+    file_out << "map_Kd texture_atlas.jpg\n";
+    file_out << "usemtl Textured\n";
+    mesh->texture_atlas->saveJpeg("texture_atlas.jpg");
+
     for (auto& vertex : mesh->vertices)
     {
         file_out << "v " << vertex.x() << " " << vertex.y() << " " << vertex.z() << "\n";
     }
+    for (auto& tex_coord : mesh->triangle_tex_coords)
+    {
+        file_out << "vt " << tex_coord.x() << " " << tex_coord.y() << "\n";
+    }
+    unsigned tex_coord_index = 1;
     for (auto& triangle : mesh->triangles)
     {
-        file_out << "f " << triangle.x() + 1 << " " << triangle.y() + 1 << " " << triangle.z() + 1 << "\n";
+        file_out << "f "
+            << triangle.x() + 1 << "/" << tex_coord_index << " "
+            << triangle.y() + 1 << "/" << tex_coord_index + 1 << " "
+            << triangle.z() + 1 << "/" << tex_coord_index + 2 << "\n";
+        tex_coord_index += 3;
     }
 }
 

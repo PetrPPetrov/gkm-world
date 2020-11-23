@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "mesh_project.h"
+#include "texture.h"
 
 typedef Eigen::Matrix<std::uint32_t, Triangle::vertex_count, 1> Vector3u;
 
@@ -17,5 +18,7 @@ struct Mesh
     std::vector<size_t> new_to_old_vertex_id_map;
 
     std::vector<Vector3u> triangles;
+    std::vector<Eigen::Vector2d> triangle_tex_coords;
+    Texture::Ptr texture_atlas;
     //std::vector<size_t> old_to_new_triangle_id_map;
 };
