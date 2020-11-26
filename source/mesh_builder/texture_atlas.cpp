@@ -198,6 +198,7 @@ void TextureAtlas::build()
 
             for (unsigned i = 0; i < 3; ++i)
             {
+                // TODO: Debug it
                 const Eigen::Vector2d tex_coord = positive_rotation * triangle_texture->texture_coordinates[i];
                 const int cur_x = x(gene.placement) + static_cast<int>(SCALE * tex_coord.x());
                 const int cur_y = y(gene.placement) + static_cast<int>(SCALE * tex_coord.y());
