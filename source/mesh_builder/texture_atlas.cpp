@@ -63,6 +63,7 @@ void TextureAtlas::build()
 
     if (best)
     {
+        const double rotation_step = 360.0 / ROTATION_COUNT * GRAD_TO_RAD;
         mesh->triangle_tex_coords.resize(mesh->triangles.size() * 3);
 
         const int x_lo_in_pixel = static_cast<int>(floor(xl(best->bounding_box) / SCALE) - PROTECTION_OFFSET);
@@ -152,7 +153,6 @@ void TextureAtlas::build()
             const int cur_x_size_in_pixel = cur_x_hi_in_pixel - cur_x_lo_in_pixel;
             const int cur_y_size_in_pixel = cur_y_hi_in_pixel - cur_y_lo_in_pixel;
 
-            const double rotation_step = 360.0 / ROTATION_COUNT * GRAD_TO_RAD;
             Eigen::Rotation2Dd negative_rotation(-rotation_step * gene.rotation_index);
             for (int x = 0; x < cur_x_size_in_pixel; ++x)
             {
@@ -190,12 +190,35 @@ void TextureAtlas::build()
                     }
                 }
             }
+        }
 
-            const int cur_x_size = cur_x_hi_in_pixel - cur_x_lo_in_pixel;
-            const int cur_y_size = cur_y_hi_in_pixel - cur_y_lo_in_pixel;
+        // For debug only
+        ImagePtr image = texture_atlas->getQImage();
+        QPainter painter(image.get());
 
+        bool f = true;
+        for (auto& gene : best->genotype)
+        {
+            if (f)
+            {
+                QPen pen;
+                pen.setWidth(3);
+                pen.setColor(Qt::red);
+                painter.setPen(pen);
+                f = false;
+            }
+            else
+            {
+                QPen pen;
+                pen.setWidth(3);
+                pen.setColor(Qt::blue);
+                painter.setPen(pen);
+            }
+
+            TriangleTexture::Ptr triangle_texture = triangle_textures[gene.triangle_texture_index];
             Eigen::Rotation2Dd positive_rotation(rotation_step * gene.rotation_index);
 
+            QPainterPath path_to_draw;
             for (unsigned i = 0; i < 3; ++i)
             {
                 // TODO: Debug it
@@ -203,10 +226,21 @@ void TextureAtlas::build()
                 const int cur_x = x(gene.placement) + static_cast<int>(SCALE * tex_coord.x());
                 const int cur_y = y(gene.placement) + static_cast<int>(SCALE * tex_coord.y());
                 const double u = (static_cast<double>(cur_x) - x_lo) / x_size;
-                const double v = (static_cast<double>(cur_y) - x_hi) / y_size;
+                const double v = (static_cast<double>(cur_y) - y_lo) / y_size;
                 mesh->triangle_tex_coords[triangle_texture->getTriangleIndex() * 3 + i] = Eigen::Vector2d(u, v);
+                if (i == 0)
+                {
+                    path_to_draw.moveTo(u * texture_atlas_width, (1.0 - v) * texture_atlas_height);
+                }
+                else
+                {
+                    path_to_draw.lineTo(u * texture_atlas_width, (1.0 - v) * texture_atlas_height);
+                }
             }
+            painter.drawPath(path_to_draw);
         }
+
+        image->save(QString("texture_debug_atlas.png"), "PNG");
 
         //painter.end();
         //image.save("atlas.png", "PNG");

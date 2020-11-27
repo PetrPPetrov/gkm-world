@@ -28,4 +28,5 @@ public:
 
     void savePng(const char* file_name) const;
     void saveJpeg(const char* file_name) const;
+    ImagePtr getQImage() const;
 };

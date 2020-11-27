@@ -8,7 +8,7 @@ size_t Texture::getIndex(unsigned x, unsigned y) const
     return (static_cast<size_t>(height) - 1 - y) * width + x;
 }
 
-Texture::Texture(unsigned width_, unsigned height_) : image_data(static_cast<size_t>(width_)* height_)
+Texture::Texture(unsigned width_, unsigned height_) : image_data(static_cast<size_t>(width_)* height_, 0xffffffff)
 {
     width = width_;
     height = height_;
@@ -152,12 +152,17 @@ std::uint32_t Texture::getInterpolatedPixel(const Eigen::Vector2d& xy) const
 
 void Texture::savePng(const char* file_name) const
 {
-    QImage subimage(reinterpret_cast<const unsigned char*>(&image_data[0]), width, height, QImage::Format_RGB32);
-    subimage.save(QString(file_name), "PNG");
+    QImage image(reinterpret_cast<const unsigned char*>(&image_data[0]), width, height, QImage::Format_RGB32);
+    image.save(QString(file_name), "PNG");
 }
 
 void Texture::saveJpeg(const char* file_name) const
 {
-    QImage subimage(reinterpret_cast<const unsigned char*>(&image_data[0]), width, height, QImage::Format_RGB32);
-    subimage.save(QString(file_name), "JPG");
+    QImage image(reinterpret_cast<const unsigned char*>(&image_data[0]), width, height, QImage::Format_RGB32);
+    image.save(QString(file_name), "JPG");
+}
+
+ImagePtr Texture::getQImage() const
+{
+    return std::make_shared<QImage>(reinterpret_cast<const unsigned char*>(&image_data[0]), width, height, QImage::Format_RGB32);
 }

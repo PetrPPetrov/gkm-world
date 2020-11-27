@@ -679,7 +679,7 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
 
         //const double density = std::max({ picture0_d01_density, picture1_d01_density, picture0_d12_density, picture1_d12_density, picture0_d02_density, picture1_d02_density });
         //const double density = (picture0_d01_density + picture1_d01_density + picture0_d12_density + picture1_d12_density + picture0_d02_density + picture1_d02_density) / 6.0;
-        const double density = 64.0;
+        const double density = 200.0;
 
         Eigen::Vector2d picture0_tr[3];
         picture0_tr[0] = Eigen::Vector2d(v0_p0_x, v0_p0_y);
