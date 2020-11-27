@@ -7,10 +7,9 @@
 #include "genetic_optimization.h"
 #include "texture_atlas.h"
 
-TriangleTexture::TriangleTexture(size_t triangle_index_, Vector3u triangle_, unsigned width, unsigned height) : texture(std::make_shared<Texture>(width, height))
+TriangleTexture::TriangleTexture(size_t triangle_index_, unsigned width, unsigned height) : texture(std::make_shared<Texture>(width, height))
 {
     triangle_index = triangle_index_;
-    triangle = triangle;
 }
 
 Texture::Ptr TriangleTexture::getTexture() const
@@ -227,7 +226,7 @@ void TextureAtlas::build()
                 const int cur_y = y(gene.placement) + static_cast<int>(SCALE * tex_coord.y());
                 const double u = (static_cast<double>(cur_x) - x_lo) / x_size;
                 const double v = (static_cast<double>(cur_y) - y_lo) / y_size;
-                mesh->triangle_tex_coords[triangle_texture->getTriangleIndex() * 3 + i] = Eigen::Vector2d(u, v);
+                mesh->triangle_tex_coords[triangle_texture->getTriangleIndex() * 3 + triangle_texture->new_to_old[i]] = Eigen::Vector2d(u, v);
                 if (i == 0)
                 {
                     path_to_draw.moveTo(u * texture_atlas_width, (1.0 - v) * texture_atlas_height);

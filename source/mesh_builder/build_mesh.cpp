@@ -504,8 +504,12 @@ TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const Pic
     const unsigned pixel_count_w = static_cast<unsigned>(pixel_width_count);
     const unsigned pixel_count_h = static_cast<unsigned>(pixel_height_count);
 
-    TriangleTexture::Ptr triangle_texture = std::make_shared<TriangleTexture>(triangle_index, triangle, pixel_count_w, pixel_count_h);
+    TriangleTexture::Ptr triangle_texture = std::make_shared<TriangleTexture>(triangle_index, pixel_count_w, pixel_count_h);
     Texture::Ptr texture = triangle_texture->getTexture();
+
+    triangle_texture->new_to_old[0] = new_to_old[0];
+    triangle_texture->new_to_old[1] = new_to_old[1];
+    triangle_texture->new_to_old[2] = new_to_old[2];
 
     const double pixel_width = uv_width / pixel_width_count;
     const double pixel_height = uv_height / pixel_height_count;
