@@ -9,6 +9,7 @@
 #include "build_mesh.h"
 #include "texture_atlas.h"
 #include "global_parameters.h"
+#include "task.h"
 
 constexpr static double EPSILON = 0.001;
 
