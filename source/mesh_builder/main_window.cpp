@@ -941,7 +941,13 @@ void MainWindow::onBuildMesh()
         return;
     }
 
-    buildMesh(mesh_project);
+    mesh_building_progress = new QProgressDialog(this);
+    mesh_building_progress->open(this, SLOT(onMeshBuildingCanceled()));
+    mesh_building_progress->setAutoClose(false);
+    mesh_building_progress->setAutoReset(false);
+    mesh_building_progress->setModal(true);
+    mesh_building_progress->show();
+    mesh_builder = new MeshBuilder(mesh_project);
 }
 
 void MainWindow::onSetOutputFile()
@@ -1237,4 +1243,15 @@ void MainWindow::currentTriangleSaveSelection()
 void MainWindow::currentTriangleRestoreSelection()
 {
     restoreSelection(saved_current_triangle_list_selection, saved_current_triangle_list_size, current_triangle_list_widget);
+}
+
+void MainWindow::onMeshBuildingCanceled()
+{
+    assert(mesh_builder);
+    if (mesh_builder)
+    {
+        mesh_builder->abort_flag_locker.lock();
+        mesh_builder->abort_flag = true;
+        mesh_builder->abort_flag_locker.unlock();
+    }
 }

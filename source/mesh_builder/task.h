@@ -99,3 +99,7 @@ class Job
         progress_calculator.step();
     }
 };
+
+struct AbortException
+{
+};

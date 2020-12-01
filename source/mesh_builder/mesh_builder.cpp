@@ -1,28 +1,18 @@
 // Copyright 2018-2020 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
-#include <QDesktopWidget>
-#include <QSplashScreen>
-#include <QApplication>
-#include <QStringList>
-#include <QTranslator>
-#include <QSettings>
-#include <QLocale>
-#include <QDebug>
-#include <QtGlobal>
 #include "main_window.h"
+#include "build_mesh.h"
+#include "mesh_builder.h"
 
-int main(int argc, char *argv[])
+MeshBuilder::MeshBuilder(const MeshProject::Ptr& mesh_project_) : mesh_project(mesh_project_)
 {
-    QApplication application(argc, argv);
-    MainWindow main_window;
+    moveToThread(&working_thread);
+    connect(&working_thread, SIGNAL(started()), this, SLOT(onThreadStart()));
+    working_thread.start();
+}
 
-    // Center main window on desktop
-    QDesktopWidget screen;
-    QRect screen_rect = screen.screenGeometry(&main_window);
-    main_window.resize(screen_rect.width() * 3 / 4, screen_rect.height() * 3 / 4);
-    QPoint position((screen_rect.width() - main_window.width()) / 2, (screen_rect.height() - main_window.height()) / 2);
-    main_window.move(position);
-    main_window.show();
-    return application.exec();
+void MeshBuilder::onThreadStart()
+{
+    buildMesh(mesh_project);
 }

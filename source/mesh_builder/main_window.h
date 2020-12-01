@@ -21,9 +21,11 @@
 #include <QListWidget>
 #include <QCloseEvent>
 #include <QResizeEvent>
+#include <QProgressDialog>
 #include "ui_main_window.h"
 #include "common.h"
 #include "mesh_project.h"
+#include "mesh_builder.h"
 
 class MainWindow : public QMainWindow
 {
@@ -137,6 +139,9 @@ private:
     void currentTriangleSaveSelection();
     void currentTriangleRestoreSelection();
 
+private slots:
+    void onMeshBuildingCanceled();
+
 private:
     bool first_show = true;
     Ui::MainWindow main_window;
@@ -220,6 +225,9 @@ private:
     VertexPhotoPosition::Ptr current_vertex_photo_position;
     Triangle::Ptr current_triangle;
     int current_triangle_item = -1;
+
+    MeshBuilder* mesh_builder = nullptr;
+    QProgressDialog* mesh_building_progress = nullptr;
 };
 
 extern MainWindow* g_main_window;
