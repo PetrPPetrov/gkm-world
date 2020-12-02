@@ -941,13 +941,32 @@ void MainWindow::onBuildMesh()
         return;
     }
 
-    mesh_building_progress = new QProgressDialog(this);
-    mesh_building_progress->open(this, SLOT(onMeshBuildingCanceled()));
-    mesh_building_progress->setAutoClose(false);
-    mesh_building_progress->setAutoReset(false);
-    mesh_building_progress->setModal(true);
-    mesh_building_progress->show();
     mesh_builder = new MeshBuilder(mesh_project);
+
+    QDialog dialog(this);
+    dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowContextHelpButtonHint);
+    dialog.setWindowTitle("Mesh Building Progress");
+    dialog.setModal(true);
+
+    QGridLayout layout(&dialog);
+
+    QLabel label_status(&dialog);
+    label_status.setText("");
+    layout.addWidget(&label_status);
+
+    QProgressBar progress_indicator(&dialog);
+    layout.addWidget(&progress_indicator);
+
+    QPushButton cancel("Cancel", &dialog);
+    //connect(&ok, &QPushButton::pressed, &dialog, &QDialog::accept);
+    layout.addWidget(&cancel);
+
+    if (dialog.exec())
+    {
+        //connectedState();
+        //connection = new MonitorUDPConnection(host_name_edit.text(), static_cast<std::uint16_t>(port_number_edit.value()), this);
+    }
+
 }
 
 void MainWindow::onSetOutputFile()

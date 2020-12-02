@@ -21,7 +21,7 @@
 #include <QListWidget>
 #include <QCloseEvent>
 #include <QResizeEvent>
-#include <QProgressDialog>
+#include <QProgressBar>
 #include "ui_main_window.h"
 #include "common.h"
 #include "mesh_project.h"
@@ -227,7 +227,6 @@ private:
     int current_triangle_item = -1;
 
     MeshBuilder* mesh_builder = nullptr;
-    QProgressDialog* mesh_building_progress = nullptr;
 };
 
 extern MainWindow* g_main_window;
