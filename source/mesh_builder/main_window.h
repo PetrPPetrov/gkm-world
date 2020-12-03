@@ -34,6 +34,12 @@ class MainWindow : public QMainWindow
 public:
     MainWindow();
 
+signals:
+    void setMeshBuildingProgressPercents(unsigned percents);
+    void setMeshBuildingProgressStatus(QString status);
+    void meshBuildingFinished();
+    void meshBuildingAborted();
+
 private:
     void initializeMenu();
     void initializeWidgets();
@@ -119,6 +125,9 @@ private:
     void onTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected);
     void onCurrentTriangleSelected(const QItemSelection& selected, const QItemSelection& deselected);
 
+    void onMeshBuildingDialogCanceled();
+    void onMeshBuildingDialogFinished();
+
     void closeEvent(QCloseEvent* event);
     void resizeEvent(QResizeEvent* event);
 
@@ -140,7 +149,10 @@ private:
     void currentTriangleRestoreSelection();
 
 private slots:
-    void onMeshBuildingCanceled();
+    void onSetMeshBuildingProgressPercents(unsigned percents);
+    void onSetMeshBuildingProgressStatus(QString status);
+    void onMeshBuildingFinished();
+    void onMeshBuildingAborted();
 
 private:
     bool first_show = true;
@@ -226,7 +238,11 @@ private:
     Triangle::Ptr current_triangle;
     int current_triangle_item = -1;
 
-    MeshBuilder* mesh_builder = nullptr;
+    std::unique_ptr<MeshBuilder> mesh_builder;
+    QDialog* mesh_building_dialog = nullptr;
+    QLabel* mesh_building_status_label = nullptr;
+    QProgressBar* mesh_building_progress_indicator = nullptr;
+    QPushButton* mesh_building_cancel_button = nullptr;
 };
 
 extern MainWindow* g_main_window;

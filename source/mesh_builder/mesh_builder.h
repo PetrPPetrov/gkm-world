@@ -16,13 +16,12 @@ class MeshBuilder : public QObject
 public:
     MeshBuilder(const MeshProject::Ptr& mesh_project);
 
-    QMutex abort_flag_locker;
-    bool abort_flag = false;
-
 private slots:
     void onThreadStart();
+    void onThreadFinish();
 
 private:
     MeshProject::Ptr mesh_project;
     QThread working_thread;
+    bool aborted = false;
 };

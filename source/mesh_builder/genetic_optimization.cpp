@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include "global_parameters.h"
 #include "genetic_optimization.h"
+#include "task.h"
 
 template<typename ProcessPointFunc>
 static inline void iterateAllPoints(const NfpPolygon& polygon, ProcessPointFunc& process_point)
@@ -423,9 +424,11 @@ void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
 
 void GeneticOptimization::calculatePenalties()
 {
+    Job job(population.size());
     for (auto& individual : population)
     {
         calculatePenalty(individual);
+        job.step();
     }
 }
 
@@ -439,6 +442,8 @@ void GeneticOptimization::sort()
 
 void GeneticOptimization::nextGeneration()
 {
+    Job job(POPULATION_SIZE);
+
     std::list<Individual::Ptr> next_population;
     next_population.push_back(getBest());
     while (next_population.size() < POPULATION_SIZE)
@@ -457,6 +462,7 @@ void GeneticOptimization::nextGeneration()
                 break;
             }
         }
+        job.step();
     }
     population = next_population;
 }

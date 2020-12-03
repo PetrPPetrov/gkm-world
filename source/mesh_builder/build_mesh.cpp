@@ -97,6 +97,7 @@ void calculateVertexLinePoints(
 
 static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, const std::string& mesh_project_filename)
 {
+    Job job(3, "Saving to .OBJ...");
     std::ofstream file_out(filename);
     file_out << "# Gkm-World Mesh Builder OBJ File : '" << mesh_project_filename << "'\n";
     file_out << "# http://gkmsoft.xyz\n";
@@ -105,28 +106,42 @@ static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, cons
     file_out << "usemtl Textured\n";
     mesh->texture_atlas->saveJpeg("texture_atlas.jpg");
 
-    for (auto& vertex : mesh->vertices)
     {
-        file_out << "v " << vertex.x() << " " << vertex.y() << " " << vertex.z() << "\n";
+        Job job(mesh->vertices.size(), "Saving vertices...");
+        for (auto& vertex : mesh->vertices)
+        {
+            file_out << "v " << vertex.x() << " " << vertex.y() << " " << vertex.z() << "\n";
+            job.step();
+        }
     }
-    for (auto& tex_coord : mesh->triangle_tex_coords)
     {
-        file_out << "vt " << tex_coord.x() << " " << tex_coord.y() << "\n";
+        Job job(mesh->triangle_tex_coords.size(), "Saving tex coordinates...");
+        for (auto& tex_coord : mesh->triangle_tex_coords)
+        {
+            file_out << "vt " << tex_coord.x() << " " << tex_coord.y() << "\n";
+            job.step();
+        }
     }
-    unsigned tex_coord_index = 1;
-    for (auto& triangle : mesh->triangles)
     {
-        file_out << "f "
-            << triangle.x() + 1 << "/" << tex_coord_index << " "
-            << triangle.y() + 1 << "/" << tex_coord_index + 1 << " "
-            << triangle.z() + 1 << "/" << tex_coord_index + 2 << "\n";
-        tex_coord_index += 3;
+        unsigned tex_coord_index = 1;
+        Job job(mesh->triangles.size(), "Saving triangles...");
+        for (auto& triangle : mesh->triangles)
+        {
+            file_out << "f "
+                << triangle.x() + 1 << "/" << tex_coord_index << " "
+                << triangle.y() + 1 << "/" << tex_coord_index + 1 << " "
+                << triangle.z() + 1 << "/" << tex_coord_index + 2 << "\n";
+            tex_coord_index += 3;
+            job.step();
+        }
     }
 }
 
 void calculateVertices(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
     const size_t source_vertex_count = mesh_project->vertices.size();
+
+    Job job(source_vertex_count, "Calculating vertex coordinates...");
     new_mesh->vertices.reserve(source_vertex_count);
     new_mesh->old_to_new_vertex_id_map.resize(source_vertex_count, source_vertex_count);
     new_mesh->new_to_old_vertex_id_map.resize(source_vertex_count, source_vertex_count);
@@ -135,7 +150,7 @@ void calculateVertices(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& ne
         const auto& vertex = mesh_project->vertices[i];
         if (vertex->id == -1)
         {
-            continue;
+            goto next_iteration; // Yes, I use goto statements!
         }
 
         if (vertex->positions.size() >= 2)
@@ -164,13 +179,18 @@ void calculateVertices(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& ne
                 new_mesh->vertices.push_back(vertex_point);
             }
         }
+
+next_iteration:
+        job.step();
     }
 }
 
 void mapTriangles(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
-    const size_t source_vertex_count = mesh_project->vertices.size();
     const size_t source_triangle_count = mesh_project->triangles.size();
+
+    Job job(source_triangle_count, "Generating result triangles...");
+    const size_t source_vertex_count = mesh_project->vertices.size();
     new_mesh->triangles.reserve(source_triangle_count);
     //new_mesh->old_to_new_vertex_id_map.resize(source_triangle_count, source_triangle_count);
     for (size_t i = 0; i < source_triangle_count; ++i)
@@ -202,6 +222,8 @@ void mapTriangles(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
             //new_mesh->old_to_new_triangle_id_map[i] = new_mesh->triangles.size();
             new_mesh->triangles.push_back(new_vertex_indices);
         }
+
+        job.step();
     }
 }
 
@@ -505,6 +527,8 @@ TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const Pic
     const unsigned pixel_count_w = static_cast<unsigned>(pixel_width_count);
     const unsigned pixel_count_h = static_cast<unsigned>(pixel_height_count);
 
+    Job job(static_cast<size_t>(pixel_count_w) * pixel_count_h, "Building triangle texture...");
+
     TriangleTexture::Ptr triangle_texture = std::make_shared<TriangleTexture>(triangle_index, pixel_count_w, pixel_count_h);
     Texture::Ptr texture = triangle_texture->getTexture();
 
@@ -540,35 +564,40 @@ TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const Pic
                 !isPointInTriangle(ul_corner_uv, uv[0], uv[1], uv[2]) &&
                 !isPointInTriangle(ur_corner_uv, uv[0], uv[1], uv[2]))
             {
-                continue;
+                goto next_iteration;
             }
 
-            const Eigen::Vector2d ll_corner = solveObliqueCoordinates(ll_corner_uv);
-            const Eigen::Vector2d lr_corner = solveObliqueCoordinates(lr_corner_uv);
-            const Eigen::Vector2d ul_corner = solveObliqueCoordinates(ul_corner_uv);
-            const Eigen::Vector2d ur_corner = solveObliqueCoordinates(ur_corner_uv);
-            const Eigen::Vector2d center = solveObliqueCoordinates(Eigen::Vector2d(u_center, v_center));
+            {
+                const Eigen::Vector2d ll_corner = solveObliqueCoordinates(ll_corner_uv);
+                const Eigen::Vector2d lr_corner = solveObliqueCoordinates(lr_corner_uv);
+                const Eigen::Vector2d ul_corner = solveObliqueCoordinates(ul_corner_uv);
+                const Eigen::Vector2d ur_corner = solveObliqueCoordinates(ur_corner_uv);
+                const Eigen::Vector2d center = solveObliqueCoordinates(Eigen::Vector2d(u_center, v_center));
 
-            const Eigen::Vector2d ll_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
-            const Eigen::Vector2d lr_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
-            const Eigen::Vector2d ul_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
-            const Eigen::Vector2d ur_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
-            const Eigen::Vector2d center_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(center);
-            const double pixel_p0_square = calculateCellSquare(ll_corner_p0, lr_corner_p0, ul_corner_p0, ur_corner_p0);
+                const Eigen::Vector2d ll_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
+                const Eigen::Vector2d lr_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
+                const Eigen::Vector2d ul_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
+                const Eigen::Vector2d ur_corner_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
+                const Eigen::Vector2d center_p0 = picture0_triangle.calculatePointInObliqueCoordinateSystem(center);
+                const double pixel_p0_square = calculateCellSquare(ll_corner_p0, lr_corner_p0, ul_corner_p0, ur_corner_p0);
 
-            const Eigen::Vector2d ll_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
-            const Eigen::Vector2d lr_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
-            const Eigen::Vector2d ul_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
-            const Eigen::Vector2d ur_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
-            const Eigen::Vector2d center_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(center);
-            const double pixel_p1_square = calculateCellSquare(ll_corner_p1, lr_corner_p1, ul_corner_p1, ur_corner_p1);
+                const Eigen::Vector2d ll_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ll_corner);
+                const Eigen::Vector2d lr_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(lr_corner);
+                const Eigen::Vector2d ul_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ul_corner);
+                const Eigen::Vector2d ur_corner_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(ur_corner);
+                const Eigen::Vector2d center_p1 = picture1_triangle.calculatePointInObliqueCoordinateSystem(center);
+                const double pixel_p1_square = calculateCellSquare(ll_corner_p1, lr_corner_p1, ul_corner_p1, ur_corner_p1);
 
-            // Select picture where the current pixel has a higher square
-            const PictureTriangle& selected_picture_triange = (pixel_p0_square > pixel_p1_square) ? picture0_triangle : picture1_triangle;
-            const Eigen::Vector2d& selected_center = (pixel_p0_square > pixel_p1_square) ? center_p0 : center_p1;
+                // Select picture where the current pixel has a higher square
+                const PictureTriangle& selected_picture_triange = (pixel_p0_square > pixel_p1_square) ? picture0_triangle : picture1_triangle;
+                const Eigen::Vector2d& selected_center = (pixel_p0_square > pixel_p1_square) ? center_p0 : center_p1;
 
-            QRgb new_pixel = getPixel(selected_picture_triange.getImage(), selected_center);
-            texture->setPixel(x, y, new_pixel);
+                QRgb new_pixel = getPixel(selected_picture_triange.getImage(), selected_center);
+                texture->setPixel(x, y, new_pixel);
+            }
+
+next_iteration:
+            job.step();
         }
     }
 
@@ -586,8 +615,9 @@ TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const Pic
 void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
     TextureAtlas::Ptr texture_atlas = std::make_shared<TextureAtlas>(mesh_project, new_mesh);
-
     const size_t new_triangle_count = new_mesh->triangles.size();
+
+    Job job(new_triangle_count + 1, "Building triangle textures...");
     for (size_t i = 0; i < new_triangle_count; ++i)
     {
         Vector3u cur_triangle = new_mesh->triangles[i];
@@ -710,6 +740,8 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
 
 void buildMesh(const MeshProject::Ptr& mesh_project)
 {
+    Job job(4, "Building resulting mesh...");
+
     Mesh::Ptr new_mesh = std::make_shared<Mesh>();
 
     calculateVertices(mesh_project, new_mesh);

@@ -19,6 +19,7 @@
 #include "main_window.h"
 #include "build_mesh.h"
 #include "color_hasher.h"
+#include "task.h"
 
 extern MainWindow* g_main_window = nullptr;
 
@@ -29,6 +30,11 @@ MainWindow::MainWindow()
 
     initializeMenu();
     initializeWidgets();
+
+    connect(this, SIGNAL(setMeshBuildingProgressPercents(unsigned)), this, SLOT(onSetMeshBuildingProgressPercents(unsigned)));
+    connect(this, SIGNAL(setMeshBuildingProgressStatus(QString)), this, SLOT(onSetMeshBuildingProgressStatus(QString)));
+    connect(this, SIGNAL(meshBuildingFinished()), this, SLOT(onMeshBuildingFinished()));
+    connect(this, SIGNAL(meshBuildingAborted()), this, SLOT(onMeshBuildingAborted()));
 }
 
 void MainWindow::initializeMenu()
@@ -941,32 +947,31 @@ void MainWindow::onBuildMesh()
         return;
     }
 
-    mesh_builder = new MeshBuilder(mesh_project);
+    mesh_builder = std::make_unique<MeshBuilder>(mesh_project);
 
-    QDialog dialog(this);
-    dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowContextHelpButtonHint);
-    dialog.setWindowTitle("Mesh Building Progress");
-    dialog.setModal(true);
+    mesh_building_dialog = new QDialog(this);
+    mesh_building_dialog->setWindowFlags(mesh_building_dialog->windowFlags() & ~Qt::WindowContextHelpButtonHint & ~Qt::WindowCloseButtonHint);
+    mesh_building_dialog->setWindowTitle("Mesh Building");
+    mesh_building_dialog->setModal(true);
 
-    QGridLayout layout(&dialog);
+    QGridLayout* layout = new QGridLayout(mesh_building_dialog);
 
-    QLabel label_status(&dialog);
-    label_status.setText("");
-    layout.addWidget(&label_status);
+    mesh_building_status_label = new QLabel(mesh_building_dialog);
+    mesh_building_status_label->setText("");
+    layout->addWidget(mesh_building_status_label);
 
-    QProgressBar progress_indicator(&dialog);
-    layout.addWidget(&progress_indicator);
+    mesh_building_progress_indicator = new QProgressBar(mesh_building_dialog);
+    mesh_building_progress_indicator->setMaximum(0);
+    mesh_building_progress_indicator->setMaximum(100 * PERCENT_MULTIPLIER);
+    layout->addWidget(mesh_building_progress_indicator);
 
-    QPushButton cancel("Cancel", &dialog);
-    //connect(&ok, &QPushButton::pressed, &dialog, &QDialog::accept);
-    layout.addWidget(&cancel);
+    mesh_building_cancel_button = new QPushButton("Cancel", mesh_building_dialog);
+    connect(mesh_building_cancel_button, &QPushButton::pressed, this, &MainWindow::onMeshBuildingDialogCanceled);
+    connect(mesh_building_dialog, &QDialog::finished, this, &MainWindow::onMeshBuildingDialogFinished);
+    layout->addWidget(mesh_building_cancel_button);
 
-    if (dialog.exec())
-    {
-        //connectedState();
-        //connection = new MonitorUDPConnection(host_name_edit.text(), static_cast<std::uint16_t>(port_number_edit.value()), this);
-    }
-
+    mesh_building_dialog->show();
+    updateActionState();
 }
 
 void MainWindow::onSetOutputFile()
@@ -1134,6 +1139,39 @@ void MainWindow::onCurrentTriangleSelected(const QItemSelection& selected, const
     updateActionState();
 }
 
+void MainWindow::onMeshBuildingDialogCanceled()
+{
+    if (mesh_builder)
+    {
+        ProgressCalculator& progress_calculator = ProgressCalculator::getInstance();
+        progress_calculator.abort_flag_locker.lock();
+        progress_calculator.abort_flag = true;
+        progress_calculator.abort_flag_locker.unlock();
+        if (mesh_building_cancel_button)
+        {
+            mesh_building_cancel_button->setText("Canceling...");
+            mesh_building_cancel_button->setEnabled(false);
+        }
+    }
+    else
+    {
+        if (mesh_building_dialog)
+        {
+            mesh_building_dialog->accept();
+        }
+    }
+}
+
+void MainWindow::onMeshBuildingDialogFinished()
+{
+    mesh_builder = nullptr;
+    mesh_building_dialog = nullptr;
+    mesh_building_status_label = nullptr;
+    mesh_building_progress_indicator = nullptr;
+    mesh_building_cancel_button = nullptr;
+    updateActionState();
+}
+
 void MainWindow::closeEvent(QCloseEvent* event)
 {
     if (closeProject())
@@ -1264,13 +1302,35 @@ void MainWindow::currentTriangleRestoreSelection()
     restoreSelection(saved_current_triangle_list_selection, saved_current_triangle_list_size, current_triangle_list_widget);
 }
 
-void MainWindow::onMeshBuildingCanceled()
+void MainWindow::onSetMeshBuildingProgressPercents(unsigned percents)
 {
-    assert(mesh_builder);
-    if (mesh_builder)
+    if (mesh_building_progress_indicator)
     {
-        mesh_builder->abort_flag_locker.lock();
-        mesh_builder->abort_flag = true;
-        mesh_builder->abort_flag_locker.unlock();
+        mesh_building_progress_indicator->setValue(percents);
+    }
+}
+
+void MainWindow::onSetMeshBuildingProgressStatus(QString status)
+{
+    if (mesh_building_status_label)
+    {
+        mesh_building_status_label->setText(status);
+    }
+}
+
+void MainWindow::onMeshBuildingFinished()
+{
+    if (mesh_building_dialog)
+    {
+        mesh_building_cancel_button->setText("OK");
+    }
+    mesh_builder = nullptr;
+}
+
+void MainWindow::onMeshBuildingAborted()
+{
+    if (mesh_building_dialog)
+    {
+        mesh_building_dialog->accept();
     }
 }

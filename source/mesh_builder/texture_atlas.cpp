@@ -6,6 +6,7 @@
 #include "global_parameters.h"
 #include "genetic_optimization.h"
 #include "texture_atlas.h"
+#include "task.h"
 
 TriangleTexture::TriangleTexture(size_t triangle_index_, unsigned width, unsigned height) : texture(std::make_shared<Texture>(width, height))
 {
@@ -45,18 +46,19 @@ void TextureAtlas::build()
 {
     auto genetic_algorithm = std::make_shared<GeneticOptimization>(triangle_textures, mesh);
 
-    size_t generation_count = 0;
+    Job job(2, "Generating texture atlas...");
+
     Individual::Ptr best = nullptr;
-    while (true)
     {
-        genetic_algorithm->calculatePenalties();
-        genetic_algorithm->sort();
-        best = genetic_algorithm->getBest();
-        genetic_algorithm->nextGeneration();
-        ++generation_count;
-        if (generation_count > 10)
+        const size_t GENERATION_NUMBER = 10;
+        Job job(GENERATION_NUMBER, "Nesting texture fragments...");
+        for (size_t generation_count = 0; generation_count < GENERATION_NUMBER; ++generation_count)
         {
-            break;
+            Job job(2);
+            genetic_algorithm->calculatePenalties();
+            genetic_algorithm->sort();
+            best = genetic_algorithm->getBest();
+            genetic_algorithm->nextGeneration();
         }
     }
 
@@ -75,6 +77,7 @@ void TextureAtlas::build()
 
         const unsigned texture_atlas_width = static_cast<unsigned>(x_size_in_pixel);
         const unsigned texture_atlas_height = static_cast<unsigned>(y_size_in_pixel);
+
         texture_atlas = std::make_shared<Texture>(texture_atlas_width, texture_atlas_height);
         mesh->texture_atlas = texture_atlas;
 
@@ -95,6 +98,8 @@ void TextureAtlas::build()
         //painter.setPen(pen);
 
         const auto& triangle_texture_information = genetic_algorithm->getTriangleTextureInformation();
+
+        Job job(best->genotype.size(), "Filling texture atlas...");
         for (auto& gene : best->genotype)
         {
             using namespace boost::polygon;
@@ -153,6 +158,8 @@ void TextureAtlas::build()
             const int cur_y_size_in_pixel = cur_y_hi_in_pixel - cur_y_lo_in_pixel;
 
             Eigen::Rotation2Dd negative_rotation(-rotation_step * gene.rotation_index);
+
+            Job job(static_cast<size_t>(cur_x_size_in_pixel) * cur_y_size_in_pixel, "Copying texture fragment to atlas...");
             for (int x = 0; x < cur_x_size_in_pixel; ++x)
             {
                 for (int y = 0; y < cur_y_size_in_pixel; ++y)
@@ -187,6 +194,7 @@ void TextureAtlas::build()
                         std::uint32_t pixel = texture_fragment->getInterpolatedPixel(original_relative_point);
                         texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, pixel);
                     }
+                    job.step();
                 }
             }
         }
