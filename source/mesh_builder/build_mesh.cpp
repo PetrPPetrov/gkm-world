@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cmath>
 #include <vector>
+#include <boost/filesystem.hpp>
 #include <QRgb>
 #include "mesh.h"
 #include "build_mesh.h"
@@ -95,16 +96,14 @@ void calculateVertexLinePoints(
     finish = end_vertex_line;
 }
 
-static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, const std::string& mesh_project_filename)
+static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, const std::string& mesh_project_filename, const std::string& mtl_filename)
 {
     Job job(3, "Saving to .OBJ...");
     std::ofstream file_out(filename);
     file_out << "# Gkm-World Mesh Builder OBJ File : '" << mesh_project_filename << "'\n";
     file_out << "# http://gkmsoft.xyz\n";
-    file_out << "newmtl Textured\n";
-    file_out << "map_Kd texture_atlas.jpg\n";
+    file_out << "mtllib " << mtl_filename << "\n";
     file_out << "usemtl Textured\n";
-    mesh->texture_atlas->saveJpeg("texture_atlas.jpg");
 
     {
         Job job(mesh->vertices.size(), "Saving vertices...");
@@ -135,6 +134,15 @@ static void saveMeshObj(const std::string& filename, const Mesh::Ptr& mesh, cons
             job.step();
         }
     }
+}
+
+static void saveMeshMtl(const std::string& filename, const std::string& texture_atlas_filename, const std::string& mesh_project_filename)
+{
+    std::ofstream file_out(filename);
+    file_out << "# Gkm-World Mesh Builder MTL File : '" << mesh_project_filename << "'\n";
+    file_out << "# http://gkmsoft.xyz\n";
+    file_out << "newmtl Textured\n";
+    file_out << "map_Kd " << texture_atlas_filename << "\n";
 }
 
 void calculateVertices(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
@@ -608,7 +616,7 @@ next_iteration:
     triangle_texture->area = calculateTriangleSquare(uv[0], uv[1], uv[2]);
 
     // For debug only
-    triangle_texture->save();
+    //triangle_texture->save();
     return triangle_texture;
 }
 
@@ -740,7 +748,7 @@ void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mes
 
 void buildMesh(const MeshProject::Ptr& mesh_project)
 {
-    Job job(4, "Building resulting mesh...");
+    Job job(5, "Building resulting mesh...");
 
     Mesh::Ptr new_mesh = std::make_shared<Mesh>();
 
@@ -748,5 +756,16 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
     mapTriangles(mesh_project, new_mesh);
     buildTexture(mesh_project, new_mesh);
 
-    saveMeshObj(mesh_project->output_file_name, new_mesh, mesh_project->file_name);
+    boost::filesystem::path output_obj_path(mesh_project->output_file_name);
+    boost::filesystem::path output_mtl_path = output_obj_path;
+    output_mtl_path.replace_extension(".mtl");
+    boost::filesystem::path texture_atlas_path = output_obj_path;
+    texture_atlas_path.replace_extension(".jpg");
+
+    saveMeshObj(mesh_project->output_file_name, new_mesh, mesh_project->file_name, output_mtl_path.filename().generic_string());
+    saveMeshMtl(output_mtl_path.generic_string(), texture_atlas_path.filename().generic_string(), mesh_project->file_name);
+
+    Job save_jpeg_job(1, "Saving texture atlas...");
+    new_mesh->texture_atlas->saveJpeg(texture_atlas_path.generic_string().c_str());
+    save_jpeg_job.step();
 }
