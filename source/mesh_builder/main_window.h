@@ -106,6 +106,7 @@ private:
 
     void onBuildMesh();
     void onSetOutputFile();
+    void onBuildOptions();
 
     void onLockedChanged(int state);
     void onRotationChanged(int index);
@@ -182,6 +183,7 @@ private:
 
     QAction* build_mesh_act = nullptr;
     QAction* set_output_file_act = nullptr;
+    QAction* build_options_act = nullptr;
 
     MeshBuilderWidget* camera_orientation_widget = nullptr;
     QMdiSubWindow* camera_orientation_window = nullptr;

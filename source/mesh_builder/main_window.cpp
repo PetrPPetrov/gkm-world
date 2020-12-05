@@ -19,6 +19,7 @@
 #include "main_window.h"
 #include "build_mesh.h"
 #include "color_hasher.h"
+#include "build_options.h"
 #include "task.h"
 
 extern MainWindow* g_main_window = nullptr;
@@ -144,10 +145,15 @@ void MainWindow::initializeMenu()
     connect(build_mesh_act, &QAction::triggered, this, &MainWindow::onBuildMesh);
     build_menu->addAction(build_mesh_act);
 
-    build_menu->addSeparator();
     set_output_file_act = new QAction("Set Output File", this);
     connect(set_output_file_act, &QAction::triggered, this, &MainWindow::onSetOutputFile);
     build_menu->addAction(set_output_file_act);
+
+    build_menu->addSeparator();
+
+    build_options_act = new QAction("Build Options", this);
+    connect(build_options_act, &QAction::triggered, this, &MainWindow::onBuildOptions);
+    build_menu->addAction(build_options_act);
 }
 
 void MainWindow::initializeWidgets()
@@ -983,6 +989,12 @@ void MainWindow::onSetOutputFile()
         dirtyProject();
         updateActionState();
     }
+}
+
+void MainWindow::onBuildOptions()
+{
+    BuildOptionsDialog build_options_dialog(this);
+    build_options_dialog.exec();
 }
 
 void MainWindow::onLockedChanged(int state)
