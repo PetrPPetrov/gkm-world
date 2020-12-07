@@ -44,7 +44,7 @@ void TextureAtlas::addTriangleTexture(const TriangleTexture::Ptr& triangle_textu
 
 void TextureAtlas::build()
 {
-    auto genetic_algorithm = std::make_shared<GeneticOptimization>(triangle_textures, mesh);
+    auto genetic_algorithm = std::make_shared<GeneticOptimization>(triangle_textures, mesh, mesh_project);
 
     Job job(2, "Generating texture atlas...");
 
@@ -64,13 +64,13 @@ void TextureAtlas::build()
 
     if (best)
     {
-        const double rotation_step = 360.0 / ROTATION_COUNT * GRAD_TO_RAD;
+        const double rotation_step = 360.0 / mesh_project->rotation_count * GRAD_TO_RAD;
         mesh->triangle_tex_coords.resize(mesh->triangles.size() * 3);
 
-        const int x_lo_in_pixel = static_cast<int>(floor(xl(best->bounding_box) / SCALE) - PROTECTION_OFFSET);
-        const int x_hi_in_pixel = static_cast<int>(ceil(xh(best->bounding_box) / SCALE) + PROTECTION_OFFSET);
-        const int y_lo_in_pixel = static_cast<int>(floor(yl(best->bounding_box) / SCALE) - PROTECTION_OFFSET);
-        const int y_hi_in_pixel = static_cast<int>(ceil(yh(best->bounding_box) / SCALE) + PROTECTION_OFFSET);
+        const int x_lo_in_pixel = static_cast<int>(floor(xl(best->bounding_box) / mesh_project->scale) - mesh_project->protection_offset);
+        const int x_hi_in_pixel = static_cast<int>(ceil(xh(best->bounding_box) / mesh_project->scale) + mesh_project->protection_offset);
+        const int y_lo_in_pixel = static_cast<int>(floor(yl(best->bounding_box) / mesh_project->scale) - mesh_project->protection_offset);
+        const int y_hi_in_pixel = static_cast<int>(ceil(yh(best->bounding_box) / mesh_project->scale) + mesh_project->protection_offset);
 
         const int x_size_in_pixel = x_hi_in_pixel - x_lo_in_pixel;
         const int y_size_in_pixel = y_hi_in_pixel - y_lo_in_pixel;
@@ -81,10 +81,10 @@ void TextureAtlas::build()
         texture_atlas = std::make_shared<Texture>(texture_atlas_width, texture_atlas_height);
         mesh->texture_atlas = texture_atlas;
 
-        const int x_lo = static_cast<int>(x_lo_in_pixel * SCALE);
-        const int x_hi = static_cast<int>(x_hi_in_pixel * SCALE);
-        const int y_lo = static_cast<int>(y_lo_in_pixel * SCALE);
-        const int y_hi = static_cast<int>(y_hi_in_pixel * SCALE);
+        const int x_lo = static_cast<int>(x_lo_in_pixel * mesh_project->scale);
+        const int x_hi = static_cast<int>(x_hi_in_pixel * mesh_project->scale);
+        const int y_lo = static_cast<int>(y_lo_in_pixel * mesh_project->scale);
+        const int y_hi = static_cast<int>(y_hi_in_pixel * mesh_project->scale);
 
         const int x_size = x_hi - x_lo;
         const int y_size = y_hi - y_lo;
@@ -126,12 +126,12 @@ void TextureAtlas::build()
                     //{
                     //    if (first_point)
                     //    {
-                    //        path_to_draw.moveTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
+                    //        path_to_draw.moveTo((point_it->x() - x_lo) / mesh_project->scale, (point_it->y() - y_lo) / mesh_project->scale);
                     //        first_point = false;
                     //    }
                     //    else
                     //    {
-                    //        path_to_draw.lineTo((point_it->x() - x_lo) / SCALE, (point_it->y() - y_lo) / SCALE);
+                    //        path_to_draw.lineTo((point_it->x() - x_lo) / mesh_project->scale, (point_it->y() - y_lo) / mesh_project->scale);
                     //    }
                     //}
                     //painter.drawPath(path_to_draw);
@@ -144,15 +144,15 @@ void TextureAtlas::build()
             std::vector<NfpPolygon> real_polygons;
             real_polygon_set.get(real_polygons);
 
-            const int cur_x_lo_in_pixel = static_cast<int>(floor(xl(cur_bounding_box) / SCALE));
-            const int cur_x_hi_in_pixel = static_cast<int>(ceil(xh(cur_bounding_box) / SCALE));
-            const int cur_y_lo_in_pixel = static_cast<int>(floor(yl(cur_bounding_box) / SCALE));
-            const int cur_y_hi_in_pixel = static_cast<int>(ceil(yh(cur_bounding_box) / SCALE));
+            const int cur_x_lo_in_pixel = static_cast<int>(floor(xl(cur_bounding_box) / mesh_project->scale));
+            const int cur_x_hi_in_pixel = static_cast<int>(ceil(xh(cur_bounding_box) / mesh_project->scale));
+            const int cur_y_lo_in_pixel = static_cast<int>(floor(yl(cur_bounding_box) / mesh_project->scale));
+            const int cur_y_hi_in_pixel = static_cast<int>(ceil(yh(cur_bounding_box) / mesh_project->scale));
 
-            const int cur_x_lo = static_cast<int>(cur_x_lo_in_pixel * SCALE);
-            const int cur_x_hi = static_cast<int>(cur_x_hi_in_pixel * SCALE);
-            const int cur_y_lo = static_cast<int>(cur_y_lo_in_pixel * SCALE);
-            const int cur_y_hi = static_cast<int>(cur_y_hi_in_pixel * SCALE);
+            const int cur_x_lo = static_cast<int>(cur_x_lo_in_pixel * mesh_project->scale);
+            const int cur_x_hi = static_cast<int>(cur_x_hi_in_pixel * mesh_project->scale);
+            const int cur_y_lo = static_cast<int>(cur_y_lo_in_pixel * mesh_project->scale);
+            const int cur_y_hi = static_cast<int>(cur_y_hi_in_pixel * mesh_project->scale);
 
             const int cur_x_size_in_pixel = cur_x_hi_in_pixel - cur_x_lo_in_pixel;
             const int cur_y_size_in_pixel = cur_y_hi_in_pixel - cur_y_lo_in_pixel;
@@ -166,7 +166,7 @@ void TextureAtlas::build()
                 {
                     const int cur_x_in_pixel = cur_x_lo_in_pixel + x;
                     const int cur_y_in_pixel = cur_y_lo_in_pixel + y;
-                    NfpPoint cur_point0(static_cast<int>(SCALE * cur_x_in_pixel), static_cast<int>(SCALE * cur_y_in_pixel));
+                    NfpPoint cur_point0(static_cast<int>(mesh_project->scale * cur_x_in_pixel), static_cast<int>(mesh_project->scale * cur_y_in_pixel));
                     bool inside = false;
                     for (size_t i = 0; i < real_polygons.size(); ++i)
                     {
@@ -189,7 +189,7 @@ void TextureAtlas::build()
                         Eigen::Vector2d cur_point(cur_point0.x(), cur_point0.y());
                         Eigen::Vector2d cur_relative_point = cur_point - Eigen::Vector2d(gene.placement.x(), gene.placement.y());
                         Eigen::Vector2d original_relative_point0 = negative_rotation * cur_relative_point;
-                        Eigen::Vector2d original_relative_point = original_relative_point0 / SCALE;
+                        Eigen::Vector2d original_relative_point = original_relative_point0 / mesh_project->scale;
 
                         std::uint32_t pixel = texture_fragment->getInterpolatedPixel(original_relative_point);
                         texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, pixel);
@@ -208,8 +208,8 @@ void TextureAtlas::build()
             for (unsigned i = 0; i < 3; ++i)
             {
                 const Eigen::Vector2d tex_coord = positive_rotation * triangle_texture->texture_coordinates[i];
-                const int cur_x = x(gene.placement) + static_cast<int>(SCALE * tex_coord.x());
-                const int cur_y = y(gene.placement) + static_cast<int>(SCALE * tex_coord.y());
+                const int cur_x = x(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.x());
+                const int cur_y = y(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.y());
                 const double u = (static_cast<double>(cur_x) - x_lo) / x_size;
                 const double v = (static_cast<double>(cur_y) - y_lo) / y_size;
                 mesh->triangle_tex_coords[triangle_texture->getTriangleIndex() * 3 + triangle_texture->new_to_old[i]] = Eigen::Vector2d(u, v);
@@ -249,8 +249,8 @@ void TextureAtlas::build()
         //    for (unsigned i = 0; i < 4; ++i)
         //    {
         //        const Eigen::Vector2d tex_coord = positive_rotation * triangle_texture->texture_coordinates[i % 3];
-        //        const int cur_x = x(gene.placement) + static_cast<int>(SCALE * tex_coord.x());
-        //        const int cur_y = y(gene.placement) + static_cast<int>(SCALE * tex_coord.y());
+        //        const int cur_x = x(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.x());
+        //        const int cur_y = y(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.y());
         //        const double u = (static_cast<double>(cur_x) - x_lo) / x_size;
         //        const double v = (static_cast<double>(cur_y) - y_lo) / y_size;
         //        if (i == 0)

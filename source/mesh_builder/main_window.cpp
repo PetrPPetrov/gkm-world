@@ -993,7 +993,7 @@ void MainWindow::onSetOutputFile()
 
 void MainWindow::onBuildOptions()
 {
-    BuildOptionsDialog build_options_dialog(this);
+    BuildOptionsDialog build_options_dialog(mesh_project, this);
     build_options_dialog.exec();
 }
 

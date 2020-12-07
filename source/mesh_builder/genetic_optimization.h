@@ -18,13 +18,6 @@ typedef std::pair<NfpPoint, NfpPoint> NfpEdge;
 
 typedef std::shared_ptr<NfpPolygonSet> NfpPolygonSetPtr;
 
-constexpr static double PROTECTION_OFFSET = 8.0;
-constexpr static double SCALE = 256.0;
-constexpr static int EFFECTIVE_PROTECTION_OFFSET = static_cast<int>(SCALE * PROTECTION_OFFSET);
-constexpr static size_t ROTATION_COUNT = 8;
-constexpr static size_t POPULATION_SIZE = 128;
-constexpr static size_t MUTATION_RATE = 10;
-
 struct PolygonSet
 {
     NfpPolygonSet polygon_set;
@@ -90,7 +83,7 @@ class GeneticOptimization
 public:
     typedef std::shared_ptr<GeneticOptimization> Ptr;
 
-    GeneticOptimization(const std::vector<TriangleTexture::Ptr>& triangle_textures, const Mesh::Ptr& mesh);
+    GeneticOptimization(const std::vector<TriangleTexture::Ptr>& triangle_textures, const Mesh::Ptr& mesh, const MeshProject::Ptr& mesh_project);
     void calculatePenalty(const Individual::Ptr& individual);
     void calculatePenalties();
     void sort();

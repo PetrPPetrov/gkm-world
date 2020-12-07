@@ -6,6 +6,13 @@
 #include "genetic_optimization.h"
 #include "task.h"
 
+static double g_protection_offset = 8.0;
+static double g_scale = 256.0;
+static size_t g_rotation_count = 8;
+static size_t g_population_size = 128;
+static size_t g_generation_count = 32;
+static size_t g_mutation_rate = 10;
+
 template<typename ProcessPointFunc>
 static inline void iterateAllPoints(const NfpPolygon& polygon, ProcessPointFunc& process_point)
 {
@@ -43,8 +50,8 @@ static inline void toPolygonSet(const TriangleTexture::Ptr& triangle_texture, do
     for (unsigned i = 0; i < 3; ++i)
     {
         const Eigen::Vector2d tex_coord = Eigen::Rotation2Dd(rotation_angle) * triangle_texture->texture_coordinates[i];
-        const int x = static_cast<int>(SCALE * tex_coord.x());
-        const int y = static_cast<int>(SCALE * tex_coord.y());
+        const int x = static_cast<int>(g_scale * tex_coord.x());
+        const int y = static_cast<int>(g_scale * tex_coord.y());
         points.push_back(NfpPoint(x, y));
     }
     NfpPolygon polygon;
@@ -180,7 +187,7 @@ const PolygonSet& GeneticOptimization::cachedNfp(const PolygonSetPtr& a, const P
 
 Pair GeneticOptimization::getRandomPair() const
 {
-    const size_t max_random = POPULATION_SIZE * POPULATION_SIZE;
+    const size_t max_random = g_population_size * g_population_size;
     Pair result = { nullptr };
     unsigned result_index = 0;
     while (result_index < 2)
@@ -190,7 +197,7 @@ Pair GeneticOptimization::getRandomPair() const
         {
             if (result.empty() || *result.begin() != individual)
             {
-                if (uniform(engine) % max_random < 2 * (POPULATION_SIZE - index))
+                if (uniform(engine) % max_random < 2 * (g_population_size - index))
                 {
                     result[result_index++] = individual;
                     if (result_index >= 2)
@@ -259,12 +266,12 @@ void GeneticOptimization::mutate(const Individual::Ptr& individual) const
 {
     for (size_t i = 0; i < individual->genotype.size(); ++i)
     {
-        if (uniform(engine) % 100 < MUTATION_RATE)
+        if (uniform(engine) % 100 < g_mutation_rate)
         {
             Gene& gene = individual->genotype[i];
-            gene.rotation_index = uniform(engine) % ROTATION_COUNT;
+            gene.rotation_index = uniform(engine) % g_mutation_rate;
         }
-        if (uniform(engine) % 100 < MUTATION_RATE)
+        if (uniform(engine) % 100 < g_mutation_rate)
         {
             size_t j = i + 1;
             if (j >= individual->genotype.size())
@@ -276,18 +283,25 @@ void GeneticOptimization::mutate(const Individual::Ptr& individual) const
     }
 }
 
-GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>& triangle_textures, const Mesh::Ptr& mesh) : engine(std::random_device()())
+GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>& triangle_textures, const Mesh::Ptr& mesh, const MeshProject::Ptr& mesh_project) : engine(std::random_device()())
 {
+    g_protection_offset = mesh_project->protection_offset;
+    g_scale = mesh_project->scale;
+    g_rotation_count = mesh_project->rotation_count;
+    g_population_size = mesh_project->population_size;
+    g_generation_count = mesh_project->generation_count;
+    g_mutation_rate = mesh_project->mutation_rate;
+
     triangle_texture_information.reserve(triangle_textures.size());
 
-    const double rotation_step = 360.0 / ROTATION_COUNT * GRAD_TO_RAD;
+    const double rotation_step = 360.0 / g_rotation_count * GRAD_TO_RAD;
     for (size_t i = 0; i < triangle_textures.size(); ++i)
     {
         auto new_information = std::make_shared<TriangleTextureInformation>();
         triangle_texture_information.push_back(new_information);
-        new_information->variations.reserve(ROTATION_COUNT);
+        new_information->variations.reserve(g_rotation_count);
 
-        for (size_t j = 0; j < ROTATION_COUNT; ++j)
+        for (size_t j = 0; j < g_rotation_count; ++j)
         {
             auto new_variation = std::make_shared<TriangleTextureVariation>();
             new_information->variations.push_back(new_variation);
@@ -299,7 +313,7 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
 
             new_variation->bloated_geometry = std::make_shared<PolygonSet>();
             new_variation->bloated_geometry->polygon_set = new_variation->geometry->polygon_set;
-            new_variation->bloated_geometry->polygon_set.bloat(PROTECTION_OFFSET * SCALE / 2.0);
+            new_variation->bloated_geometry->polygon_set.bloat(g_protection_offset * g_scale / 2.0);
             new_variation->bloated_geometry->polygon_set.get(new_variation->bloated_geometry->polygons);
         }
     }
@@ -316,12 +330,12 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
     {
         Gene new_gene;
         new_gene.triangle_texture_index = triangle_info->getTriangleIndex();
-        new_gene.rotation_index = uniform(engine) % ROTATION_COUNT;
+        new_gene.rotation_index = uniform(engine) % g_rotation_count;
         adam->genotype.push_back(new_gene);
     }
     population.push_back(adam);
 
-    while (population.size() < POPULATION_SIZE)
+    while (population.size() < g_population_size)
     {
         auto eva = std::make_shared<Individual>();
         *eva = *adam;
@@ -332,6 +346,8 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
 
 void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
 {
+    const int EFFECTIVE_PROTECTION_OFFSET = static_cast<int>(g_scale * g_protection_offset);
+
     if (individual->penalty)
     {
         // If this individual already contains some calculated
@@ -442,17 +458,17 @@ void GeneticOptimization::sort()
 
 void GeneticOptimization::nextGeneration()
 {
-    Job job(POPULATION_SIZE);
+    Job job(g_population_size);
 
     std::list<Individual::Ptr> next_population;
     next_population.push_back(getBest());
-    while (next_population.size() < POPULATION_SIZE)
+    while (next_population.size() < g_population_size)
     {
         auto pair = getRandomPair();
         Pair children = mate(pair);
         for (auto& child : children)
         {
-            if (next_population.size() < POPULATION_SIZE)
+            if (next_population.size() < g_population_size)
             {
                 mutate(child);
                 next_population.push_back(child);

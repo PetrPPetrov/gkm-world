@@ -285,6 +285,30 @@ MeshProject::Ptr loadMeshProject(const std::string& file_name)
         {
             project->triangles.push_back(loadTriangle(file_in));
         }
+        else if (next_token == "protection_offset")
+        {
+            file_in >> project->protection_offset;
+        }
+        else if (next_token == "scale")
+        {
+            file_in >> project->scale;
+        }
+        else if (next_token == "rotation_count")
+        {
+            file_in >> project->rotation_count;
+        }
+        else if (next_token == "population_size")
+        {
+            file_in >> project->population_size;
+        }
+        else if (next_token == "generation_count")
+        {
+            file_in >> project->generation_count;
+        }
+        else if (next_token == "mutation_rate")
+        {
+            file_in >> project->mutation_rate;
+        }
     }
     linkProject(project);
     return project;
@@ -312,6 +336,12 @@ void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_na
     {
         saveTriangle(triangle, file_out);
     }
+    file_out << "protection_offset\n" << project->protection_offset << "\n";
+    file_out << "scale\n" << project->scale << "\n";
+    file_out << "rotation_count\n" << project->rotation_count << "\n";
+    file_out << "population_size\n" << project->population_size << "\n";
+    file_out << "generation_count\n" << project->generation_count << "\n";
+    file_out << "mutation_rate\n" << project->mutation_rate << "\n";
 }
 
 Camera::Ptr projectGetCamera(const MeshProject::Ptr& project, int camera_id)

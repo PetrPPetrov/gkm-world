@@ -6,7 +6,7 @@
 #include <QGroupBox>
 #include "build_options.h"
 
-BuildOptionsDialog::BuildOptionsDialog(QWidget* parent) : QDialog(parent)
+BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project, QWidget* parent) : QDialog(parent)
 {
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setWindowTitle("Build Options");
@@ -25,6 +25,7 @@ BuildOptionsDialog::BuildOptionsDialog(QWidget* parent) : QDialog(parent)
     protection_offset->setMinimum(0);
     protection_offset->setMaximum(64);
     protection_offset->setSuffix("pixel(s)");
+    protection_offset->setValue(mesh_project->protection_offset);
     nesting_layout->addWidget(protection_offset, 0, 1);
 
     nesting_options->setLayout(nesting_layout);
@@ -40,6 +41,7 @@ BuildOptionsDialog::BuildOptionsDialog(QWidget* parent) : QDialog(parent)
     tolerance_divider = new QSpinBox(this);
     tolerance_divider->setMinimum(1);
     tolerance_divider->setMaximum(4096);
+    tolerance_divider->setValue(mesh_project->scale);
     genetic_layout->addWidget(tolerance_divider, 0, 1);
 
     QLabel* rotation_count_label = new QLabel(this);
@@ -49,6 +51,7 @@ BuildOptionsDialog::BuildOptionsDialog(QWidget* parent) : QDialog(parent)
     rotation_count = new QSpinBox(this);
     rotation_count->setMinimum(1);
     rotation_count->setMaximum(64);
+    rotation_count->setValue(static_cast<int>(mesh_project->rotation_count));
     genetic_layout->addWidget(rotation_count, 1, 1);
 
     QLabel* population_size_label = new QLabel(this);
@@ -58,6 +61,7 @@ BuildOptionsDialog::BuildOptionsDialog(QWidget* parent) : QDialog(parent)
     population_size = new QSpinBox(this);
     population_size->setMinimum(1);
     population_size->setMaximum(2048);
+    population_size->setValue(static_cast<int>(mesh_project->population_size));
     genetic_layout->addWidget(population_size, 2, 1);
 
     QLabel* generation_count_label = new QLabel(this);
@@ -67,6 +71,7 @@ BuildOptionsDialog::BuildOptionsDialog(QWidget* parent) : QDialog(parent)
     generation_count = new QSpinBox(this);
     generation_count->setMinimum(1);
     generation_count->setMaximum(1024);
+    generation_count->setValue(static_cast<int>(mesh_project->generation_count));
     genetic_layout->addWidget(generation_count, 3, 1);
 
     QLabel* mutation_rate_label = new QLabel(this);
@@ -77,6 +82,7 @@ BuildOptionsDialog::BuildOptionsDialog(QWidget* parent) : QDialog(parent)
     mutation_rate->setMinimum(1);
     mutation_rate->setMaximum(64);
     mutation_rate->setSuffix("%");
+    mutation_rate->setValue(static_cast<int>(mesh_project->mutation_rate));
     genetic_layout->addWidget(mutation_rate, 4, 1);
 
     genetic_nesting_options->setLayout(genetic_layout);

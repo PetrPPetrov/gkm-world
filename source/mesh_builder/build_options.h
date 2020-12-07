@@ -6,13 +6,14 @@
 #include <QDialog>
 #include <QPushButton>
 #include <QSpinBox>
+#include "mesh_project.h"
 
 class BuildOptionsDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    BuildOptionsDialog(QWidget* parent);
+    BuildOptionsDialog(const MeshProject::Ptr& mesh_project, QWidget* parent);
 
 private:
     void onOk();
