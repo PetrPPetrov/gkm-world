@@ -5,8 +5,9 @@
 #include <QLabel>
 #include <QGroupBox>
 #include "build_options.h"
+#include "main_window.h"
 
-BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project, QWidget* parent) : QDialog(parent)
+BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QWidget* parent) : QDialog(parent), mesh_project(mesh_project_)
 {
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setWindowTitle("Build Options");
@@ -51,7 +52,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project, QWi
     rotation_count = new QSpinBox(this);
     rotation_count->setMinimum(1);
     rotation_count->setMaximum(64);
-    rotation_count->setValue(static_cast<int>(mesh_project->rotation_count));
+    rotation_count->setValue(mesh_project->rotation_count);
     genetic_layout->addWidget(rotation_count, 1, 1);
 
     QLabel* population_size_label = new QLabel(this);
@@ -61,7 +62,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project, QWi
     population_size = new QSpinBox(this);
     population_size->setMinimum(1);
     population_size->setMaximum(2048);
-    population_size->setValue(static_cast<int>(mesh_project->population_size));
+    population_size->setValue(mesh_project->population_size);
     genetic_layout->addWidget(population_size, 2, 1);
 
     QLabel* generation_count_label = new QLabel(this);
@@ -71,7 +72,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project, QWi
     generation_count = new QSpinBox(this);
     generation_count->setMinimum(1);
     generation_count->setMaximum(1024);
-    generation_count->setValue(static_cast<int>(mesh_project->generation_count));
+    generation_count->setValue(mesh_project->generation_count);
     genetic_layout->addWidget(generation_count, 3, 1);
 
     QLabel* mutation_rate_label = new QLabel(this);
@@ -82,11 +83,15 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project, QWi
     mutation_rate->setMinimum(1);
     mutation_rate->setMaximum(64);
     mutation_rate->setSuffix("%");
-    mutation_rate->setValue(static_cast<int>(mesh_project->mutation_rate));
+    mutation_rate->setValue(mesh_project->mutation_rate);
     genetic_layout->addWidget(mutation_rate, 4, 1);
 
     genetic_nesting_options->setLayout(genetic_layout);
     layout->addWidget(genetic_nesting_options, 1, 0);
+
+    reset_button = new QPushButton("Reset To Default", this);
+    connect(reset_button, &QPushButton::pressed, this, &BuildOptionsDialog::onResetToDefault);
+    layout->addWidget(reset_button, 2, 0);
 
     ok_button = new QPushButton("OK", this);
     connect(ok_button, &QPushButton::pressed, this, &BuildOptionsDialog::onOk);
@@ -97,8 +102,48 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project, QWi
     layout->addWidget(cancel_button, 2, 3);
 }
 
+void BuildOptionsDialog::onResetToDefault()
+{
+    protection_offset->setValue(8);
+    tolerance_divider->setValue(256);
+    rotation_count->setValue(8);
+    population_size->setValue(128);
+    generation_count->setValue(32);
+    mutation_rate->setValue(10);
+}
+
 void BuildOptionsDialog::onOk()
 {
+    if (mesh_project->protection_offset != protection_offset->value())
+    {
+        mesh_project->protection_offset = protection_offset->value();
+        g_main_window->dirtyProject();
+    }
+    if (mesh_project->scale != tolerance_divider->value())
+    {
+        mesh_project->scale = tolerance_divider->value();
+        g_main_window->dirtyProject();
+    }
+    if (mesh_project->rotation_count != rotation_count->value())
+    {
+        mesh_project->rotation_count = rotation_count->value();
+        g_main_window->dirtyProject();
+    }
+    if (mesh_project->population_size != population_size->value())
+    {
+        mesh_project->population_size = population_size->value();
+        g_main_window->dirtyProject();
+    }
+    if (mesh_project->generation_count != generation_count->value())
+    {
+        mesh_project->generation_count = generation_count->value();
+        g_main_window->dirtyProject();
+    }
+    if (mesh_project->mutation_rate != mutation_rate->value())
+    {
+        mesh_project->mutation_rate = mutation_rate->value();
+        g_main_window->dirtyProject();
+    }
     accept();
 }
 

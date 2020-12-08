@@ -16,6 +16,7 @@ public:
     BuildOptionsDialog(const MeshProject::Ptr& mesh_project, QWidget* parent);
 
 private:
+    void onResetToDefault();
     void onOk();
     void onCancel();
 
@@ -27,6 +28,9 @@ private:
     QSpinBox* generation_count = nullptr;
     QSpinBox* mutation_rate = nullptr;
 
+    QPushButton* reset_button = nullptr;
     QPushButton* ok_button = nullptr;
     QPushButton* cancel_button = nullptr;
+
+    MeshProject::Ptr mesh_project;
 };

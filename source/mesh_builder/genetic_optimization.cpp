@@ -6,12 +6,12 @@
 #include "genetic_optimization.h"
 #include "task.h"
 
-static double g_protection_offset = 8.0;
-static double g_scale = 256.0;
-static size_t g_rotation_count = 8;
-static size_t g_population_size = 128;
-static size_t g_generation_count = 32;
-static size_t g_mutation_rate = 10;
+static int g_protection_offset = 8;
+static int g_scale = 256;
+static int g_rotation_count = 8;
+static int g_population_size = 128;
+static int g_generation_count = 32;
+static int g_mutation_rate = 10;
 
 template<typename ProcessPointFunc>
 static inline void iterateAllPoints(const NfpPolygon& polygon, ProcessPointFunc& process_point)
@@ -269,7 +269,7 @@ void GeneticOptimization::mutate(const Individual::Ptr& individual) const
         if (uniform(engine) % 100 < g_mutation_rate)
         {
             Gene& gene = individual->genotype[i];
-            gene.rotation_index = uniform(engine) % g_mutation_rate;
+            gene.rotation_index = uniform(engine) % g_rotation_count;
         }
         if (uniform(engine) % 100 < g_mutation_rate)
         {
@@ -313,7 +313,7 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
 
             new_variation->bloated_geometry = std::make_shared<PolygonSet>();
             new_variation->bloated_geometry->polygon_set = new_variation->geometry->polygon_set;
-            new_variation->bloated_geometry->polygon_set.bloat(g_protection_offset * g_scale / 2.0);
+            new_variation->bloated_geometry->polygon_set.bloat(g_protection_offset * g_scale / 2);
             new_variation->bloated_geometry->polygon_set.get(new_variation->bloated_geometry->polygons);
         }
     }
@@ -346,7 +346,7 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
 
 void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
 {
-    const int EFFECTIVE_PROTECTION_OFFSET = static_cast<int>(g_scale * g_protection_offset);
+    const int EFFECTIVE_PROTECTION_OFFSET = g_scale * g_protection_offset;
 
     if (individual->penalty)
     {

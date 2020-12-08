@@ -48,13 +48,12 @@ public:
     void updateWindowTitle();
     VertexPhotoPosition::Ptr getCurrentVertexPhotoPosition() const;
     void updateCurrentVertexPhotoPosition();
+    void dirtyProject();
 
 protected:
     void showEvent(QShowEvent* event) override;
 
 private:
-    void dirtyProject();
-
     void loadProject(const char* filename);
     void loadPhotos();
     void updateProject();

@@ -231,6 +231,12 @@ void MainWindow::updateCurrentVertexPhotoPosition()
     label_y->setText(QString("Y %1").arg(current_vertex_photo_position->y));
 }
 
+void MainWindow::dirtyProject()
+{
+    mesh_project->dirty = true;
+    updateWindowTitle();
+}
+
 void MainWindow::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
@@ -267,12 +273,6 @@ void MainWindow::showEvent(QShowEvent* event)
 
         onNewProject();
     }
-}
-
-void MainWindow::dirtyProject()
-{
-    mesh_project->dirty = true;
-    updateWindowTitle();
 }
 
 void MainWindow::loadProject(const char* filename)

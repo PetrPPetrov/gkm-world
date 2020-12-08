@@ -88,12 +88,12 @@ struct MeshProject
     std::vector<Vertex::Ptr> vertices;
     std::vector<Triangle::Ptr> triangles;
 
-    double protection_offset = 8.0;
-    double scale = 256.0;
-    size_t rotation_count = 8;
-    size_t population_size = 128;
-    size_t generation_count = 32;
-    size_t mutation_rate = 10;
+    int protection_offset = 8;
+    int scale = 256.0;
+    int rotation_count = 8;
+    int population_size = 128;
+    int generation_count = 32;
+    int mutation_rate = 10;
 
     std::string file_name;
     std::string output_file_name;
