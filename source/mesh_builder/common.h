@@ -39,10 +39,9 @@ inline bool fileExists(const std::string& filename)
 }
 
 // TODO:
-// Introduce some settings dialog box
-// Save settings to a project file
 // Downsample the generated texture to a desired size (for instance, 1024x1024 or 2048x2048 or 4096x4096)
 // Remove code duplication at build_mesh.cpp:getPixel() and Texture::getInterpolatedPixel()
+// Debug black texture case
 // Improve nesting by using the shared edges
 // Make nesting algorithm more deterministic or introduce complete another, deterministic nesting algorithm
 // GUI tweaks
