@@ -1,6 +1,7 @@
 // Copyright 2018-2020 Petr Petrovich Petrov. All rights reserved.
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
+#include "task.h"
 #include "texture.h"
 
 size_t Texture::getIndex(unsigned x, unsigned y) const
@@ -116,6 +117,15 @@ std::uint32_t Texture::getInterpolatedPixel(const Eigen::Vector2d& xy) const
         bottom -= 1.0;
     }
 
+    if (right == left)
+    {
+        right += 1.0;
+    }
+    if (top == bottom)
+    {
+        top += 1.0;
+    }
+
     const double distance_to_left = pixel.x() - left;
     const double distance_to_right = right - pixel.x();
     const double distance_to_bottom = pixel.y() - bottom;
@@ -148,6 +158,24 @@ std::uint32_t Texture::getInterpolatedPixel(const Eigen::Vector2d& xy) const
         static_cast<int>(interpolated_pixel.y() * 255.0),
         static_cast<int>(interpolated_pixel.z() * 255.0),
         static_cast<int>(interpolated_pixel.w() * 255.0));
+}
+
+Texture::Ptr Texture::createNewSize(unsigned new_width, unsigned new_height)
+{
+    Job job(static_cast<size_t>(new_width) * new_height, "Changing size of texture...");
+    Texture::Ptr new_texture = std::make_shared<Texture>(new_width, new_height);
+    for (unsigned x = 0; x < new_width; ++x)
+    {
+        for (unsigned y = 0; y < new_height; ++y)
+        {
+            const double cur_x = static_cast<double>(x) / new_width * width;
+            const double cur_y = static_cast<double>(y) / new_height * height;
+            const std::uint32_t pixel = getInterpolatedPixel(Eigen::Vector2d(cur_x, cur_y));
+            new_texture->setPixel(x, y, pixel);
+            job.step();
+        }
+    }
+    return new_texture;
 }
 
 void Texture::savePng(const char* file_name) const

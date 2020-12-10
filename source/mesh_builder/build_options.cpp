@@ -89,6 +89,25 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     genetic_nesting_options->setLayout(genetic_layout);
     layout->addWidget(genetic_nesting_options, 1, 0);
 
+    QGroupBox* texture_options = new QGroupBox("Output Texture Parameters");
+    QGridLayout* texture_layout = new QGridLayout(texture_options);
+
+    QLabel* max_texture_size_label = new QLabel(this);
+    max_texture_size_label->setText("Max. Texture Size");
+    texture_layout->addWidget(max_texture_size_label, 0, 0);
+
+    max_texture_size = new QComboBox(this);
+    max_texture_size->addItem("256 x 256");
+    max_texture_size->addItem("512 x 512");
+    max_texture_size->addItem("1024 x 1024");
+    max_texture_size->addItem("2048 x 2048");
+    max_texture_size->addItem("4096 x 4096");
+    texture_layout->addWidget(max_texture_size, 0, 1);
+    loadMaxTextureSize();
+
+    texture_options->setLayout(texture_layout);
+    layout->addWidget(texture_options, 0, 1);
+
     reset_button = new QPushButton("Reset To Default", this);
     connect(reset_button, &QPushButton::pressed, this, &BuildOptionsDialog::onResetToDefault);
     layout->addWidget(reset_button, 2, 0);
@@ -100,6 +119,52 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     cancel_button = new QPushButton("Cancel", this);
     connect(cancel_button, &QPushButton::pressed, this, &BuildOptionsDialog::onCancel);
     layout->addWidget(cancel_button, 2, 3);
+}
+
+void BuildOptionsDialog::loadMaxTextureSize()
+{
+    switch (mesh_project->max_texture_size)
+    {
+    case 256:
+        max_texture_size->setCurrentIndex(0);
+        break;
+    case 512:
+        max_texture_size->setCurrentIndex(1);
+        break;
+    case 1024:
+        max_texture_size->setCurrentIndex(2);
+        break;
+    case 2048:
+        max_texture_size->setCurrentIndex(3);
+        break;
+    case 4096:
+    default:
+        max_texture_size->setCurrentIndex(4);
+        break;
+    }
+}
+
+void BuildOptionsDialog::saveMaxTextureSize()
+{
+    switch (max_texture_size->currentIndex())
+    {
+    case 0:
+        mesh_project->max_texture_size = 256;
+        break;
+    case 1:
+        mesh_project->max_texture_size = 512;
+        break;
+    case 2:
+        mesh_project->max_texture_size = 1024;
+        break;
+    case 3:
+        mesh_project->max_texture_size = 2048;
+        break;
+    case 4:
+    default:
+        mesh_project->max_texture_size = 4096;
+        break;
+    }
 }
 
 void BuildOptionsDialog::onResetToDefault()
@@ -142,6 +207,12 @@ void BuildOptionsDialog::onOk()
     if (mesh_project->mutation_rate != mutation_rate->value())
     {
         mesh_project->mutation_rate = mutation_rate->value();
+        g_main_window->dirtyProject();
+    }
+    unsigned prev_max_texture_size = mesh_project->max_texture_size;
+    saveMaxTextureSize();
+    if (mesh_project->max_texture_size != prev_max_texture_size)
+    {
         g_main_window->dirtyProject();
     }
     accept();

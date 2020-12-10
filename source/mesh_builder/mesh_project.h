@@ -94,6 +94,7 @@ struct MeshProject
     int population_size = 128;
     int generation_count = 32;
     int mutation_rate = 10;
+    unsigned max_texture_size = 1024;
 
     std::string file_name;
     std::string output_file_name;

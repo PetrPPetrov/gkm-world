@@ -64,6 +64,8 @@ void TextureAtlas::build()
 
     if (best)
     {
+        Job job(3);
+
         const double rotation_step = 360.0 / mesh_project->rotation_count * GRAD_TO_RAD;
         mesh->triangle_tex_coords.resize(mesh->triangles.size() * 3);
 
@@ -99,121 +101,151 @@ void TextureAtlas::build()
 
         const auto& triangle_texture_information = genetic_algorithm->getTriangleTextureInformation();
 
-        Job job(best->genotype.size(), "Filling texture atlas...");
-        for (auto& gene : best->genotype)
         {
-            using namespace boost::polygon;
-            using namespace boost::polygon::operators;
-
-            assert(gene.placed);
-
-            TriangleTexture::Ptr triangle_texture = triangle_textures[gene.triangle_texture_index];
-            Texture::Ptr texture_fragment = triangle_texture->getTexture();
-            auto bloated_geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->bloated_geometry;
-
-            NfpPolygonSet real_polygon_set;
+            Job job(best->genotype.size(), "Filling texture atlas...");
+            for (auto& gene : best->genotype)
             {
-                for (auto& polygon : bloated_geometry->polygons)
-                {
-                    NfpPolygon new_polygon = polygon;
-                    move(new_polygon, HORIZONTAL, x(gene.placement));
-                    move(new_polygon, VERTICAL, y(gene.placement));
-                    real_polygon_set += new_polygon;
+                using namespace boost::polygon;
+                using namespace boost::polygon::operators;
 
-                    //bool first_point = true;
-                    //QPainterPath path_to_draw;
-                    //for (auto& point_it = begin_points(new_polygon); point_it != end_points(new_polygon); ++point_it)
-                    //{
-                    //    if (first_point)
-                    //    {
-                    //        path_to_draw.moveTo((point_it->x() - x_lo) / mesh_project->scale, (point_it->y() - y_lo) / mesh_project->scale);
-                    //        first_point = false;
-                    //    }
-                    //    else
-                    //    {
-                    //        path_to_draw.lineTo((point_it->x() - x_lo) / mesh_project->scale, (point_it->y() - y_lo) / mesh_project->scale);
-                    //    }
-                    //}
-                    //painter.drawPath(path_to_draw);
+                assert(gene.placed);
+
+                TriangleTexture::Ptr triangle_texture = triangle_textures[gene.triangle_texture_index];
+                Texture::Ptr texture_fragment = triangle_texture->getTexture();
+                auto bloated_geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->bloated_geometry;
+
+                NfpPolygonSet real_polygon_set;
+                {
+                    for (auto& polygon : bloated_geometry->polygons)
+                    {
+                        NfpPolygon new_polygon = polygon;
+                        move(new_polygon, HORIZONTAL, x(gene.placement));
+                        move(new_polygon, VERTICAL, y(gene.placement));
+                        real_polygon_set += new_polygon;
+
+                        //bool first_point = true;
+                        //QPainterPath path_to_draw;
+                        //for (auto& point_it = begin_points(new_polygon); point_it != end_points(new_polygon); ++point_it)
+                        //{
+                        //    if (first_point)
+                        //    {
+                        //        path_to_draw.moveTo((point_it->x() - x_lo) / mesh_project->scale, (point_it->y() - y_lo) / mesh_project->scale);
+                        //        first_point = false;
+                        //    }
+                        //    else
+                        //    {
+                        //        path_to_draw.lineTo((point_it->x() - x_lo) / mesh_project->scale, (point_it->y() - y_lo) / mesh_project->scale);
+                        //    }
+                        //}
+                        //painter.drawPath(path_to_draw);
+                    }
                 }
-            }
 
-            NfpRectange cur_bounding_box;
-            extents(cur_bounding_box, real_polygon_set);
+                NfpRectange cur_bounding_box;
+                extents(cur_bounding_box, real_polygon_set);
 
-            std::vector<NfpPolygon> real_polygons;
-            real_polygon_set.get(real_polygons);
+                std::vector<NfpPolygon> real_polygons;
+                real_polygon_set.get(real_polygons);
 
-            const int cur_x_lo_in_pixel = static_cast<int>(floor(xl(cur_bounding_box) / mesh_project->scale));
-            const int cur_x_hi_in_pixel = static_cast<int>(ceil(xh(cur_bounding_box) / mesh_project->scale));
-            const int cur_y_lo_in_pixel = static_cast<int>(floor(yl(cur_bounding_box) / mesh_project->scale));
-            const int cur_y_hi_in_pixel = static_cast<int>(ceil(yh(cur_bounding_box) / mesh_project->scale));
+                const int cur_x_lo_in_pixel = static_cast<int>(floor(xl(cur_bounding_box) / mesh_project->scale));
+                const int cur_x_hi_in_pixel = static_cast<int>(ceil(xh(cur_bounding_box) / mesh_project->scale));
+                const int cur_y_lo_in_pixel = static_cast<int>(floor(yl(cur_bounding_box) / mesh_project->scale));
+                const int cur_y_hi_in_pixel = static_cast<int>(ceil(yh(cur_bounding_box) / mesh_project->scale));
 
-            const int cur_x_lo = static_cast<int>(cur_x_lo_in_pixel * mesh_project->scale);
-            const int cur_x_hi = static_cast<int>(cur_x_hi_in_pixel * mesh_project->scale);
-            const int cur_y_lo = static_cast<int>(cur_y_lo_in_pixel * mesh_project->scale);
-            const int cur_y_hi = static_cast<int>(cur_y_hi_in_pixel * mesh_project->scale);
+                const int cur_x_lo = static_cast<int>(cur_x_lo_in_pixel * mesh_project->scale);
+                const int cur_x_hi = static_cast<int>(cur_x_hi_in_pixel * mesh_project->scale);
+                const int cur_y_lo = static_cast<int>(cur_y_lo_in_pixel * mesh_project->scale);
+                const int cur_y_hi = static_cast<int>(cur_y_hi_in_pixel * mesh_project->scale);
 
-            const int cur_x_size_in_pixel = cur_x_hi_in_pixel - cur_x_lo_in_pixel;
-            const int cur_y_size_in_pixel = cur_y_hi_in_pixel - cur_y_lo_in_pixel;
+                const int cur_x_size_in_pixel = cur_x_hi_in_pixel - cur_x_lo_in_pixel;
+                const int cur_y_size_in_pixel = cur_y_hi_in_pixel - cur_y_lo_in_pixel;
 
-            Eigen::Rotation2Dd negative_rotation(-rotation_step * gene.rotation_index);
+                Eigen::Rotation2Dd negative_rotation(-rotation_step * gene.rotation_index);
 
-            Job job(static_cast<size_t>(cur_x_size_in_pixel) * cur_y_size_in_pixel, "Copying texture fragment to atlas...");
-            for (int x = 0; x < cur_x_size_in_pixel; ++x)
-            {
-                for (int y = 0; y < cur_y_size_in_pixel; ++y)
+                Job job(static_cast<size_t>(cur_x_size_in_pixel) * cur_y_size_in_pixel, "Copying texture fragment to atlas...");
+                for (int x = 0; x < cur_x_size_in_pixel; ++x)
                 {
-                    const int cur_x_in_pixel = cur_x_lo_in_pixel + x;
-                    const int cur_y_in_pixel = cur_y_lo_in_pixel + y;
-                    NfpPoint cur_point0(static_cast<int>(mesh_project->scale * cur_x_in_pixel), static_cast<int>(mesh_project->scale * cur_y_in_pixel));
-                    bool inside = false;
-                    for (size_t i = 0; i < real_polygons.size(); ++i)
+                    for (int y = 0; y < cur_y_size_in_pixel; ++y)
                     {
-                        if (contains(real_polygons[i], cur_point0, true))
+                        const int cur_x_in_pixel = cur_x_lo_in_pixel + x;
+                        const int cur_y_in_pixel = cur_y_lo_in_pixel + y;
+                        NfpPoint cur_point0(static_cast<int>(mesh_project->scale * cur_x_in_pixel), static_cast<int>(mesh_project->scale * cur_y_in_pixel));
+                        bool inside = false;
+                        for (size_t i = 0; i < real_polygons.size(); ++i)
                         {
-                            inside = true;
-                            break;
+                            if (contains(real_polygons[i], cur_point0, true))
+                            {
+                                inside = true;
+                                break;
+                            }
                         }
-                    }
-                    if (inside)
-                    {
-                        //if (gene.triangle_texture_index == 0)
-                        //{
-                        //    texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, 0xffff0000);
-                        //}
-                        //else
-                        //{
-                        //    texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, 0xff00ff00);
-                        //}
-                        Eigen::Vector2d cur_point(cur_point0.x(), cur_point0.y());
-                        Eigen::Vector2d cur_relative_point = cur_point - Eigen::Vector2d(gene.placement.x(), gene.placement.y());
-                        Eigen::Vector2d original_relative_point0 = negative_rotation * cur_relative_point;
-                        Eigen::Vector2d original_relative_point = original_relative_point0 / mesh_project->scale;
+                        if (inside)
+                        {
+                            //if (gene.triangle_texture_index == 0)
+                            //{
+                            //    texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, 0xffff0000);
+                            //}
+                            //else
+                            //{
+                            //    texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, 0xff00ff00);
+                            //}
+                            Eigen::Vector2d cur_point(cur_point0.x(), cur_point0.y());
+                            Eigen::Vector2d cur_relative_point = cur_point - Eigen::Vector2d(gene.placement.x(), gene.placement.y());
+                            Eigen::Vector2d original_relative_point0 = negative_rotation * cur_relative_point;
+                            Eigen::Vector2d original_relative_point = original_relative_point0 / mesh_project->scale;
 
-                        std::uint32_t pixel = texture_fragment->getInterpolatedPixel(original_relative_point);
-                        texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, pixel);
+                            std::uint32_t pixel = texture_fragment->getInterpolatedPixel(original_relative_point);
+                            texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, pixel);
+                        }
+                        job.step();
                     }
-                    job.step();
                 }
             }
         }
 
-        // Correct texture coordinates
-        for (auto& gene : best->genotype)
         {
-            TriangleTexture::Ptr triangle_texture = triangle_textures[gene.triangle_texture_index];
-            Eigen::Rotation2Dd positive_rotation(rotation_step * gene.rotation_index);
-
-            for (unsigned i = 0; i < 3; ++i)
+            // Correct texture coordinates
+            Job job(best->genotype.size(), "Correcting texture coordinates...");
+            for (auto& gene : best->genotype)
             {
-                const Eigen::Vector2d tex_coord = positive_rotation * triangle_texture->texture_coordinates[i];
-                const int cur_x = x(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.x());
-                const int cur_y = y(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.y());
-                const double u = (static_cast<double>(cur_x) - x_lo) / x_size;
-                const double v = (static_cast<double>(cur_y) - y_lo) / y_size;
-                mesh->triangle_tex_coords[triangle_texture->getTriangleIndex() * 3 + triangle_texture->new_to_old[i]] = Eigen::Vector2d(u, v);
+                TriangleTexture::Ptr triangle_texture = triangle_textures[gene.triangle_texture_index];
+                Eigen::Rotation2Dd positive_rotation(rotation_step * gene.rotation_index);
+
+                for (unsigned i = 0; i < 3; ++i)
+                {
+                    const Eigen::Vector2d tex_coord = positive_rotation * triangle_texture->texture_coordinates[i];
+                    const int cur_x = x(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.x());
+                    const int cur_y = y(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.y());
+                    const double u = (static_cast<double>(cur_x) - x_lo) / x_size;
+                    const double v = (static_cast<double>(cur_y) - y_lo) / y_size;
+                    mesh->triangle_tex_coords[triangle_texture->getTriangleIndex() * 3 + triangle_texture->new_to_old[i]] = Eigen::Vector2d(u, v);
+                }
+                job.step();
             }
+        }
+
+        if (texture_atlas->getWidth() > mesh_project->max_texture_size ||
+            texture_atlas->getHeight() > mesh_project->max_texture_size)
+        {
+            const double ratio_x = static_cast<double>(mesh_project->max_texture_size) / texture_atlas->getWidth();
+            const double ratio_y = static_cast<double>(mesh_project->max_texture_size) / texture_atlas->getHeight();
+            unsigned new_width;
+            unsigned new_height;
+            if (ratio_x < ratio_y)
+            {
+                new_width = mesh_project->max_texture_size;
+                new_height = static_cast<unsigned>(ceil(ratio_x * texture_atlas->getHeight() - 0.5));
+                // TODO: Correct texture coordinates because new texture aspect ratio is not the same as previous
+                // due rounding new_height
+            }
+            else
+            {
+                new_height = mesh_project->max_texture_size;
+                new_width = static_cast<unsigned>(ceil(ratio_y * texture_atlas->getWidth() - 0.5));
+                // TODO: Correct texture coordinates because new texture aspect ratio is not the same as previous
+                // due rounding new_width
+            }
+            mesh->texture_atlas = texture_atlas = texture_atlas->createNewSize(new_width, new_height);
         }
 
         //painter.end();

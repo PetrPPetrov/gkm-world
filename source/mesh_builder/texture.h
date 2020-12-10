@@ -25,6 +25,7 @@ public:
     void setPixel(unsigned x, unsigned y, std::uint32_t value);
     std::uint32_t getPixel(unsigned x, unsigned y) const;
     std::uint32_t getInterpolatedPixel(const Eigen::Vector2d& xy) const;
+    Texture::Ptr createNewSize(unsigned new_width, unsigned new_height);
 
     void savePng(const char* file_name) const;
     void saveJpeg(const char* file_name) const;

@@ -309,6 +309,10 @@ MeshProject::Ptr loadMeshProject(const std::string& file_name)
         {
             file_in >> project->mutation_rate;
         }
+        else if (next_token == "max_texture_size")
+        {
+            file_in >> project->max_texture_size;
+        }
     }
     linkProject(project);
     return project;
@@ -342,6 +346,7 @@ void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_na
     file_out << "population_size\n" << project->population_size << "\n";
     file_out << "generation_count\n" << project->generation_count << "\n";
     file_out << "mutation_rate\n" << project->mutation_rate << "\n";
+    file_out << "max_texture_size\n" << project->max_texture_size << "\n";
 }
 
 Camera::Ptr projectGetCamera(const MeshProject::Ptr& project, int camera_id)
