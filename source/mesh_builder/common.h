@@ -39,10 +39,9 @@ inline bool fileExists(const std::string& filename)
 }
 
 // TODO:
-// Remove code duplication at build_mesh.cpp:getPixel() and Texture::getInterpolatedPixel()
+// Add options for selecting interim texture density
 // Correct texture coordinates after texture downsampling
 // Debug black texture case
-// Add options for selecting interim texture density
 // Improve nesting by using the shared edges
 // Make nesting algorithm more deterministic or introduce complete another, deterministic nesting algorithm
 // GUI tweaks

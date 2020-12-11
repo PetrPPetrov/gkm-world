@@ -5,6 +5,7 @@
 #include <QImage>
 #include "global_parameters.h"
 #include "genetic_optimization.h"
+#include "bilinear_interpolation.h"
 #include "texture_atlas.h"
 #include "task.h"
 
@@ -194,7 +195,7 @@ void TextureAtlas::build()
                             Eigen::Vector2d original_relative_point0 = negative_rotation * cur_relative_point;
                             Eigen::Vector2d original_relative_point = original_relative_point0 / mesh_project->scale;
 
-                            std::uint32_t pixel = texture_fragment->getInterpolatedPixel(original_relative_point);
+                            std::uint32_t pixel = getInterpolatedPixel(texture_fragment, original_relative_point);
                             texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, pixel);
                         }
                         job.step();

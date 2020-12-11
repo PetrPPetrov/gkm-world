@@ -8,6 +8,7 @@
 #include <QRgb>
 #include "mesh.h"
 #include "build_mesh.h"
+#include "bilinear_interpolation.h"
 #include "texture_atlas.h"
 #include "global_parameters.h"
 #include "task.h"
@@ -276,94 +277,6 @@ static inline bool isPointInTriangle(const Eigen::Vector2d& pt, const Eigen::Vec
     return !(has_neg && has_pos);
 }
 
-// TODO: replace by Texture class
-static inline QRgb getPixel(const ImagePtr& image, const Eigen::Vector2d& source_pixel)
-{
-    Eigen::Vector2d pixel = source_pixel;
-    pixel.y() = static_cast<double>(image->height()) - 1 - pixel.y();
-    bool increase_right = false;
-    bool decrease_left = false;
-    bool increase_top = false;
-    bool decrease_bottom = false;
-
-    if (pixel.x() <= 0.0)
-    {
-        pixel.x() = 0.0;
-        increase_right = true;
-    }
-    if (pixel.y() < 0.0)
-    {
-        pixel.y() = 0.0;
-        increase_top = true;
-    }
-    if (pixel.x() >= image->width())
-    {
-        pixel.x() = image->width();
-        decrease_left = true;
-    }
-    if (pixel.y() >= image->height())
-    {
-        pixel.y() = image->height();
-        decrease_bottom = true;
-    }
-
-    double left = floor(pixel.x());
-    double right = ceil(pixel.x());
-    double bottom = floor(pixel.y());
-    double top = ceil(pixel.y());
-
-    if (increase_right)
-    {
-        right += 1.0;
-    }
-    else if (decrease_left)
-    {
-        left -= 1.0;
-    }
-
-    if (increase_top)
-    {
-        top += 1.0;
-    }
-    else if (decrease_bottom)
-    {
-        bottom -= 1.0;
-    }
-
-    const double distance_to_left = pixel.x() - left;
-    const double distance_to_right = right - pixel.x();
-    const double distance_to_bottom = pixel.y() - bottom;
-    const double distance_to_top = top - pixel.y();
-
-    const double lower_left_square = distance_to_left * distance_to_bottom;
-    const double lower_right_square = distance_to_right * distance_to_bottom;
-    const double upper_left_square = distance_to_left * distance_to_top;
-    const double upper_right_square = distance_to_right * distance_to_top;
-
-    QRgb ll_pixel = image->pixel(static_cast<int>(left), static_cast<int>(bottom));
-    QRgb lr_pixel = image->pixel(static_cast<int>(right), static_cast<int>(bottom));
-    QRgb ul_pixel = image->pixel(static_cast<int>(left), static_cast<int>(top));
-    QRgb ur_pixel = image->pixel(static_cast<int>(right), static_cast<int>(top));
-
-    Eigen::Vector4d lower_left_pixel(qRed(ll_pixel) / 255.0, qGreen(ll_pixel) / 255.0, qBlue(ll_pixel) / 255.0, qAlpha(ll_pixel) / 255.0);
-    Eigen::Vector4d lower_right_pixel(qRed(lr_pixel) / 255.0, qGreen(lr_pixel) / 255.0, qBlue(lr_pixel) / 255.0, qAlpha(lr_pixel) / 255.0);
-    Eigen::Vector4d upper_left_pixel(qRed(ul_pixel) / 255.0, qGreen(ul_pixel) / 255.0, qBlue(ul_pixel) / 255.0, qAlpha(ul_pixel) / 255.0);
-    Eigen::Vector4d upper_right_pixel(qRed(ur_pixel) / 255.0, qGreen(ur_pixel) / 255.0, qBlue(ur_pixel) / 255.0, qAlpha(ur_pixel) / 255.0);
-
-    const double lower_left_weight = upper_right_square;
-    const double lower_right_weight = upper_left_square;
-    const double upper_left_weight = lower_right_square;
-    const double upper_right_weight = lower_left_square;
-
-    Eigen::Vector4d interpolated_pixel = lower_left_pixel * lower_left_weight + lower_right_pixel * lower_right_weight + upper_left_pixel * upper_left_weight + upper_right_pixel * upper_right_weight;
-
-    return qRgba(
-        static_cast<int>(interpolated_pixel.x() * 255.0),
-        static_cast<int>(interpolated_pixel.y() * 255.0),
-        static_cast<int>(interpolated_pixel.z() * 255.0),
-        static_cast<int>(interpolated_pixel.w() * 255.0));
-}
-
 class PictureTriangle
 {
     Eigen::Vector2d v[3];
@@ -600,7 +513,7 @@ TriangleTexture::Ptr ComputationTriangle::buildTexture(double density, const Pic
                 const PictureTriangle& selected_picture_triange = (pixel_p0_square > pixel_p1_square) ? picture0_triangle : picture1_triangle;
                 const Eigen::Vector2d& selected_center = (pixel_p0_square > pixel_p1_square) ? center_p0 : center_p1;
 
-                QRgb new_pixel = getPixel(selected_picture_triange.getImage(), selected_center);
+                QRgb new_pixel = getInterpolatedPixel(selected_picture_triange.getImage(), selected_center);
                 texture->setPixel(x, y, new_pixel);
             }
 
