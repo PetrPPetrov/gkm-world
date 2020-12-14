@@ -92,9 +92,27 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     QGroupBox* texture_options = new QGroupBox("Output Texture Parameters");
     QGridLayout* texture_layout = new QGridLayout(texture_options);
 
+    QLabel* triangle_texture_density_label = new QLabel(this);
+    triangle_texture_density_label->setText("Triangle Texture Density");
+    texture_layout->addWidget(triangle_texture_density_label, 0, 0);
+
+    triangle_texture_density = new QComboBox(this);
+    triangle_texture_density->addItem("Average");
+    triangle_texture_density->addItem("Maximum");
+    texture_layout->addWidget(triangle_texture_density, 0, 1);
+
+    QLabel* atlas_texture_density_label = new QLabel(this);
+    atlas_texture_density_label->setText("Texture Atlas Density");
+    texture_layout->addWidget(atlas_texture_density_label, 1, 0);
+
+    atlas_texture_density = new QComboBox(this);
+    atlas_texture_density->addItem("Average");
+    atlas_texture_density->addItem("Maximum");
+    texture_layout->addWidget(atlas_texture_density, 1, 1);
+
     QLabel* max_texture_size_label = new QLabel(this);
     max_texture_size_label->setText("Max. Texture Size");
-    texture_layout->addWidget(max_texture_size_label, 0, 0);
+    texture_layout->addWidget(max_texture_size_label, 2, 0);
 
     max_texture_size = new QComboBox(this);
     max_texture_size->addItem("256 x 256");
@@ -102,7 +120,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     max_texture_size->addItem("1024 x 1024");
     max_texture_size->addItem("2048 x 2048");
     max_texture_size->addItem("4096 x 4096");
-    texture_layout->addWidget(max_texture_size, 0, 1);
+    texture_layout->addWidget(max_texture_size, 2, 1);
     loadMaxTextureSize();
 
     texture_options->setLayout(texture_layout);

@@ -32,6 +32,8 @@ private:
     QSpinBox* generation_count = nullptr;
     QSpinBox* mutation_rate = nullptr;
     QComboBox* max_texture_size = nullptr;
+    QComboBox* triangle_texture_density = nullptr;
+    QComboBox* atlas_texture_density = nullptr;
 
     QPushButton* reset_button = nullptr;
     QPushButton* ok_button = nullptr;

@@ -124,6 +124,7 @@ void TextureAtlas::build()
                         move(new_polygon, VERTICAL, y(gene.placement));
                         real_polygon_set += new_polygon;
 
+                        // For debug only
                         //bool first_point = true;
                         //QPainterPath path_to_draw;
                         //for (auto& point_it = begin_points(new_polygon); point_it != end_points(new_polygon); ++point_it)
@@ -182,6 +183,7 @@ void TextureAtlas::build()
                         }
                         if (inside)
                         {
+                            // For debug only
                             //if (gene.triangle_texture_index == 0)
                             //{
                             //    texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, 0xffff0000);
@@ -249,6 +251,7 @@ void TextureAtlas::build()
             mesh->texture_atlas = texture_atlas = texture_atlas->createNewSize(new_width, new_height);
         }
 
+        // For debug only
         //painter.end();
         //image.save("atlas.png", "PNG");
 
