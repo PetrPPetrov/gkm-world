@@ -313,6 +313,18 @@ MeshProject::Ptr loadMeshProject(const std::string& file_name)
         {
             file_in >> project->max_texture_size;
         }
+        else if (next_token == "triangle_density_mode")
+        {
+            int temp;
+            file_in >> temp;
+            project->triangle_density_mode = getDensityMode(temp);
+        }
+        else if (next_token == "atlas_density_mode")
+        {
+            int temp;
+            file_in >> temp;
+            project->atlas_density_mode = getDensityMode(temp);
+        }
     }
     linkProject(project);
     return project;
@@ -347,6 +359,8 @@ void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_na
     file_out << "generation_count\n" << project->generation_count << "\n";
     file_out << "mutation_rate\n" << project->mutation_rate << "\n";
     file_out << "max_texture_size\n" << project->max_texture_size << "\n";
+    file_out << "triangle_density_mode\n" << getIndex(project->triangle_density_mode) << "\n";
+    file_out << "atlas_density_mode\n" << getIndex(project->atlas_density_mode) << "\n";
 }
 
 Camera::Ptr projectGetCamera(const MeshProject::Ptr& project, int camera_id)

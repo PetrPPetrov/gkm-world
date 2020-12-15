@@ -78,6 +78,22 @@ int cameraGetHeight(const Camera::Ptr& camera);
 int cameraGetRotationIndex(const Camera::Ptr& camera);
 void cameraSetRotationFromIndex(const Camera::Ptr& camera, int rotation_index);
 
+enum class EDensityMode
+{
+    Avarage,
+    Maximum
+};
+
+inline int getIndex(EDensityMode density_mode)
+{
+    return static_cast<int>(density_mode);
+}
+
+inline EDensityMode getDensityMode(int index)
+{
+    return static_cast<EDensityMode>(index);
+}
+
 struct MeshProject
 {
     typedef std::shared_ptr<MeshProject> Ptr;
@@ -95,6 +111,8 @@ struct MeshProject
     int generation_count = 32;
     int mutation_rate = 10;
     unsigned max_texture_size = 1024;
+    EDensityMode triangle_density_mode = EDensityMode::Maximum;
+    EDensityMode atlas_density_mode = EDensityMode::Avarage;
 
     std::string file_name;
     std::string output_file_name;

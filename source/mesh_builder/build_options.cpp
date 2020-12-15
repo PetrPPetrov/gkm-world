@@ -99,6 +99,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     triangle_texture_density = new QComboBox(this);
     triangle_texture_density->addItem("Average");
     triangle_texture_density->addItem("Maximum");
+    triangle_texture_density->setCurrentIndex(getIndex(mesh_project->triangle_density_mode));
     texture_layout->addWidget(triangle_texture_density, 0, 1);
 
     QLabel* atlas_texture_density_label = new QLabel(this);
@@ -108,6 +109,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     atlas_texture_density = new QComboBox(this);
     atlas_texture_density->addItem("Average");
     atlas_texture_density->addItem("Maximum");
+    atlas_texture_density->setCurrentIndex(getIndex(mesh_project->atlas_density_mode));
     texture_layout->addWidget(atlas_texture_density, 1, 1);
 
     QLabel* max_texture_size_label = new QLabel(this);
@@ -193,6 +195,9 @@ void BuildOptionsDialog::onResetToDefault()
     population_size->setValue(128);
     generation_count->setValue(32);
     mutation_rate->setValue(10);
+    max_texture_size->setCurrentIndex(4);
+    triangle_texture_density->setCurrentIndex(1);
+    atlas_texture_density->setCurrentIndex(0);
 }
 
 void BuildOptionsDialog::onOk()
@@ -231,6 +236,16 @@ void BuildOptionsDialog::onOk()
     saveMaxTextureSize();
     if (mesh_project->max_texture_size != prev_max_texture_size)
     {
+        g_main_window->dirtyProject();
+    }
+    if (mesh_project->triangle_density_mode != getDensityMode(triangle_texture_density->currentIndex()))
+    {
+        mesh_project->triangle_density_mode = getDensityMode(triangle_texture_density->currentIndex());
+        g_main_window->dirtyProject();
+    }
+    if (mesh_project->atlas_density_mode != getDensityMode(atlas_texture_density->currentIndex()))
+    {
+        mesh_project->atlas_density_mode = getDensityMode(atlas_texture_density->currentIndex());
         g_main_window->dirtyProject();
     }
     accept();
