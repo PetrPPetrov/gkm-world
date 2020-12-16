@@ -196,7 +196,7 @@ void BuildOptionsDialog::onResetToDefault()
     generation_count->setValue(32);
     mutation_rate->setValue(10);
     max_texture_size->setCurrentIndex(4);
-    triangle_texture_density->setCurrentIndex(1);
+    triangle_texture_density->setCurrentIndex(0);
     atlas_texture_density->setCurrentIndex(0);
 }
 

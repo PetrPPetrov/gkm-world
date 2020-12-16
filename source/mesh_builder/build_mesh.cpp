@@ -413,28 +413,15 @@ ComputationTriangle::ComputationTriangle(size_t triangle_index_, Vector3u triang
     uv[0] = Eigen::Vector2d(0, 0);
     uv[1] = Eigen::Vector2d((v[1] - v[0]).dot(x_axis), 0);
     uv[2] = Eigen::Vector2d(v2_x_coord, v2_rel.dot(y_axis));
-    uv_min = uv[0];
-    uv_max = uv[0];
+    uv_min = uv_max = uv[0];
 
     for (unsigned i = 0; i < 3; ++i)
     {
-        const Eigen::Vector2d cur_uv = uv[i];
-        if (cur_uv.x() < uv_min.x())
-        {
-            uv_min.x() = cur_uv.x();
-        }
-        if (cur_uv.y() < uv_min.y())
-        {
-            uv_min.y() = cur_uv.y();
-        }
-        if (cur_uv.x() > uv_max.x())
-        {
-            uv_max.x() = cur_uv.x();
-        }
-        if (cur_uv.y() > uv_max.y())
-        {
-            uv_max.y() = cur_uv.y();
-        }
+        const Eigen::Vector2d& cur_uv = uv[i];
+        uv_min.x() = std::min(uv_min.x(), cur_uv.x());
+        uv_min.y() = std::min(uv_min.y(), cur_uv.y());
+        uv_max.x() = std::max(uv_max.x(), cur_uv.x());
+        uv_max.y() = std::max(uv_max.y(), cur_uv.y());
     }
 }
 
@@ -533,127 +520,198 @@ next_iteration:
     return triangle_texture;
 }
 
+struct DensityInfo
+{
+    unsigned camera0_id;
+    unsigned camera1_id;
+    Eigen::Vector2d picture0_tr[3];
+    Eigen::Vector2d picture1_tr[3];
+    double density;
+    bool valid_triangle;
+};
+
+bool calculateDensity(
+    const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh, const Vector3u& triangle,
+    DensityInfo& density_info)
+{
+    Eigen::Vector3d v[3];
+    v[0] = new_mesh->vertices[triangle.x()];
+    v[1] = new_mesh->vertices[triangle.y()];
+    v[2] = new_mesh->vertices[triangle.z()];
+
+    const double d01 = (v[1] - v[0]).norm();
+    const double d12 = (v[2] - v[1]).norm();
+    const double d02 = (v[2] - v[0]).norm();
+
+    const size_t old_vertex0_id = new_mesh->new_to_old_vertex_id_map[triangle.x()];
+    const size_t old_vertex1_id = new_mesh->new_to_old_vertex_id_map[triangle.y()];
+    const size_t old_vertex2_id = new_mesh->new_to_old_vertex_id_map[triangle.z()];
+
+    auto vertex0_info = mesh_project->vertices[old_vertex0_id];
+    density_info.camera0_id = vertex0_info->positions[0]->camera_id;
+    density_info.camera1_id = vertex0_info->positions[1]->camera_id;
+
+    const int v0_p0_x = vertex0_info->positions[0]->x;
+    const int v0_p0_y = vertex0_info->positions[0]->y;
+    const int v0_p1_x = vertex0_info->positions[1]->x;
+    const int v0_p1_y = vertex0_info->positions[1]->y;
+
+    auto vertex1_info = mesh_project->vertices[old_vertex1_id];
+    unsigned v1_pos0_index = 0;
+    unsigned v1_pos1_index = 1;
+    if (vertex1_info->positions[1]->camera_id == density_info.camera0_id)
+    {
+        v1_pos0_index = 1;
+        v1_pos1_index = 0;
+    }
+    const int v1_p0_x = vertex1_info->positions[v1_pos0_index]->x;
+    const int v1_p0_y = vertex1_info->positions[v1_pos0_index]->y;
+    const int v1_p1_x = vertex1_info->positions[v1_pos1_index]->x;
+    const int v1_p1_y = vertex1_info->positions[v1_pos1_index]->y;
+    const unsigned v1_camera0_id = vertex1_info->positions[v1_pos0_index]->camera_id;
+    const unsigned v1_camera1_id = vertex1_info->positions[v1_pos1_index]->camera_id;
+    if (v1_camera0_id != density_info.camera0_id || v1_camera1_id != density_info.camera1_id)
+    {
+        // Oops! Different cameras, skipping this triangle
+        return false;
+    }
+
+    auto vertex2_info = mesh_project->vertices[old_vertex2_id];
+    unsigned v2_pos0_index = 0;
+    unsigned v2_pos1_index = 1;
+    if (vertex2_info->positions[1]->camera_id == density_info.camera0_id)
+    {
+        v2_pos0_index = 1;
+        v2_pos1_index = 0;
+    }
+    const int v2_p0_x = vertex2_info->positions[0]->x;
+    const int v2_p0_y = vertex2_info->positions[0]->y;
+    const int v2_p1_x = vertex2_info->positions[1]->x;
+    const int v2_p1_y = vertex2_info->positions[1]->y;
+    const unsigned v2_camera0_id = vertex2_info->positions[v2_pos0_index]->camera_id;
+    const unsigned v2_camera1_id = vertex2_info->positions[v2_pos1_index]->camera_id;
+    if (v2_camera0_id != density_info.camera0_id || v2_camera1_id != density_info.camera1_id)
+    {
+        // Oops! Different cameras, skipping this triangle
+        return false;
+    }
+
+    density_info.picture0_tr[0] = Eigen::Vector2d(v0_p0_x, v0_p0_y);
+    density_info.picture0_tr[1] = Eigen::Vector2d(v1_p0_x, v1_p0_y);
+    density_info.picture0_tr[2] = Eigen::Vector2d(v2_p0_x, v2_p0_y);
+
+    density_info.picture1_tr[0] = Eigen::Vector2d(v0_p1_x, v0_p1_y);
+    density_info.picture1_tr[1] = Eigen::Vector2d(v1_p1_x, v1_p1_y);
+    density_info.picture1_tr[2] = Eigen::Vector2d(v2_p1_x, v2_p1_y);
+
+    const Eigen::Vector3d v0_p0(v0_p0_x, v0_p0_y, 0);
+    const Eigen::Vector3d v0_p1(v0_p1_x, v0_p1_y, 0);
+
+    const Eigen::Vector3d v1_p0(v1_p0_x, v1_p0_y, 0);
+    const Eigen::Vector3d v1_p1(v1_p1_x, v1_p1_y, 0);
+
+    const Eigen::Vector3d v2_p0(v2_p0_x, v2_p0_y, 0);
+    const Eigen::Vector3d v2_p1(v2_p1_x, v2_p1_y, 0);
+
+    const double d01_p0 = (v1_p0 - v0_p0).norm();
+    const double d12_p0 = (v2_p0 - v1_p0).norm();
+    const double d02_p0 = (v2_p0 - v0_p0).norm();
+
+    const double d01_p1 = (v1_p1 - v0_p1).norm();
+    const double d12_p1 = (v2_p1 - v1_p1).norm();
+    const double d02_p1 = (v2_p1 - v0_p1).norm();
+
+    const double picture0_d01_density = d01_p0 / d01;
+    const double picture1_d01_density = d01_p1 / d01;
+
+    const double picture0_d12_density = d12_p0 / d12;
+    const double picture1_d12_density = d12_p1 / d12;
+
+    const double picture0_d02_density = d02_p0 / d02;
+    const double picture1_d02_density = d02_p1 / d02;
+
+    if (mesh_project->triangle_density_mode == EDensityMode::Maximum)
+    {
+        density_info.density = std::max({ picture0_d01_density, picture1_d01_density, picture0_d12_density, picture1_d12_density, picture0_d02_density, picture1_d02_density });
+    }
+    else
+    {
+        // Average is default
+        density_info.density = (picture0_d01_density + picture1_d01_density + picture0_d12_density + picture1_d12_density + picture0_d02_density + picture1_d02_density) / 6.0;
+    }
+
+    return true;
+}
+
 void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
     TextureAtlas::Ptr texture_atlas = std::make_shared<TextureAtlas>(mesh_project, new_mesh);
     const size_t new_triangle_count = new_mesh->triangles.size();
 
-    Job job(new_triangle_count + 1, "Building triangle textures...");
-    for (size_t i = 0; i < new_triangle_count; ++i)
+    Job job(2, "Building triangle textures...");
+
+    std::vector<DensityInfo> density_info(new_triangle_count);
+    double density = 0.0;
+
     {
-        Vector3u cur_triangle = new_mesh->triangles[i];
+        Job job(new_triangle_count + 1, "Calculating triangle texture density...");
 
-        Eigen::Vector3d v[3];
-        v[0] = new_mesh->vertices[cur_triangle.x()];
-        v[1] = new_mesh->vertices[cur_triangle.y()];
-        v[2] = new_mesh->vertices[cur_triangle.z()];
-
-        ComputationTriangle comp_triangle(i, cur_triangle, v);
-
-        const double d01 = (v[1] - v[0]).norm();
-        const double d12 = (v[2] - v[1]).norm();
-        const double d02 = (v[2] - v[0]).norm();
-
-        const size_t old_vertex0_id = new_mesh->new_to_old_vertex_id_map[cur_triangle.x()];
-        const size_t old_vertex1_id = new_mesh->new_to_old_vertex_id_map[cur_triangle.y()];
-        const size_t old_vertex2_id = new_mesh->new_to_old_vertex_id_map[cur_triangle.z()];
-
-        auto vertex0_info = mesh_project->vertices[old_vertex0_id];
-        const unsigned camera0_id = vertex0_info->positions[0]->camera_id;
-        const unsigned camera1_id = vertex0_info->positions[1]->camera_id;
-
-        const int v0_p0_x = vertex0_info->positions[0]->x;
-        const int v0_p0_y = vertex0_info->positions[0]->y;
-        const int v0_p1_x = vertex0_info->positions[1]->x;
-        const int v0_p1_y = vertex0_info->positions[1]->y;
-
-        auto vertex1_info = mesh_project->vertices[old_vertex1_id];
-        unsigned v1_pos0_index = 0;
-        unsigned v1_pos1_index = 1;
-        if (vertex1_info->positions[1]->camera_id == camera0_id)
+        size_t valid_triangle_count = 0;
+        for (size_t i = 0; i < new_triangle_count; ++i)
         {
-            v1_pos0_index = 1;
-            v1_pos1_index = 0;
-        }
-        const int v1_p0_x = vertex1_info->positions[v1_pos0_index]->x;
-        const int v1_p0_y = vertex1_info->positions[v1_pos0_index]->y;
-        const int v1_p1_x = vertex1_info->positions[v1_pos1_index]->x;
-        const int v1_p1_y = vertex1_info->positions[v1_pos1_index]->y;
-        const unsigned v1_camera0_id = vertex1_info->positions[v1_pos0_index]->camera_id;
-        const unsigned v1_camera1_id = vertex1_info->positions[v1_pos1_index]->camera_id;
-        if (v1_camera0_id != camera0_id || v1_camera1_id != camera1_id)
-        {
-            // Oops! Different cameras, skipping this triangle
-            continue;
+            Vector3u cur_triangle = new_mesh->triangles[i];
+
+            density_info[i].valid_triangle = calculateDensity(mesh_project, new_mesh, cur_triangle, density_info[i]);
+            job.step();
+
+            if (!density_info[i].valid_triangle)
+            {
+                continue;
+            }
+
+            ++valid_triangle_count;
+            if (mesh_project->atlas_density_mode == EDensityMode::Maximum)
+            {
+                density = std::max(density, density_info[i].density);
+            }
+            else
+            {
+                density += density_info[i].density;
+            }
         }
 
-        auto vertex2_info = mesh_project->vertices[old_vertex2_id];
-        unsigned v2_pos0_index = 0;
-        unsigned v2_pos1_index = 1;
-        if (vertex2_info->positions[1]->camera_id == camera0_id)
+        if (mesh_project->atlas_density_mode == EDensityMode::Average && valid_triangle_count > 0)
         {
-            v2_pos0_index = 1;
-            v2_pos1_index = 0;
-        }
-        const int v2_p0_x = vertex2_info->positions[0]->x;
-        const int v2_p0_y = vertex2_info->positions[0]->y;
-        const int v2_p1_x = vertex2_info->positions[1]->x;
-        const int v2_p1_y = vertex2_info->positions[1]->y;
-        const unsigned v2_camera0_id = vertex2_info->positions[v2_pos0_index]->camera_id;
-        const unsigned v2_camera1_id = vertex2_info->positions[v2_pos1_index]->camera_id;
-        if (v2_camera0_id != camera0_id || v2_camera1_id != camera1_id)
-        {
-            // Oops! Different cameras, skipping this triangle
-            continue;
+            density /= valid_triangle_count;
         }
 
-        const Eigen::Vector3d v0_p0(v0_p0_x, v0_p0_y, 0);
-        const Eigen::Vector3d v0_p1(v0_p1_x, v0_p1_y, 0);
+        if (density == 0.0)
+        {
+            density = 1.0;
+        }
+    }
 
-        const Eigen::Vector3d v1_p0(v1_p0_x, v1_p0_y, 0);
-        const Eigen::Vector3d v1_p1(v1_p1_x, v1_p1_y, 0);
+    {
+        Job job(new_triangle_count + 1, "Building triangle textures...");
+        for (size_t i = 0; i < new_triangle_count; ++i)
+        {
+            Vector3u cur_triangle = new_mesh->triangles[i];
 
-        const Eigen::Vector3d v2_p0(v2_p0_x, v2_p0_y, 0);
-        const Eigen::Vector3d v2_p1(v2_p1_x, v2_p1_y, 0);
+            Camera::Ptr camera0 = projectGetCamera(mesh_project, density_info[i].camera0_id);
+            Camera::Ptr camera1 = projectGetCamera(mesh_project, density_info[i].camera1_id);
 
-        const double d01_p0 = (v1_p0 - v0_p0).norm();
-        const double d12_p0 = (v2_p0 - v1_p0).norm();
-        const double d02_p0 = (v2_p0 - v0_p0).norm();
+            Eigen::Vector3d v[3];
+            v[0] = new_mesh->vertices[cur_triangle.x()];
+            v[1] = new_mesh->vertices[cur_triangle.y()];
+            v[2] = new_mesh->vertices[cur_triangle.z()];
 
-        const double d01_p1 = (v1_p1 - v0_p1).norm();
-        const double d12_p1 = (v2_p1 - v1_p1).norm();
-        const double d02_p1 = (v2_p1 - v0_p1).norm();
+            ComputationTriangle comp_triangle(i, cur_triangle, v);
 
-        const double picture0_d01_density = d01_p0 / d01;
-        const double picture1_d01_density = d01_p1 / d01;
+            PictureTriangle picture0_triangle(density_info[i].picture0_tr, comp_triangle.new_to_old, camera0->photo_image);
+            PictureTriangle picture1_triangle(density_info[i].picture1_tr, comp_triangle.new_to_old, camera1->photo_image);
 
-        const double picture0_d12_density = d12_p0 / d12;
-        const double picture1_d12_density = d12_p1 / d12;
-
-        const double picture0_d02_density = d02_p0 / d02;
-        const double picture1_d02_density = d02_p1 / d02;
-
-        //const double density = std::max({ picture0_d01_density, picture1_d01_density, picture0_d12_density, picture1_d12_density, picture0_d02_density, picture1_d02_density });
-        //const double density = (picture0_d01_density + picture1_d01_density + picture0_d12_density + picture1_d12_density + picture0_d02_density + picture1_d02_density) / 6.0;
-        const double density = 200.0;
-
-        Eigen::Vector2d picture0_tr[3];
-        picture0_tr[0] = Eigen::Vector2d(v0_p0_x, v0_p0_y);
-        picture0_tr[1] = Eigen::Vector2d(v1_p0_x, v1_p0_y);
-        picture0_tr[2] = Eigen::Vector2d(v2_p0_x, v2_p0_y);
-
-        Eigen::Vector2d picture1_tr[3];
-        picture1_tr[0] = Eigen::Vector2d(v0_p1_x, v0_p1_y);
-        picture1_tr[1] = Eigen::Vector2d(v1_p1_x, v1_p1_y);
-        picture1_tr[2] = Eigen::Vector2d(v2_p1_x, v2_p1_y);
-
-        Camera::Ptr camera0 = projectGetCamera(mesh_project, camera0_id);
-        Camera::Ptr camera1 = projectGetCamera(mesh_project, camera1_id);
-
-        PictureTriangle picture0_triangle(picture0_tr, comp_triangle.new_to_old, camera0->photo_image);
-        PictureTriangle picture1_triangle(picture1_tr, comp_triangle.new_to_old, camera1->photo_image);
-
-        texture_atlas->addTriangleTexture(comp_triangle.buildTexture(density, picture0_triangle, picture1_triangle));
+            texture_atlas->addTriangleTexture(comp_triangle.buildTexture(density, picture0_triangle, picture1_triangle));
+        }
     }
 
     texture_atlas->build();

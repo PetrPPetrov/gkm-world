@@ -80,7 +80,7 @@ void cameraSetRotationFromIndex(const Camera::Ptr& camera, int rotation_index);
 
 enum class EDensityMode
 {
-    Avarage,
+    Average,
     Maximum
 };
 
@@ -111,8 +111,8 @@ struct MeshProject
     int generation_count = 32;
     int mutation_rate = 10;
     unsigned max_texture_size = 1024;
-    EDensityMode triangle_density_mode = EDensityMode::Maximum;
-    EDensityMode atlas_density_mode = EDensityMode::Avarage;
+    EDensityMode triangle_density_mode = EDensityMode::Average;
+    EDensityMode atlas_density_mode = EDensityMode::Average;
 
     std::string file_name;
     std::string output_file_name;
