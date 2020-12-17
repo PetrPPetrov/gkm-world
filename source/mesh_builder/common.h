@@ -39,7 +39,7 @@ inline bool fileExists(const std::string& filename)
 }
 
 // TODO:
-// Add options for selecting interim texture density
+// Optimize texture atlas creation - avoid interim triangle textures
 // Correct texture coordinates after texture downsampling
 // Debug black texture case
 // Improve nesting by using the shared edges
