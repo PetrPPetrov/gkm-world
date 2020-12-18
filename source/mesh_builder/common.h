@@ -39,11 +39,11 @@ inline bool fileExists(const std::string& filename)
 }
 
 // TODO:
-// Optimize texture atlas creation - avoid interim triangle textures
 // Correct texture coordinates after texture downsampling
 // Debug black texture case
 // Improve nesting by using the shared edges
 // Make nesting algorithm more deterministic or introduce complete another, deterministic nesting algorithm
+// Optimize texture atlas creation - avoid interim triangle textures
 // GUI tweaks
 // Saving and restoring window layout
 // Remove rotation parameter at all
