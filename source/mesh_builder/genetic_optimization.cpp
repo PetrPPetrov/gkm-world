@@ -424,18 +424,29 @@ void GeneticOptimization::calculatePenalty(const Individual::Ptr& individual)
             }
         );
 
-        assert(gene.placed);
-        for (auto& cur_gene_polygon : cur_gene_polygons)
+        if (gene.placed)
         {
-            NfpPolygon new_cur_gene_polygon = cur_gene_polygon;
-            move(new_cur_gene_polygon, HORIZONTAL, x(gene.placement));
-            move(new_cur_gene_polygon, VERTICAL, y(gene.placement));
-            accumulated_geometry += new_cur_gene_polygon;
+            for (auto& cur_gene_polygon : cur_gene_polygons)
+            {
+                NfpPolygon new_cur_gene_polygon = cur_gene_polygon;
+                move(new_cur_gene_polygon, HORIZONTAL, x(gene.placement));
+                move(new_cur_gene_polygon, VERTICAL, y(gene.placement));
+                accumulated_geometry += new_cur_gene_polygon;
+            }
+            individual->penalty = min_local_penalty;
         }
-
-        individual->penalty = min_local_penalty;
     }
     extents(individual->bounding_box, accumulated_geometry);
+
+    for (size_t gene_index = 0; gene_index < individual->genotype.size(); ++gene_index)
+    {
+        Gene& gene = individual->genotype[gene_index];
+        if (!gene.placed)
+        {
+            individual->penalty = std::numeric_limits<size_t>::max();
+            break;
+        }
+    }
 }
 
 void GeneticOptimization::calculatePenalties()
