@@ -11,24 +11,6 @@
 #include "mesh.h"
 #include "texture.h"
 
-class TriangleTexture
-{
-    Texture::Ptr texture;
-    size_t triangle_index;
-
-public:
-    typedef std::shared_ptr<TriangleTexture> Ptr;
-
-    TriangleTexture(size_t triangle_index, unsigned width, unsigned height);
-    Texture::Ptr getTexture() const;
-    size_t getTriangleIndex() const;
-    void save() const;
-
-    double area = 0.0;
-    Eigen::Vector2d texture_coordinates[3];
-    unsigned new_to_old[3];
-};
-
 class TextureAtlas
 {
     Texture::Ptr texture_atlas;
