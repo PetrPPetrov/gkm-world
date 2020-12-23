@@ -10,11 +10,11 @@
 #include "mesh_project.h"
 #include "mesh.h"
 #include "texture.h"
+#include "triangle_texture.h"
 
 class TextureAtlas
 {
     Texture::Ptr texture_atlas;
-    std::vector<TriangleTexture::Ptr> triangle_textures;
     MeshProject::Ptr mesh_project;
     Mesh::Ptr mesh;
 
@@ -23,6 +23,7 @@ public:
 
     TextureAtlas(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& mesh);
 
-    void addTriangleTexture(const TriangleTexture::Ptr& triangle_texture);
     void build();
+
+    std::vector<TriangleTexture::Ptr> triangle_textures;
 };

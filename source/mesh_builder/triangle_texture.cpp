@@ -5,6 +5,7 @@
 #include "task.h"
 #include "bilinear_interpolation.h"
 #include "triangle_texture.h"
+#include "texture_adapter.h"
 
 static inline double sign(const Eigen::Vector2d& p1, const Eigen::Vector2d& p2, const Eigen::Vector2d& p3) noexcept
 {
@@ -43,7 +44,7 @@ static inline double calculateCellSquare(const Eigen::Vector2d& ll, const Eigen:
     return result;
 }
 
-void TriangleTexture::calculateDensity()
+void TriangleTexture::calculateDensity(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
     // TODO: Reduce size of this method
     valid_triangle = false;
@@ -110,8 +111,8 @@ void TriangleTexture::calculateDensity()
         return;
     }
 
-    photo0 = projectGetCamera(mesh_project, camera0_id)->photo_image;
-    photo1 = projectGetCamera(mesh_project, camera1_id)->photo_image;
+    camera0 = projectGetCamera(mesh_project, camera0_id);
+    camera1 = projectGetCamera(mesh_project, camera1_id);
 
     pic0_tri[0] = Eigen::Vector2d(v0_p0_x, v0_p0_y);
     pic0_tri[1] = Eigen::Vector2d(v1_p0_x, v1_p0_y);
@@ -155,6 +156,7 @@ void TriangleTexture::calculateDensity()
     {
         // Average is default
         density = (picture0_d01_density + picture1_d01_density + picture0_d12_density + picture1_d12_density + picture0_d02_density + picture1_d02_density) / 6.0;
+        postProcessDensityMode(density, mesh_project->triangle_density_mode);
     }
 
     valid_triangle = true;
@@ -234,10 +236,10 @@ void TriangleTexture::prepareAxis()
     }
 }
 
-TriangleTexture::TriangleTexture(const MeshProject::Ptr& mesh_project_, const Mesh::Ptr& new_mesh_, size_t triangle_index_)
-    : mesh_project(mesh_project_), new_mesh(new_mesh_), triangle_index(triangle_index_)
+TriangleTexture::TriangleTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh, size_t triangle_index_)
 {
-    calculateDensity();
+    triangle_index = triangle_index_;
+    calculateDensity(mesh_project, new_mesh);
 }
 
 size_t TriangleTexture::getTriangleIndex() const noexcept
@@ -280,6 +282,9 @@ void TriangleTexture::prepareTexture(double total_density)
     width = static_cast<unsigned>(pixel_width_count);
     height = static_cast<unsigned>(pixel_height_count);
 
+    is_pixel_cached.resize(static_cast<size_t>(width) * height, 0);
+    cached_image_data.resize(is_pixel_cached.size(), 0);
+
     pixel_width = uv_width / pixel_width_count;
     pixel_height = uv_height / pixel_height_count;
     pixel_width2 = pixel_width / 2;
@@ -296,6 +301,11 @@ Eigen::Vector2d TriangleTexture::getTextureCoordinate(unsigned i) const noexcept
     return texture_coordinates[i];
 }
 
+unsigned TriangleTexture::getNewToOld(unsigned i) const noexcept
+{
+    return new_to_old[i];
+}
+
 unsigned TriangleTexture::getWidth() const
 {
     return width;
@@ -308,7 +318,10 @@ unsigned TriangleTexture::getHeight() const
 
 std::uint32_t TriangleTexture::getPixel(unsigned x, unsigned y) const
 {
-    // TODO: Add caching
+    if (is_pixel_cached[getIndex(x, y)])
+    {
+        return cached_image_data[getIndex(x, y)];
+    }
 
     const double dx = static_cast<double>(x);
     const double dy = static_cast<double>(y);
@@ -329,7 +342,10 @@ std::uint32_t TriangleTexture::getPixel(unsigned x, unsigned y) const
         !isPointInTriangle(ul_corner_uv, uv[0], uv[1], uv[2]) &&
         !isPointInTriangle(ur_corner_uv, uv[0], uv[1], uv[2]))
     {
-        return 0xffffffff;
+        const std::uint32_t white_pixel = 0xffffffff;
+        is_pixel_cached[getIndex(x, y)] = 1;
+        cached_image_data[getIndex(x, y)] = white_pixel;
+        return white_pixel;
     }
 
     const Eigen::Vector2d ll_corner = solveObliqueCoordinates(ll_corner_uv);
@@ -353,9 +369,13 @@ std::uint32_t TriangleTexture::getPixel(unsigned x, unsigned y) const
     const double pixel_p1_square = calculateCellSquare(ll_corner_p1, lr_corner_p1, ul_corner_p1, ur_corner_p1);
 
     // Select picture where the current pixel has a higher square
-    const ImagePtr selected_image = (pixel_p0_square > pixel_p1_square) ? photo0 : photo1;
+    const Camera::Ptr selected_camera = (pixel_p0_square > pixel_p1_square) ? camera0 : camera1;
     const Eigen::Vector2d& selected_center = (pixel_p0_square > pixel_p1_square) ? center_p0 : center_p1;
 
-    QRgb interpolated_pixel = getInterpolatedPixel(selected_image, selected_center);
+    std::uint32_t interpolated_pixel = getInterpolatedPixel(std::make_shared<TextureAdapter>(selected_camera), selected_center);
+
+    is_pixel_cached[getIndex(x, y)] = 1;
+    cached_image_data[getIndex(x, y)] = interpolated_pixel;
+
     return interpolated_pixel;
 }

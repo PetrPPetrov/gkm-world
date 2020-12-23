@@ -9,38 +9,12 @@
 #include "texture_atlas.h"
 #include "task.h"
 
-TriangleTexture::TriangleTexture(size_t triangle_index_, unsigned width, unsigned height) : texture(std::make_shared<Texture>(width, height))
-{
-    triangle_index = triangle_index_;
-}
-
-Texture::Ptr TriangleTexture::getTexture() const
-{
-    return texture;
-}
-
-size_t TriangleTexture::getTriangleIndex() const
-{
-    return triangle_index;
-}
-
-void TriangleTexture::save() const
-{
-    std::string file_name = "subimage_" + std::to_string(triangle_index) + ".png";
-    texture->savePng(file_name.c_str());
-}
-
 TextureAtlas::TextureAtlas(const MeshProject::Ptr& mesh_project_, const Mesh::Ptr& mesh_)
 {
     mesh_project = mesh_project_;
     mesh = mesh_;
     triangle_textures.reserve(mesh->triangles.size());
     mesh->texture_atlas = texture_atlas;
-}
-
-void TextureAtlas::addTriangleTexture(const TriangleTexture::Ptr& triangle_texture)
-{
-    triangle_textures.push_back(triangle_texture);
 }
 
 void TextureAtlas::build()
@@ -51,9 +25,9 @@ void TextureAtlas::build()
 
     Individual::Ptr best = nullptr;
     {
-        const size_t GENERATION_NUMBER = 10;
-        Job job(GENERATION_NUMBER, "Nesting texture fragments...");
-        for (size_t generation_count = 0; generation_count < GENERATION_NUMBER; ++generation_count)
+        const size_t generation_count = mesh_project->generation_count;
+        Job job(generation_count, "Nesting texture fragments...");
+        for (size_t generation_index = 0; generation_index < generation_count; ++generation_index)
         {
             Job job(2);
             genetic_algorithm->calculatePenalties();
@@ -112,7 +86,6 @@ void TextureAtlas::build()
                 assert(gene.placed);
 
                 TriangleTexture::Ptr triangle_texture = triangle_textures[gene.triangle_texture_index];
-                Texture::Ptr texture_fragment = triangle_texture->getTexture();
                 auto bloated_geometry = triangle_texture_information[gene.triangle_texture_index]->variations[gene.rotation_index]->bloated_geometry;
 
                 NfpPolygonSet real_polygon_set;
@@ -164,7 +137,7 @@ void TextureAtlas::build()
 
                 Eigen::Rotation2Dd negative_rotation(-rotation_step * gene.rotation_index);
 
-                Job job(static_cast<size_t>(cur_x_size_in_pixel) * cur_y_size_in_pixel, "Copying texture fragment to atlas...");
+                Job job(static_cast<size_t>(cur_x_size_in_pixel) * cur_y_size_in_pixel, "Copying texture fragments to atlas...");
                 for (int x = 0; x < cur_x_size_in_pixel; ++x)
                 {
                     for (int y = 0; y < cur_y_size_in_pixel; ++y)
@@ -197,7 +170,7 @@ void TextureAtlas::build()
                             Eigen::Vector2d original_relative_point0 = negative_rotation * cur_relative_point;
                             Eigen::Vector2d original_relative_point = original_relative_point0 / mesh_project->scale;
 
-                            std::uint32_t pixel = getInterpolatedPixel(texture_fragment, original_relative_point);
+                            std::uint32_t pixel = getInterpolatedPixel(triangle_texture, original_relative_point);
                             texture_atlas->setPixel(cur_x_in_pixel - x_lo_in_pixel, cur_y_in_pixel - y_lo_in_pixel, pixel);
                         }
                         job.step();
@@ -216,12 +189,12 @@ void TextureAtlas::build()
 
                 for (unsigned i = 0; i < 3; ++i)
                 {
-                    const Eigen::Vector2d tex_coord = positive_rotation * triangle_texture->texture_coordinates[i];
+                    const Eigen::Vector2d tex_coord = positive_rotation * triangle_texture->getTextureCoordinate(i);
                     const int cur_x = x(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.x());
                     const int cur_y = y(gene.placement) + static_cast<int>(mesh_project->scale * tex_coord.y());
                     const double u = (static_cast<double>(cur_x) - x_lo) / x_size;
                     const double v = (static_cast<double>(cur_y) - y_lo) / y_size;
-                    mesh->triangle_tex_coords[triangle_texture->getTriangleIndex() * 3 + triangle_texture->new_to_old[i]] = Eigen::Vector2d(u, v);
+                    mesh->triangle_tex_coords[triangle_texture->getTriangleIndex() * 3 + triangle_texture->getNewToOld(i)] = Eigen::Vector2d(u, v);
                 }
                 job.step();
             }

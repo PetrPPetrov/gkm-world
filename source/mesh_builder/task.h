@@ -66,7 +66,7 @@ struct ProgressCalculator
     void startJob(std::uint32_t expected_steps)
     {
         Task new_task;
-        new_task.expected_steps = expected_steps;
+        new_task.expected_steps = std::max<std::uint32_t>(1, expected_steps);
         if (!tasks.empty())
         {
             new_task.percent_start = getCurrentProgress();

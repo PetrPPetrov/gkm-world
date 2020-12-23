@@ -5,7 +5,6 @@
 
 #include <cstdint>
 #include "common.h"
-#include "texture.h"
 
 inline int extractRed(std::uint32_t argb)
 {
@@ -37,51 +36,6 @@ inline std::uint32_t packRgba(int r, int g, int b, int a)
     return ((a & 0xffu) << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu);
 }
 
-inline unsigned getWidth(const Texture* texture)
-{
-    return texture->getWidth();
-}
-
-inline unsigned getHeight(const Texture* texture)
-{
-    return texture->getHeight();
-}
-
-inline std::uint32_t getPixel(const Texture* texture, unsigned x, unsigned y)
-{
-    return texture->getPixel(x, y);
-}
-
-inline unsigned getWidth(const Texture::Ptr& texture)
-{
-    return texture->getWidth();
-}
-
-inline unsigned getHeight(const Texture::Ptr& texture)
-{
-    return texture->getHeight();
-}
-
-inline std::uint32_t getPixel(const Texture::Ptr& texture, unsigned x, unsigned y)
-{
-    return texture->getPixel(x, y);
-}
-
-inline unsigned getWidth(const ImagePtr& texture)
-{
-    return static_cast<unsigned>(texture->width());
-}
-
-inline unsigned getHeight(const ImagePtr& texture)
-{
-    return static_cast<unsigned>(texture->height());
-}
-
-inline std::uint32_t getPixel(const ImagePtr& texture, unsigned x, unsigned y)
-{
-    return texture->pixel(static_cast<int>(x), static_cast<int>(texture->height() - 1 - y));
-}
-
 template<class TextureType>
 std::uint32_t getInterpolatedPixel(const TextureType& texture, const Eigen::Vector2d& xy)
 {
@@ -101,13 +55,13 @@ std::uint32_t getInterpolatedPixel(const TextureType& texture, const Eigen::Vect
         pixel.y() = 0.0;
         increase_top = true;
     }
-    const double limit_x = static_cast<double>(getWidth(texture) - 1);
+    const double limit_x = static_cast<double>(texture->getWidth() - 1);
     if (pixel.x() >= limit_x)
     {
         pixel.x() = limit_x;
         decrease_left = true;
     }
-    const double limit_y = static_cast<double>(getHeight(texture) - 1);
+    const double limit_y = static_cast<double>(texture->getHeight() - 1);
     if (pixel.y() >= limit_y)
     {
         pixel.y() = limit_y;
@@ -156,10 +110,10 @@ std::uint32_t getInterpolatedPixel(const TextureType& texture, const Eigen::Vect
     const double upper_left_square = distance_to_left * distance_to_top;
     const double upper_right_square = distance_to_right * distance_to_top;
 
-    std::uint32_t ll_pixel = getPixel(texture, static_cast<unsigned>(left), static_cast<unsigned>(bottom));
-    std::uint32_t lr_pixel = getPixel(texture, static_cast<unsigned>(right), static_cast<unsigned>(bottom));
-    std::uint32_t ul_pixel = getPixel(texture, static_cast<unsigned>(left), static_cast<unsigned>(top));
-    std::uint32_t ur_pixel = getPixel(texture, static_cast<unsigned>(right), static_cast<unsigned>(top));
+    std::uint32_t ll_pixel = texture->getPixel(static_cast<unsigned>(left), static_cast<unsigned>(bottom));
+    std::uint32_t lr_pixel = texture->getPixel(static_cast<unsigned>(right), static_cast<unsigned>(bottom));
+    std::uint32_t ul_pixel = texture->getPixel(static_cast<unsigned>(left), static_cast<unsigned>(top));
+    std::uint32_t ur_pixel = texture->getPixel(static_cast<unsigned>(right), static_cast<unsigned>(top));
 
     Eigen::Vector4d lower_left_pixel(extractRed(ll_pixel) / 255.0, extractGreen(ll_pixel) / 255.0, extractBlue(ll_pixel) / 255.0, extractAlpha(ll_pixel) / 255.0);
     Eigen::Vector4d lower_right_pixel(extractRed(lr_pixel) / 255.0, extractGreen(lr_pixel) / 255.0, extractBlue(lr_pixel) / 255.0, extractAlpha(lr_pixel) / 255.0);

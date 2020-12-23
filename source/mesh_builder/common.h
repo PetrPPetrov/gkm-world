@@ -39,10 +39,9 @@ inline bool fileExists(const std::string& filename)
 }
 
 // TODO:
-// Optimize texture atlas creation - avoid interim triangle textures
+// Add noexcept keywords
+// Add support of !valid_triangle TriangleTexture objects
 // Reduce size of TriangleTexture::calculateDensity() method
-// Add caching to TriangleTexture::getPixel() method
-// Create adapter for QImage
 // Correct texture coordinates after texture downsampling
 // Debug black texture case
 // Improve nesting by using the shared edges

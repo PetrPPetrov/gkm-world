@@ -81,7 +81,11 @@ void cameraSetRotationFromIndex(const Camera::Ptr& camera, int rotation_index);
 enum class EDensityMode
 {
     Average,
-    Maximum
+    Maximum,
+    Average2,
+    Average3,
+    Average4,
+    Average8,
 };
 
 inline int getIndex(EDensityMode density_mode)
@@ -92,6 +96,25 @@ inline int getIndex(EDensityMode density_mode)
 inline EDensityMode getDensityMode(int index)
 {
     return static_cast<EDensityMode>(index);
+}
+
+inline void postProcessDensityMode(double& density, EDensityMode density_mode)
+{
+    switch (density_mode)
+    {
+    case EDensityMode::Average2:
+        density /= 2;
+        break;
+    case EDensityMode::Average3:
+        density /= 3;
+        break;
+    case EDensityMode::Average4:
+        density /= 4;
+        break;
+    case EDensityMode::Average8:
+        density /= 8;
+        break;
+    }
 }
 
 struct MeshProject

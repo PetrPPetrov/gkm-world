@@ -10,7 +10,6 @@ static int g_protection_offset = 8;
 static int g_scale = 256;
 static int g_rotation_count = 8;
 static int g_population_size = 128;
-static int g_generation_count = 32;
 static int g_mutation_rate = 10;
 
 template<typename ProcessPointFunc>
@@ -49,7 +48,7 @@ static inline void toPolygonSet(const TriangleTexture::Ptr& triangle_texture, do
     points.reserve(3);
     for (unsigned i = 0; i < 3; ++i)
     {
-        const Eigen::Vector2d tex_coord = Eigen::Rotation2Dd(rotation_angle) * triangle_texture->texture_coordinates[i];
+        const Eigen::Vector2d tex_coord = Eigen::Rotation2Dd(rotation_angle) * triangle_texture->getTextureCoordinate(i);
         const int x = static_cast<int>(g_scale * tex_coord.x());
         const int y = static_cast<int>(g_scale * tex_coord.y());
         points.push_back(NfpPoint(x, y));
@@ -289,7 +288,6 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
     g_scale = mesh_project->scale;
     g_rotation_count = mesh_project->rotation_count;
     g_population_size = mesh_project->population_size;
-    g_generation_count = mesh_project->generation_count;
     g_mutation_rate = mesh_project->mutation_rate;
 
     triangle_texture_information.reserve(triangle_textures.size());
@@ -321,7 +319,7 @@ GeneticOptimization::GeneticOptimization(const std::vector<TriangleTexture::Ptr>
     std::vector<TriangleTexture::Ptr> sorted_triangle_textures = triangle_textures; // Perform copy
     std::sort(sorted_triangle_textures.begin(), sorted_triangle_textures.end(), [](const TriangleTexture::Ptr& a, const TriangleTexture::Ptr& b)
         {
-            return a->area > b->area;
+            return a->getArea() > b->getArea();
         });
 
     auto adam = std::make_shared<Individual>();

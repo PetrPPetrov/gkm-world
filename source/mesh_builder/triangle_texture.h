@@ -13,8 +13,6 @@ class TriangleTexture
 {
     bool valid_triangle = false;
 
-    MeshProject::Ptr mesh_project;
-    Mesh::Ptr new_mesh;
     size_t triangle_index;
 
     Vector3u triangle;
@@ -24,8 +22,8 @@ class TriangleTexture
 
     Eigen::Vector2d pic0_tri[3];
     Eigen::Vector2d pic1_tri[3];
-    ImagePtr photo0;
-    ImagePtr photo1;
+    Camera::Ptr camera0;
+    Camera::Ptr camera1;
 
     Eigen::Vector2d pic0_base;
     Eigen::Vector2d pic0_x_axis_oblique;
@@ -66,6 +64,14 @@ class TriangleTexture
 
     double area = 0.0;
     Eigen::Vector2d texture_coordinates[3];
+
+    mutable std::vector<std::uint8_t> is_pixel_cached;
+    mutable std::vector<std::uint32_t> cached_image_data;
+
+    size_t getIndex(unsigned x, unsigned y) const noexcept
+    {
+        return static_cast<size_t>(y) * width + x;
+    }
 
     Eigen::Vector2d solveRectangularCoordinates(const Eigen::Vector3d& vec) const noexcept
     {
@@ -108,7 +114,7 @@ class TriangleTexture
         return calculatePointInObliqueCoordinateSystem(uv, pic1_base, pic1_x_axis_oblique, pic1_y_axis_oblique);
     }
 
-    void calculateDensity();
+    void calculateDensity(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh);
     void prepareAxis();
 
 public:
@@ -122,6 +128,7 @@ public:
     void prepareTexture(double total_density);
     double getArea() const noexcept;
     Eigen::Vector2d getTextureCoordinate(unsigned i) const noexcept;
+    unsigned getNewToOld(unsigned i) const noexcept;
 
     unsigned getWidth() const;
     unsigned getHeight() const;

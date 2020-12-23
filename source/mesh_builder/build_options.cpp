@@ -99,6 +99,10 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     triangle_texture_density = new QComboBox(this);
     triangle_texture_density->addItem("Average");
     triangle_texture_density->addItem("Maximum");
+    triangle_texture_density->addItem("Average/2");
+    triangle_texture_density->addItem("Average/3");
+    triangle_texture_density->addItem("Average/4");
+    triangle_texture_density->addItem("Average/8");
     triangle_texture_density->setCurrentIndex(getIndex(mesh_project->triangle_density_mode));
     texture_layout->addWidget(triangle_texture_density, 0, 1);
 
@@ -109,6 +113,10 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     atlas_texture_density = new QComboBox(this);
     atlas_texture_density->addItem("Average");
     atlas_texture_density->addItem("Maximum");
+    atlas_texture_density->addItem("Average/2");
+    atlas_texture_density->addItem("Average/3");
+    atlas_texture_density->addItem("Average/4");
+    atlas_texture_density->addItem("Average/8");
     atlas_texture_density->setCurrentIndex(getIndex(mesh_project->atlas_density_mode));
     texture_layout->addWidget(atlas_texture_density, 1, 1);
 
