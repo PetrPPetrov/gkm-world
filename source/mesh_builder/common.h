@@ -39,11 +39,14 @@ inline bool fileExists(const std::string& filename)
 }
 
 // TODO:
+// Add original images texture mode
+// Add generated triangle images texture mode
+// Debug rotated image case
+// Do not process removed triangles
 // Add noexcept keywords
 // Add support of !valid_triangle TriangleTexture objects
 // Reduce size of TriangleTexture::calculateDensity() method
 // Correct texture coordinates after texture downsampling
-// Debug black texture case
 // Improve nesting by using the shared edges
 // Make nesting algorithm more deterministic or introduce complete another, deterministic nesting algorithm
 // GUI tweaks
