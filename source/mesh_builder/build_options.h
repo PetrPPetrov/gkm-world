@@ -25,6 +25,7 @@ private:
     void onCancel();
 
 private:
+    QComboBox* texture_mode = nullptr;
     QSpinBox* protection_offset = nullptr;
     QSpinBox* tolerance_divider = nullptr;
     QSpinBox* rotation_count = nullptr;

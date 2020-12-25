@@ -15,6 +15,36 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
 
     QGridLayout* layout = new QGridLayout(this);
 
+    QGroupBox* generic_options = new QGroupBox("Generic Parameters");
+    QGridLayout* generic_layout = new QGridLayout(generic_options);
+
+    QLabel* texture_mode_label = new QLabel(this);
+    texture_mode_label->setText("Texture Mode");
+    generic_layout->addWidget(texture_mode_label, 0, 0);
+
+    texture_mode = new QComboBox(this);
+    texture_mode->addItem("Use Original Images");
+    texture_mode->addItem("Generate Triangle Textures");
+    texture_mode->addItem("Generate Texture Atlas");
+    texture_mode->setCurrentIndex(0);
+    generic_layout->addWidget(texture_mode, 0, 1);
+
+    QLabel* max_texture_size_label = new QLabel(this);
+    max_texture_size_label->setText("Max. Texture Size");
+    generic_layout->addWidget(max_texture_size_label, 1, 0);
+
+    max_texture_size = new QComboBox(this);
+    max_texture_size->addItem("256 x 256");
+    max_texture_size->addItem("512 x 512");
+    max_texture_size->addItem("1024 x 1024");
+    max_texture_size->addItem("2048 x 2048");
+    max_texture_size->addItem("4096 x 4096");
+    generic_layout->addWidget(max_texture_size, 1, 1);
+    loadMaxTextureSize();
+
+    generic_options->setLayout(generic_layout);
+    layout->addWidget(generic_options, 0, 0);
+
     QGroupBox* nesting_options = new QGroupBox("Nesting Parameters");
     QGridLayout* nesting_layout = new QGridLayout(nesting_options);
 
@@ -30,7 +60,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     nesting_layout->addWidget(protection_offset, 0, 1);
 
     nesting_options->setLayout(nesting_layout);
-    layout->addWidget(nesting_options, 0, 0);
+    layout->addWidget(nesting_options, 1, 0);
 
     QGroupBox* genetic_nesting_options = new QGroupBox("Genetic Nesting Optimization Parameters");
     QGridLayout* genetic_layout = new QGridLayout(genetic_nesting_options);
@@ -87,7 +117,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     genetic_layout->addWidget(mutation_rate, 4, 1);
 
     genetic_nesting_options->setLayout(genetic_layout);
-    layout->addWidget(genetic_nesting_options, 1, 0);
+    layout->addWidget(genetic_nesting_options, 2, 0);
 
     QGroupBox* texture_options = new QGroupBox("Output Texture Parameters");
     QGridLayout* texture_layout = new QGridLayout(texture_options);
@@ -120,33 +150,20 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     atlas_texture_density->setCurrentIndex(getIndex(mesh_project->atlas_density_mode));
     texture_layout->addWidget(atlas_texture_density, 1, 1);
 
-    QLabel* max_texture_size_label = new QLabel(this);
-    max_texture_size_label->setText("Max. Texture Size");
-    texture_layout->addWidget(max_texture_size_label, 2, 0);
-
-    max_texture_size = new QComboBox(this);
-    max_texture_size->addItem("256 x 256");
-    max_texture_size->addItem("512 x 512");
-    max_texture_size->addItem("1024 x 1024");
-    max_texture_size->addItem("2048 x 2048");
-    max_texture_size->addItem("4096 x 4096");
-    texture_layout->addWidget(max_texture_size, 2, 1);
-    loadMaxTextureSize();
-
     texture_options->setLayout(texture_layout);
     layout->addWidget(texture_options, 0, 1);
 
     reset_button = new QPushButton("Reset To Default", this);
     connect(reset_button, &QPushButton::pressed, this, &BuildOptionsDialog::onResetToDefault);
-    layout->addWidget(reset_button, 2, 0);
+    layout->addWidget(reset_button, 3, 0);
 
     ok_button = new QPushButton("OK", this);
     connect(ok_button, &QPushButton::pressed, this, &BuildOptionsDialog::onOk);
-    layout->addWidget(ok_button, 2, 2);
+    layout->addWidget(ok_button, 3, 2);
 
     cancel_button = new QPushButton("Cancel", this);
     connect(cancel_button, &QPushButton::pressed, this, &BuildOptionsDialog::onCancel);
-    layout->addWidget(cancel_button, 2, 3);
+    layout->addWidget(cancel_button, 3, 3);
 }
 
 void BuildOptionsDialog::loadMaxTextureSize()
