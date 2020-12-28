@@ -16,3 +16,4 @@ Open Source Massive Multiplayer Online Battle Game
 * use successful double action policy for packet delivery
 * prepare visible users list on node server for quick fetching
 * implement some basic version of Mesh Builder
+* finish Mesh-Build to some stable stage
