@@ -78,6 +78,13 @@ int cameraGetHeight(const Camera::Ptr& camera);
 int cameraGetRotationIndex(const Camera::Ptr& camera);
 void cameraSetRotationFromIndex(const Camera::Ptr& camera, int rotation_index);
 
+enum class ETextureMode
+{
+    UseOriginalImages,
+    GenerateTriangleTextures,
+    GenerateTextureAtlas
+};
+
 enum class EDensityMode
 {
     Average,
