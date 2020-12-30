@@ -285,6 +285,12 @@ MeshProject::Ptr loadMeshProject(const std::string& file_name)
         {
             project->triangles.push_back(loadTriangle(file_in));
         }
+        else if (next_token == "texture_mode")
+        {
+            int temp;
+            file_in >> temp;
+            project->texture_mode = getTextureMode(temp);
+        }
         else if (next_token == "protection_offset")
         {
             file_in >> project->protection_offset;
@@ -352,6 +358,7 @@ void saveMeshProject(const MeshProject::Ptr& project, const std::string& file_na
     {
         saveTriangle(triangle, file_out);
     }
+    file_out << "texture_mode\n" << getIndex(project->texture_mode) << "\n";
     file_out << "protection_offset\n" << project->protection_offset << "\n";
     file_out << "scale\n" << project->scale << "\n";
     file_out << "rotation_count\n" << project->rotation_count << "\n";

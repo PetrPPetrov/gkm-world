@@ -85,6 +85,16 @@ enum class ETextureMode
     GenerateTextureAtlas
 };
 
+inline int getIndex(ETextureMode texture_mode)
+{
+    return static_cast<int>(texture_mode);
+}
+
+inline ETextureMode getTextureMode(int index)
+{
+    return static_cast<ETextureMode>(index);
+}
+
 enum class EDensityMode
 {
     Average,
@@ -134,6 +144,7 @@ struct MeshProject
     std::vector<Vertex::Ptr> vertices;
     std::vector<Triangle::Ptr> triangles;
 
+    ETextureMode texture_mode = ETextureMode::UseOriginalImages;
     int protection_offset = 8;
     int scale = 256.0;
     int rotation_count = 8;

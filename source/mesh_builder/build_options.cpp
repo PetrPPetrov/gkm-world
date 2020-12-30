@@ -26,7 +26,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     texture_mode->addItem("Use Original Images");
     texture_mode->addItem("Generate Triangle Textures");
     texture_mode->addItem("Generate Texture Atlas");
-    texture_mode->setCurrentIndex(0);
+    texture_mode->setCurrentIndex(getIndex(mesh_project->texture_mode));
     generic_layout->addWidget(texture_mode, 0, 1);
 
     QLabel* max_texture_size_label = new QLabel(this);
@@ -214,6 +214,7 @@ void BuildOptionsDialog::saveMaxTextureSize()
 
 void BuildOptionsDialog::onResetToDefault()
 {
+    texture_mode->setCurrentIndex(0);
     protection_offset->setValue(8);
     tolerance_divider->setValue(256);
     rotation_count->setValue(8);
@@ -227,6 +228,11 @@ void BuildOptionsDialog::onResetToDefault()
 
 void BuildOptionsDialog::onOk()
 {
+    if (mesh_project->texture_mode != getTextureMode(texture_mode->currentIndex()))
+    {
+        mesh_project->texture_mode = getTextureMode(texture_mode->currentIndex());
+        g_main_window->dirtyProject();
+    }
     if (mesh_project->protection_offset != protection_offset->value())
     {
         mesh_project->protection_offset = protection_offset->value();
