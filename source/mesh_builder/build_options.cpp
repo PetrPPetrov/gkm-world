@@ -26,6 +26,7 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     texture_mode->addItem("Use Original Images");
     texture_mode->addItem("Generate Triangle Textures");
     texture_mode->addItem("Generate Texture Atlas");
+    connect(texture_mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &BuildOptionsDialog::onTextureModeChanged);
     texture_mode->setCurrentIndex(getIndex(mesh_project->texture_mode));
     generic_layout->addWidget(texture_mode, 0, 1);
 
@@ -164,6 +165,8 @@ BuildOptionsDialog::BuildOptionsDialog(const MeshProject::Ptr& mesh_project_, QW
     cancel_button = new QPushButton("Cancel", this);
     connect(cancel_button, &QPushButton::pressed, this, &BuildOptionsDialog::onCancel);
     layout->addWidget(cancel_button, 3, 3);
+
+    onTextureModeChanged(getIndex(mesh_project->texture_mode));
 }
 
 void BuildOptionsDialog::loadMaxTextureSize()
@@ -208,6 +211,47 @@ void BuildOptionsDialog::saveMaxTextureSize()
     case 4:
     default:
         mesh_project->max_texture_size = 4096;
+        break;
+    }
+}
+
+void BuildOptionsDialog::onTextureModeChanged(int new_mode)
+{
+    switch (new_mode)
+    {
+    default:
+    case 0:
+        protection_offset->setEnabled(false);
+        tolerance_divider->setEnabled(false);
+        rotation_count->setEnabled(false);
+        population_size->setEnabled(false);
+        generation_count->setEnabled(false);
+        mutation_rate->setEnabled(false);
+        max_texture_size->setEnabled(true);
+        triangle_texture_density->setEnabled(false);
+        atlas_texture_density->setEnabled(false);
+        break;
+    case 1:
+        protection_offset->setEnabled(false);
+        tolerance_divider->setEnabled(false);
+        rotation_count->setEnabled(false);
+        population_size->setEnabled(false);
+        generation_count->setEnabled(false);
+        mutation_rate->setEnabled(false);
+        max_texture_size->setEnabled(true);
+        triangle_texture_density->setEnabled(true);
+        atlas_texture_density->setEnabled(true);
+        break;
+    case 2:
+        protection_offset->setEnabled(true);
+        tolerance_divider->setEnabled(true);
+        rotation_count->setEnabled(true);
+        population_size->setEnabled(true);
+        generation_count->setEnabled(true);
+        mutation_rate->setEnabled(true);
+        max_texture_size->setEnabled(true);
+        triangle_texture_density->setEnabled(true);
+        atlas_texture_density->setEnabled(true);
         break;
     }
 }

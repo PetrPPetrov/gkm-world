@@ -20,6 +20,7 @@ private:
     void loadMaxTextureSize();
     void saveMaxTextureSize();
 
+    void onTextureModeChanged(int new_mode);
     void onResetToDefault();
     void onOk();
     void onCancel();
