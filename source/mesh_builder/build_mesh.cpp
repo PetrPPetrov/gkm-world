@@ -299,6 +299,8 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
 {
     Job job(5, "Building resulting mesh...");
 
+
+    // TODO: Add other texture modes support
     Mesh::Ptr new_mesh = std::make_shared<Mesh>();
 
     calculateVertices(mesh_project, new_mesh);
