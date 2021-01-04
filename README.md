@@ -11,9 +11,10 @@ Open Source Massive Multiplayer Online Battle Game
   * vcpkg install tinyobjloader --triplet x64-windows (for resource packer)
 
 ## TODO list
+* finish Mesh-Build to some stable stage
 * implement Windows client
 * avoid InitializePositionInternalAnswer packet from Node->Balancer, send it directly Node->Proxy
 * use successful double action policy for packet delivery
 * prepare visible users list on node server for quick fetching
 * implement some basic version of Mesh Builder
-* finish Mesh-Build to some stable stage
+
