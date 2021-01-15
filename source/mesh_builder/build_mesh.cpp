@@ -236,7 +236,7 @@ static void mapTriangles(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& 
     }
 }
 
-static void buildTexture(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
+static void buildTextureAtlas(const MeshProject::Ptr& mesh_project, const Mesh::Ptr& new_mesh)
 {
     TextureAtlas::Ptr texture_atlas = std::make_shared<TextureAtlas>(mesh_project, new_mesh);
     const size_t new_triangle_count = new_mesh->triangles.size();
@@ -299,15 +299,24 @@ void buildMesh(const MeshProject::Ptr& mesh_project)
 {
     Job job(5, "Building resulting mesh...");
 
-
     // TODO: Add other texture modes support
     Mesh::Ptr new_mesh = std::make_shared<Mesh>();
 
     calculateVertices(mesh_project, new_mesh);
     mapTriangles(mesh_project, new_mesh);
-    buildTexture(mesh_project, new_mesh);
 
     boost::filesystem::path output_obj_path(mesh_project->output_file_name);
+
+    switch (mesh_project->texture_mode)
+    {
+    case ETextureMode::UseOriginalImages:
+    case ETextureMode::GenerateTriangleTextures:
+        break;
+    case ETextureMode::GenerateTextureAtlas:
+        buildTextureAtlas(mesh_project, new_mesh);
+        break;
+    }
+
     boost::filesystem::path output_mtl_path = output_obj_path;
     output_mtl_path.replace_extension(".mtl");
     boost::filesystem::path texture_atlas_path = output_obj_path;
