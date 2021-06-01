@@ -92,7 +92,7 @@ namespace Memory
                 return nullptr;
             }
         }
-        ElementType* allocate(std::uint32_t index)
+        ElementType* allocate(std::uint32_t index) // Hide it
         {
             max_allocated_id = std::max(max_allocated_id, index);
             std::uint32_t page_index = index / PAGE_SIZE;
@@ -113,7 +113,7 @@ namespace Memory
                 return reinterpret_cast<ElementType*>(new_element.storage.data());
             }
         }
-        void deallocate(std::uint32_t index)
+        void deallocate(std::uint32_t index) // Hide it
         {
             std::uint32_t page_index = index / PAGE_SIZE;
             Page* page = pages[page_index];
@@ -129,7 +129,7 @@ namespace Memory
             if (pageAllocated(next_available_id))
             {
                 ElementStorage* info = element(next_available_id);
-                assert(!find(next_available_id));
+                assert(!info->allocated);
                 std::uint32_t result_id = next_available_id;
                 if (info->next_available_id)
                 {

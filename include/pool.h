@@ -25,8 +25,8 @@ namespace Memory
             ElementStorage* next_free = nullptr;
             std::array<unsigned char, ELEMENT_SIZE> buffer;
         };
-        typedef std::vector<ElementStorage> storage_t;
-        storage_t storage;
+        typedef std::vector<ElementStorage> Storage;
+        Storage storage;
         ElementStorage* free_element = nullptr;
 
     public:

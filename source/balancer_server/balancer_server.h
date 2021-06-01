@@ -20,11 +20,10 @@
 
 struct NodeServerInfo
 {
-    typedef NodeServerInfo SelfType;
-    typedef std::shared_ptr<SelfType> Ptr;
+    typedef std::shared_ptr<NodeServerInfo> Ptr;
 
     Network::MacAddress mac_address;
-    ip_address_t ip_address;
+    IpAddress ip_address;
     unsigned short max_process_count = 1;
     bool power_on = false;
 
@@ -34,7 +33,7 @@ struct NodeServerInfo
 struct NodeInfo
 {
     Network::MacAddress mac_address;
-    ip_address_t ip_address;
+    IpAddress ip_address;
     std::uint16_t port_number = NODE_SERVER_PORT_NUMBER_BASE;
 };
 
@@ -49,18 +48,18 @@ class BalancerServer : public Transport
     SquareCell global_bounding_box;
     BalanceTree* balance_tree = nullptr;
 
-    typedef Memory::FastIndexMap<BalanceTree> uuid_to_tree_t;
-    uuid_to_tree_t uuid_to_tree;
+    typedef Memory::FastIndexMap<BalanceTree> UuidToTree;
+    UuidToTree uuid_to_tree;
 
-    typedef std::map<boost::asio::ip::udp::endpoint, BalanceTree*> end_point_to_tree_t;
-    end_point_to_tree_t end_point_to_tree;
+    typedef std::map<boost::asio::ip::udp::endpoint, BalanceTree*> EndPointToTree;
+    EndPointToTree end_point_to_tree;
 
-    typedef std::map<ip_address_t::bytes_type, NodeServerInfo::Ptr> available_node_servers_t;
-    available_node_servers_t available_node_servers;
+    typedef std::map<IpAddress::bytes_type, NodeServerInfo::Ptr> AvailableNodeServers;
+    AvailableNodeServers available_node_servers;
     std::list<NodeInfo> available_nodes;
 
-    typedef std::unordered_map<std::uint32_t, boost::asio::ip::udp::endpoint> id_to_proxy_t;
-    id_to_proxy_t id_to_proxy;
+    typedef std::unordered_map<std::uint32_t, boost::asio::ip::udp::endpoint> IdToProxy;
+    IdToProxy id_to_proxy;
 
     Packet::ESeverityType minimum_level = Packet::ESeverityType::DebugMessage;
     bool log_to_screen = false;

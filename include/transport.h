@@ -34,8 +34,7 @@ private:
 
     struct GuaranteedDeliveryInfo : public std::enable_shared_from_this<GuaranteedDeliveryInfo>
     {
-        typedef GuaranteedDeliveryInfo SelfType;
-        typedef std::shared_ptr<SelfType> Ptr;
+        typedef std::shared_ptr<GuaranteedDeliveryInfo> Ptr;
 
         std::uint32_t packet_number = 0;
         std::uint8_t attempt_count = 8;
@@ -52,8 +51,8 @@ private:
         {
         }
     };
-    typedef std::unordered_map<std::uint32_t, GuaranteedDeliveryInfo::Ptr> guaranteed_delivery_map_t;
-    guaranteed_delivery_map_t guaranteed_delivery_map;
+    typedef std::unordered_map<std::uint32_t, GuaranteedDeliveryInfo::Ptr> GuaranteedDeliveryMap;
+    GuaranteedDeliveryMap guaranteed_delivery_map;
     bool guaranteed_delivery_enabled = false;
 
 public:
@@ -317,7 +316,7 @@ private:
 
     void onGuaranteedAnswer(std::uint32_t packet_number)
     {
-        guaranteed_delivery_map_t::iterator fit = guaranteed_delivery_map.find(packet_number);
+        GuaranteedDeliveryMap::iterator fit = guaranteed_delivery_map.find(packet_number);
         if (fit != guaranteed_delivery_map.end())
         {
 #ifndef NETWORK_LOG

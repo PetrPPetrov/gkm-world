@@ -70,4 +70,7 @@ another thread is for GUI interaction and 3D visualization.
 * avoid InitializePositionInternalAnswer packet from Node->Balancer, send it directly Node->Proxy
 * use successful double action policy for packet delivery
 * prepare visible users list on node server for quick fetching
-* implement some basic version of Mesh Builder
+* Log::Logger is not thread-safe
+* Log::Logger could lost some log messages
+* Memory::FastIndexMap hide some methods
+* 

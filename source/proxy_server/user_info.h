@@ -9,8 +9,8 @@
 
 struct UserInfo
 {
-    typedef UserInfo self_type;
-    typedef std::shared_ptr<self_type> ptr;
+    typedef std::shared_ptr<UserInfo> Ptr;
+
     std::string login;
     std::string password;
     std::string full_name;

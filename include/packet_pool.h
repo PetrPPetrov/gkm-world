@@ -10,7 +10,7 @@
 
 namespace Packet
 {
-    template<size_t Capacity>
+    template<std::size_t Capacity>
     class Pool : public Memory::Pool<void, Capacity, MAX_SIZE>
     {
     };

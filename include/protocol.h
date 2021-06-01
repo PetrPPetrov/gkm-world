@@ -13,8 +13,8 @@
 #include "mac_address.h"
 #include "balance_tree/common.h"
 
-typedef boost::asio::ip::address_v6 ip_address_t;
-#define to_v to_v6
+typedef boost::asio::ip::address_v6 IpAddress;
+#define TO_V to_v6
 
 #pragma pack(push, 1)
 
@@ -170,7 +170,7 @@ namespace Packet
         PlayerLocation user_location;
         std::uint32_t client_packet_number = 0;
         std::uint32_t proxy_packet_number = 0;
-        ip_address_t::bytes_type proxy_server_address = { 0 };
+        IpAddress::bytes_type proxy_server_address = { 0 };
         std::uint16_t proxy_server_port_number = 0;
 
         InitializePositionInternal()
@@ -183,7 +183,7 @@ namespace Packet
     struct InitializePositionInternalAnswer : public Base
     {
         bool success = false;
-        ip_address_t::bytes_type node_server_address = { 0 };
+        IpAddress::bytes_type node_server_address = { 0 };
         std::uint16_t node_server_port_number = 0;
         std::uint32_t user_token = 0;
         PlayerLocation corrected_location;
@@ -263,10 +263,10 @@ namespace Packet
     {
         bool success = false;
         SquareCell bounding_box;
-        std::array<ip_address_t::bytes_type, 12> neighbor_addresses = { 0 };
+        std::array<IpAddress::bytes_type, 12> neighbor_addresses = { 0 };
         std::array<std::uint16_t, 12> neighbor_ports = { 0 };
         std::array<std::uint32_t, 12> neighbor_tokens = { 0 };
-        ip_address_t::bytes_type parent_address = { 0 };
+        IpAddress::bytes_type parent_address = { 0 };
         unsigned short parent_port = 0;
         std::uint32_t parent_token = 0;
 
@@ -360,7 +360,7 @@ namespace Packet
         bool leaf_node = true;
         std::array<std::uint32_t, CountOfChildren> children;
         std::uint32_t user_count = 0;
-        ip_address_t::bytes_type node_server_address = { 0 };
+        IpAddress::bytes_type node_server_address = { 0 };
         std::uint16_t node_server_port_number = 0;
 
         MonitoringBalanceTreeInfoAnswer()
@@ -480,7 +480,7 @@ namespace Packet
     {
         bool success = false;
         std::uint32_t proxy_index = 0;
-        ip_address_t::bytes_type proxy_server_address = { 0 };
+        IpAddress::bytes_type proxy_server_address = { 0 };
         std::uint16_t proxy_server_port_number = 0;
 
         MonitoringGetProxyInfoAnswer()

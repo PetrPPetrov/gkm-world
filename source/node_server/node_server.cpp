@@ -37,9 +37,9 @@ NodeServer::NodeServer(std::uint16_t port_number_, const std::string& cfg_file_n
     config_reader.addParameter("log_to_file", log_to_file);
     config_reader.read(config_file);
 
-    balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
+    balancer_server_end_point = boost::asio::ip::udp::endpoint(IpAddress::from_string(balancer_server_ip), balancer_server_port_number);
 
-    node_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(), port_number);
+    node_server_end_point = boost::asio::ip::udp::endpoint(IpAddress(), port_number);
     node_server_token = 0;
     socket = boost::asio::ip::udp::socket(io_service, node_server_end_point);
 
@@ -166,11 +166,11 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
             answer->user_token = new_user->value.user_location.user_token;
             answer->client_packet_number = packet->client_packet_number;
             answer->corrected_location = new_user->value.user_location;
-            answer->node_server_address = node_server_end_point.address().to_v().to_bytes();
+            answer->node_server_address = node_server_end_point.address().TO_V().to_bytes();
             answer->node_server_port_number = node_server_end_point.port();
             answer->proxy_packet_number = packet->proxy_packet_number;
             answer->success = true;
-            auto proxy_server_endpoint = boost::asio::ip::udp::endpoint(ip_address_t(packet->proxy_server_address), packet->proxy_server_port_number);
+            auto proxy_server_endpoint = boost::asio::ip::udp::endpoint(IpAddress(packet->proxy_server_address), packet->proxy_server_port_number);
             standardSendTo(answer, proxy_server_endpoint);
             return true;
         }
@@ -182,11 +182,11 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
             auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->packet_number);
             answer->user_token = packet->user_token;
             answer->client_packet_number = packet->client_packet_number;
-            answer->node_server_address = node_server_end_point.address().to_v().to_bytes();
+            answer->node_server_address = node_server_end_point.address().TO_V().to_bytes();
             answer->node_server_port_number = node_server_end_point.port();
             answer->proxy_packet_number = packet->proxy_packet_number;
             answer->success = false;
-            auto proxy_server_endpoint = boost::asio::ip::udp::endpoint(ip_address_t(packet->proxy_server_address), packet->proxy_server_port_number);
+            auto proxy_server_endpoint = boost::asio::ip::udp::endpoint(IpAddress(packet->proxy_server_address), packet->proxy_server_port_number);
             standardSendTo(answer, proxy_server_endpoint);
             return true;
         }
@@ -201,11 +201,11 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
         answer->user_token = packet->user_token;
         answer->client_packet_number = packet->client_packet_number;
         answer->corrected_location = user_location->value.user_location;
-        answer->node_server_address = node_server_end_point.address().to_v().to_bytes();
+        answer->node_server_address = node_server_end_point.address().TO_V().to_bytes();
         answer->node_server_port_number = node_server_end_point.port();
         answer->proxy_packet_number = packet->proxy_packet_number;
         answer->success = true;
-        auto proxy_server_endpoint = boost::asio::ip::udp::endpoint(ip_address_t(packet->proxy_server_address), packet->proxy_server_port_number);
+        auto proxy_server_endpoint = boost::asio::ip::udp::endpoint(IpAddress(packet->proxy_server_address), packet->proxy_server_port_number);
         standardSendTo(answer, proxy_server_endpoint);
         return true;
     }
@@ -270,7 +270,7 @@ bool NodeServer::onGetNodeInfoAnswer(size_t received_bytes)
     for (size_t i = NeighborFirst; i < NeighborLast; ++i)
     {
         neighbor_end_points[i] = boost::asio::ip::udp::endpoint(
-            ip_address_t(packet->neighbor_addresses[i]), packet->neighbor_ports[i]);
+            IpAddress(packet->neighbor_addresses[i]), packet->neighbor_ports[i]);
         neighbor_tokens[i] = packet->neighbor_tokens[i];
 #ifdef _DEBUG
         LOG_DEBUG << "neighbor_end_points[ " << i << "] " << neighbor_end_points[i];
@@ -278,7 +278,7 @@ bool NodeServer::onGetNodeInfoAnswer(size_t received_bytes)
 #endif
     }
     parent_end_point = boost::asio::ip::udp::endpoint(
-        ip_address_t(packet->parent_address), packet->parent_port);
+        IpAddress(packet->parent_address), packet->parent_port);
     parent_token = packet->parent_token;
 #ifdef _DEBUG
     LOG_DEBUG << "parent_end_point " << parent_end_point;

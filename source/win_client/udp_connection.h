@@ -63,8 +63,8 @@ private:
     void onLogoutFailure();
     bool onLogoutAnswer(size_t received_bytes);
 private:
-    typedef std::map<std::uint32_t, SentPacketInfo> packet_number_to_sent_packet_info_t;
-    packet_number_to_sent_packet_info_t packet_number_to_location;
+    typedef std::map<std::uint32_t, SentPacketInfo> PacketNumberToSentPacketInfo;
+    PacketNumberToSentPacketInfo packet_number_to_location;
 
     boost::asio::deadline_timer timer;
     std::uint32_t last_received_packet_number_answer = 0;

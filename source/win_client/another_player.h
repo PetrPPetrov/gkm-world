@@ -10,8 +10,7 @@
 
 struct AnotherPlayer
 {
-    typedef AnotherPlayer Self;
-    typedef std::shared_ptr<Self> Ptr;
+    typedef std::shared_ptr<AnotherPlayer> Ptr;
 
     PlayerUuidLocation player_info;
     //BlockChain<Self> display_chain;

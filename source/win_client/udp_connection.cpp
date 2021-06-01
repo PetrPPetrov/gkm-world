@@ -285,7 +285,7 @@ bool UDPConnection::onUserActionAnswer(size_t received_bytes)
 #endif
 
     auto packet = getReceiveBufferAs<Packet::UserActionAnswer>();
-    packet_number_to_sent_packet_info_t::iterator fit = packet_number_to_location.find(packet->packet_number);
+    PacketNumberToSentPacketInfo::iterator fit = packet_number_to_location.find(packet->packet_number);
     if (fit == packet_number_to_location.end())
     {
         LOG_ERROR << "can not find packet_number in packet_number_to_location" << std::endl;
@@ -318,7 +318,7 @@ bool UDPConnection::onUserActionAnswer(size_t received_bytes)
 
     //PlayerLocation new_local = add(local, difference);
     //g_player_state = PlayerState(new_local.x_pos, new_local.y_pos, g_player_state.z_pos, new_local.direction);
-    packet_number_to_sent_packet_info_t::iterator it = fit;
+    PacketNumberToSentPacketInfo::iterator it = fit;
     ++it;
     while (it != packet_number_to_location.end())
     {
@@ -332,8 +332,8 @@ bool UDPConnection::onUserActionAnswer(size_t received_bytes)
 #ifdef _DEBUG
     LOG_DEBUG << "other_player_count = " << packet->other_player_count << std::endl;
 #endif
-    typedef std::set<std::uint32_t> uuid_set_t;
-    uuid_set_t current_other_player_uuids;
+    typedef std::set<std::uint32_t> UuidSet;
+    UuidSet current_other_player_uuids;
     for (std::uint16_t i = 0; i < packet->other_player_count; ++i)
     {
         if (i >= Packet::MAX_USER_COUNT_IN_PACKET)

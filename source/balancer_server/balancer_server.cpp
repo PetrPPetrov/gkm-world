@@ -47,17 +47,17 @@ BalancerServer::BalancerServer(const std::string& cfg_file_name_) :
     {
         NodeServerInfo::Ptr new_node_server_info = std::make_shared<NodeServerInfo>();
         new_node_server_info->mac_address = *mac_address_it;
-        new_node_server_info->ip_address = ip_address_t::from_string(*ip_address_it++);
+        new_node_server_info->ip_address = IpAddress::from_string(*ip_address_it++);
         if (new_node_server_info->ip_address.is_loopback())
         {
             // Local node server is always power on
             new_node_server_info->power_on = true;
         }
         new_node_server_info->max_process_count = *max_process_count_it++;
-        available_node_servers.insert(available_node_servers_t::value_type(new_node_server_info->ip_address.to_bytes(), new_node_server_info));
+        available_node_servers.insert(AvailableNodeServers::value_type(new_node_server_info->ip_address.to_bytes(), new_node_server_info));
     }
 
-    balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(), port_number);
+    balancer_server_end_point = boost::asio::ip::udp::endpoint(IpAddress(), port_number);
     socket = boost::asio::ip::udp::socket(io_service, balancer_server_end_point);
 
     global_bounding_box.start.x = global_bounding_box_start_x;
@@ -157,7 +157,7 @@ void BalancerServer::startNode(NodeInfo& node_info, BalanceTree* balance_tree)
     auto it = end_point_to_tree.find(end_point);
     if (it == end_point_to_tree.end())
     {
-        end_point_to_tree.insert(end_point_to_tree_t::value_type(end_point, balance_tree));
+        end_point_to_tree.insert(EndPointToTree::value_type(end_point, balance_tree));
     }
     else
     {
@@ -316,7 +316,7 @@ bool BalancerServer::onGetNodeInfo(size_t received_bytes)
     auto node_it = end_point_to_tree.find(remote_end_point);
     if (node_it != end_point_to_tree.end())
     {
-        auto found_node_info_it = available_node_servers.find(remote_end_point.address().to_v().to_bytes());
+        auto found_node_info_it = available_node_servers.find(remote_end_point.address().TO_V().to_bytes());
         if (found_node_info_it != available_node_servers.end())
         {
             if (!found_node_info_it->second->power_on)
@@ -513,7 +513,7 @@ bool BalancerServer::onMonitoringGetProxyInfo(size_t received_bytes)
     auto find_it = id_to_proxy.find(packet->proxy_index);
     if (find_it != id_to_proxy.end())
     {
-        answer->proxy_server_address = find_it->second.address().to_v().to_bytes();
+        answer->proxy_server_address = find_it->second.address().TO_V().to_bytes();
         answer->proxy_server_port_number = find_it->second.port();
         answer->success = true;
     }

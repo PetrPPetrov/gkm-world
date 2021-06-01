@@ -58,19 +58,19 @@ class ConfigurationReader
         }
     };
 
-    typedef std::map<std::string, std::shared_ptr<IConfigurationParameter> > name_to_parameter_t;
-    name_to_parameter_t parameters;
+    typedef std::map<std::string, std::shared_ptr<IConfigurationParameter> > NameToParameter;
+    NameToParameter parameters;
 public:
     template<class Type>
     ConfigurationReader& addParameter(const std::string& name, Type& parameter)
     {
-        parameters.insert(name_to_parameter_t::value_type(name, std::make_shared<ConfigurationParameter<Type> >(name, parameter)));
+        parameters.insert(NameToParameter::value_type(name, std::make_shared<ConfigurationParameter<Type> >(name, parameter)));
         return *this;
     }
     template<class ElementType>
     ConfigurationReader& addParameter(const std::string& name, std::list<ElementType>& parameter_list)
     {
-        parameters.insert(name_to_parameter_t::value_type(name, std::make_shared<ConfigurationParameterList<ElementType> >(name, parameter_list)));
+        parameters.insert(NameToParameter::value_type(name, std::make_shared<ConfigurationParameterList<ElementType> >(name, parameter_list)));
         return *this;
     }
     void read(std::istream& stream)

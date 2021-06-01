@@ -24,11 +24,11 @@ class ProxyServer : public Transport
     boost::asio::ip::udp::endpoint balancer_server_end_point;
     boost::asio::ip::udp::endpoint proxy_server_end_point;
 
-    typedef std::map<std::string, UserInfo::ptr> login_to_user_info_t;
-    login_to_user_info_t login_to_user_info;
+    typedef std::map<std::string, UserInfo::Ptr> LoginToUserInfo;
+    LoginToUserInfo login_to_user_info;
 
-    typedef Memory::FastIndexMap<UserOnlineInfo> id_to_user_info_t;
-    id_to_user_info_t id_to_user_info;
+    typedef Memory::FastIndexMap<UserOnlineInfo> IdToUserInfo;
+    IdToUserInfo id_to_user_info;
     std::uint32_t online_user_count = 0;
 
     std::uint32_t proxy_index = 0;

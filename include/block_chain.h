@@ -5,13 +5,14 @@
 
 #include <cassert>
 #include <list>
+#include <atomic>
 
 template<typename ValueType>
 struct BlockChain
 {
     ValueType value;
-    BlockChain<ValueType>* previous = nullptr;
-    BlockChain<ValueType>* next = nullptr;
+    std::atomic<BlockChain<ValueType>*> previous = nullptr;
+    std::atomic<BlockChain<ValueType>*> next = nullptr;
 
     BlockChain(ValueType value_) : value(value_)
     {

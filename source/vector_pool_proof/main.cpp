@@ -31,8 +31,8 @@ std::uint32_t my_rand()
     return random;
 }
 
-typedef Memory::FastIndexMap<A> fast_index_map_t;
-fast_index_map_t map_data6;
+typedef Memory::FastIndexMap<A> FastIndexMap;
+FastIndexMap map_data6;
 void main6()
 {
     for (size_t i = 0; i < 500000; ++i)
@@ -73,17 +73,17 @@ void main6()
     }
 }
 
-typedef std::unordered_map<std::uint32_t, A*> unordered_map_t;
-unordered_map_t map_data5;
+typedef std::unordered_map<std::uint32_t, A*> UnorderedMap;
+UnorderedMap map_data5;
 void main5()
 {
     for (size_t i = 0; i < 500000; ++i)
     {
         std::uint32_t index = my_rand() % 1000000;
-        unordered_map_t::iterator it = map_data5.find(index);
+        UnorderedMap::iterator it = map_data5.find(index);
         if (it == map_data5.end())
         {
-            map_data5.insert(unordered_map_t::value_type(index, new A));
+            map_data5.insert(UnorderedMap::value_type(index, new A));
         }
         else
         {
@@ -95,7 +95,7 @@ void main5()
         std::uint32_t x = my_rand() % 1000000;
         if (my_rand() % 2)
         {
-            unordered_map_t::iterator it = map_data5.find(x);
+            UnorderedMap::iterator it = map_data5.find(x);
             if (it != map_data5.end())
             {
                 delete it->second;
@@ -104,17 +104,17 @@ void main5()
         }
         else
         {
-            unordered_map_t::iterator it = map_data5.find(x);
+            UnorderedMap::iterator it = map_data5.find(x);
             if (it == map_data5.end())
             {
-                map_data5.insert(unordered_map_t::value_type(x, new A));
+                map_data5.insert(UnorderedMap::value_type(x, new A));
             }
         }
     }
 }
 
-typedef std::vector<A*> vector_t;
-vector_t map_data1(1000000);
+typedef std::vector<A*> Vector;
+Vector map_data1(1000000);
 void main1()
 {
     for (size_t i = 0; i < 500000; ++i)
@@ -150,17 +150,17 @@ void main1()
     }
 }
 
-typedef std::map<std::uint32_t, A*> map_t;
-map_t map_data2;
+typedef std::map<std::uint32_t, A*> Map;
+Map map_data2;
 void main2()
 {
     for (size_t i = 0; i < 500000; ++i)
     {
         std::uint32_t index = my_rand() % 1000000;
-        map_t::iterator it = map_data2.find(index);
+        Map::iterator it = map_data2.find(index);
         if (it == map_data2.end())
         {
-            map_data2.insert(map_t::value_type(index, new A));
+            map_data2.insert(Map::value_type(index, new A));
         }
         else
         {
@@ -172,7 +172,7 @@ void main2()
         std::uint32_t x = my_rand() % 1000000;
         if (my_rand() % 2)
         {
-            map_t::iterator it = map_data2.find(x);
+            Map::iterator it = map_data2.find(x);
             if (it != map_data2.end())
             {
                 delete it->second;
@@ -181,17 +181,17 @@ void main2()
         }
         else
         {
-            map_t::iterator it = map_data2.find(x);
+            Map::iterator it = map_data2.find(x);
             if (it == map_data2.end())
             {
-                map_data2.insert(map_t::value_type(x, new A));
+                map_data2.insert(Map::value_type(x, new A));
             }
         }
     }
 }
 
 Memory::Pool<A, 1000000> vector_pool;
-vector_t map_data3(1000000);
+Vector map_data3(1000000);
 void main3()
 {
     for (size_t i = 0; i < 500000; ++i)
@@ -229,16 +229,16 @@ void main3()
 
 
 Memory::Pool<A, 1000000> map_pool;
-map_t map_data4;
+Map map_data4;
 void main4()
 {
     for (size_t i = 0; i < 500000; ++i)
     {
         std::uint32_t index = my_rand() % 1000000;
-        map_t::iterator it = map_data4.find(index);
+        Map::iterator it = map_data4.find(index);
         if (it == map_data4.end())
         {
-            map_data4.insert(map_t::value_type(index, map_pool.allocate()));
+            map_data4.insert(Map::value_type(index, map_pool.allocate()));
         }
         else
         {
@@ -250,7 +250,7 @@ void main4()
         std::uint32_t x = my_rand() % 1000000;
         if (my_rand() % 2)
         {
-            map_t::iterator it = map_data4.find(x);
+            Map::iterator it = map_data4.find(x);
             if (it != map_data4.end())
             {
                 map_pool.deallocate(it->second);
@@ -259,16 +259,16 @@ void main4()
         }
         else
         {
-            map_t::iterator it = map_data4.find(x);
+            Map::iterator it = map_data4.find(x);
             if (it == map_data4.end())
             {
-                map_data4.insert(map_t::value_type(x, map_pool.allocate()));
+                map_data4.insert(Map::value_type(x, map_pool.allocate()));
             }
         }
     }
 }
 
-void validate(const vector_t& vec1, const vector_t& vec2)
+void validate(const Vector& vec1, const Vector& vec2)
 {
     bool validation_error = false;
     for (size_t i = 0; i < 1000000; ++i)
@@ -290,11 +290,11 @@ void validate(const vector_t& vec1, const vector_t& vec2)
     }
 }
 
-void validate(const map_t& map1, const map_t& map2)
+void validate(const Map& map1, const Map& map2)
 {
     bool validation_error = false;
-    map_t::const_iterator it1 = map1.begin();
-    map_t::const_iterator it2 = map2.begin();
+    Map::const_iterator it1 = map1.begin();
+    Map::const_iterator it2 = map2.begin();
     while (it1 != map1.end())
     {
         if (it1->first != it2->first)
@@ -328,10 +328,10 @@ void validate(const map_t& map1, const map_t& map2)
     }
 }
 
-void validate(const vector_t& vec, const map_t& map)
+void validate(const Vector& vec, const Map& map)
 {
     bool validation_error = false;
-    map_t::const_iterator it = map.begin();
+    Map::const_iterator it = map.begin();
     for (size_t i = 0; i < 1000000; ++i)
     {
         if (vec[i])
@@ -365,11 +365,11 @@ void validate(const vector_t& vec, const map_t& map)
     }
 }
 
-void validate(const map_t& map1, const unordered_map_t& map2)
+void validate(const Map& map1, const UnorderedMap& map2)
 {
     bool validation_error = false;
-    map_t::const_iterator it1 = map1.begin();
-    unordered_map_t::const_iterator it2 = map2.begin();
+    Map::const_iterator it1 = map1.begin();
+    UnorderedMap::const_iterator it2 = map2.begin();
     while (it1 != map1.end())
     {
         if (it1->first != it2->first)

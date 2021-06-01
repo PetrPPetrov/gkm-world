@@ -595,7 +595,7 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
                 tree_info->leaf_node = answer->leaf_node;
                 tree_info->level = answer->level;
                 tree_info->user_count = answer->user_count;
-                tree_info->node_server_address = ip_address_t(answer->node_server_address);
+                tree_info->node_server_address = IpAddress(answer->node_server_address);
                 tree_info->node_server_port_number = answer->node_server_port_number;
                 tree_info->current_child_index_to_send = 0;
 
@@ -805,7 +805,7 @@ void MainMonitorWindow::onMonitoringGetProxyInfoAnswer(QByteArray data)
     {
         log->appendPlainText(tr("proxy info, proxy index = %1").arg(answer->proxy_index));
         ServerInfo::ProxyInfo proxy_server_address;
-        proxy_server_address.ip_address = ip_address_t(answer->proxy_server_address).to_string();
+        proxy_server_address.ip_address = IpAddress(answer->proxy_server_address).to_string();
         proxy_server_address.port_number = answer->proxy_server_port_number;
         server_info->id_to_proxy.emplace(answer->proxy_index, proxy_server_address);
         if (server_info->proxy_info_requests.empty())

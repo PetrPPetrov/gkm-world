@@ -28,7 +28,7 @@ struct BalancerTreeInfo
     std::array<std::uint32_t, CountOfChildren> children;
     std::array<std::uint32_t, 4 * (NEIGHBOR_COUNT_AT_SIDE + 1)> neighbors;
     std::uint32_t user_count = 0;
-    ip_address_t node_server_address;
+    IpAddress node_server_address;
     std::uint16_t node_server_port_number = 0;
 
     // (X, Y) -> neighbor token. (X,Y) is cell address of external cell

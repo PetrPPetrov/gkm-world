@@ -27,8 +27,8 @@ ProxyServer::ProxyServer(const std::string& cfg_file_name_) :
     config_reader.addParameter("registered_users_file_name", registered_users_file_name);
     config_reader.read(config_file);
 
-    balancer_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t::from_string(balancer_server_ip), balancer_server_port_number);
-    proxy_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(), port_number);
+    balancer_server_end_point = boost::asio::ip::udp::endpoint(IpAddress::from_string(balancer_server_ip), balancer_server_port_number);
+    proxy_server_end_point = boost::asio::ip::udp::endpoint(IpAddress(), port_number);
     socket = boost::asio::ip::udp::socket(io_service, proxy_server_end_point);
 }
 
@@ -151,7 +151,7 @@ bool ProxyServer::onLogin(size_t received_bytes)
 #endif
 
     auto fit_login_it = login_to_user_info.find(login);
-    UserInfo::ptr cur_user;
+    UserInfo::Ptr cur_user;
     if (fit_login_it != login_to_user_info.end())
     {
 #ifdef _DEBUG
@@ -180,11 +180,11 @@ bool ProxyServer::onLogin(size_t received_bytes)
 #ifdef _DEBUG
         LOG_DEBUG << "new user";
 #endif
-        UserInfo::ptr new_user = std::make_shared<UserInfo>();
+        UserInfo::Ptr new_user = std::make_shared<UserInfo>();
         new_user->login = login;
         new_user->password = password;
         new_user->full_name = full_name;
-        login_to_user_info.insert(login_to_user_info_t::value_type(login, new_user));
+        login_to_user_info.insert(LoginToUserInfo::value_type(login, new_user));
         cur_user = new_user;
     }
 
@@ -320,7 +320,7 @@ bool ProxyServer::onInitializePosition(size_t received_bytes)
         request->client_packet_number = packet->packet_number;
         request->proxy_packet_number = request->packet_number;
         request->user_location = packet->user_location;
-        request->proxy_server_address = socket.local_endpoint().address().to_v().to_bytes();
+        request->proxy_server_address = socket.local_endpoint().address().TO_V().to_bytes();
         request->proxy_server_port_number = port_number;
         standardSendTo(request, balancer_server_end_point);
         return true;
@@ -373,11 +373,11 @@ bool ProxyServer::onInitializePositionInternalAnswer(size_t received_bytes)
 
     user_online_info->in_game = true;
 
-    user_online_info->node_server_end_point = boost::asio::ip::udp::endpoint(ip_address_t(packet->node_server_address), packet->node_server_port_number);
+    user_online_info->node_server_end_point = boost::asio::ip::udp::endpoint(IpAddress(packet->node_server_address), packet->node_server_port_number);
 
     if (user_online_info->node_server_end_point.address().is_loopback())
     {
-        user_online_info->node_server_end_point = boost::asio::ip::udp::endpoint(remote_end_point.address().to_v(), packet->node_server_port_number);
+        user_online_info->node_server_end_point = boost::asio::ip::udp::endpoint(remote_end_point.address().TO_V(), packet->node_server_port_number);
     }
 
     auto answer = createPacket<Packet::InitializePositionAnswer>(packet->client_packet_number);
@@ -507,7 +507,7 @@ void ProxyServer::loadRegisteredUsers(const std::string& file_name)
     std::ifstream registered_users(file_name);
     while (!registered_users.bad() && !registered_users.eof())
     {
-        UserInfo::ptr new_user = std::make_shared<UserInfo>();
+        UserInfo::Ptr new_user = std::make_shared<UserInfo>();
         registered_users >> *new_user;
         if (new_user->login.empty() || new_user->password.empty() || new_user->full_name.empty())
         {
