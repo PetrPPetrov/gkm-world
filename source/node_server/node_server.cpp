@@ -117,7 +117,7 @@ bool NodeServer::onLogoutInternal(size_t received_bytes)
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::LogoutInternal>();
-    UserLocation* user_location = uuid_to_user_location.find(packet->user_token);
+    UserLocationBlockChain* user_location = uuid_to_user_location.find(packet->user_token);
     if (user_location)
     {
         logic_thread.removeUser(user_location);
@@ -145,27 +145,27 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
 #endif
 
     const auto packet = getReceiveBufferAs<Packet::InitializePositionInternal>();
-    UserLocation* user_location = uuid_to_user_location.find(packet->user_token);
+    UserLocationBlockChain* user_location = uuid_to_user_location.find(packet->user_token);
     if (!user_location)
     {
         // Register new user
         if (inside(global_bounding_box, packet->user_location.x_pos, packet->user_location.y_pos))
         {
             user_count++;
-            UserLocation* new_user = new(uuid_to_user_location.allocate(packet->user_token)) UserLocation;
-            new_user->user_location.user_token = packet->user_token;
-            new_user->user_location.x_pos = packet->user_location.x_pos;
-            new_user->user_location.y_pos = packet->user_location.y_pos;
-            new_user->user_location.direction = packet->user_location.direction;
+            UserLocationBlockChain* new_user = new(uuid_to_user_location.allocate(packet->user_token)) UserLocationBlockChain;
+            new_user->value.user_location.user_token = packet->user_token;
+            new_user->value.user_location.x_pos = packet->user_location.x_pos;
+            new_user->value.user_location.y_pos = packet->user_location.y_pos;
+            new_user->value.user_location.direction = packet->user_location.direction;
             logic_thread.addNewUser(new_user);
 
 #ifdef _DEBUG
-            LOG_DEBUG << "initialized position of user " << new_user->user_location.user_token;
+            LOG_DEBUG << "initialized position of user " << new_user->value.user_location.user_token;
 #endif
             auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->packet_number);
-            answer->user_token = new_user->user_location.user_token;
+            answer->user_token = new_user->value.user_location.user_token;
             answer->client_packet_number = packet->client_packet_number;
-            answer->corrected_location = new_user->user_location;
+            answer->corrected_location = new_user->value.user_location;
             answer->node_server_address = node_server_end_point.address().to_v().to_bytes();
             answer->node_server_port_number = node_server_end_point.port();
             answer->proxy_packet_number = packet->proxy_packet_number;
@@ -200,7 +200,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
         auto answer = createPacket<Packet::InitializePositionInternalAnswer>(packet->packet_number);
         answer->user_token = packet->user_token;
         answer->client_packet_number = packet->client_packet_number;
-        answer->corrected_location = user_location->user_location;
+        answer->corrected_location = user_location->value.user_location;
         answer->node_server_address = node_server_end_point.address().to_v().to_bytes();
         answer->node_server_port_number = node_server_end_point.port();
         answer->proxy_packet_number = packet->proxy_packet_number;
@@ -224,7 +224,7 @@ bool NodeServer::onUserActionInternal(size_t received_bytes)
     if (user_location)
     {
         // If user is in the notify zone, then need to send message neighbors node servers
-        if (!inside(without_notify_bounding_box, user_location->user_location.x_pos, user_location->user_location.y_pos))
+        if (!inside(without_notify_bounding_box, user_location->value.user_location.x_pos, user_location->value.user_location.y_pos))
         {
             //ENeighborIndex neighbor_index = getNeihgborByPosition(user_location->user_location.x_pos, user_location->user_location.y_pos, global_bounding_box);
             //boost::asio::ip::udp::endpoint neighbor_end_point = neighbor_end_points[neighbor_index];
@@ -234,10 +234,10 @@ bool NodeServer::onUserActionInternal(size_t received_bytes)
             //standardSendTo(user_action_internal_packet, neighbor_end_point);
         }
 
-        user_location->state = packet->keyboard_state;
+        user_location->value.state = packet->keyboard_state;
         auto answer = createPacket<Packet::UserActionInternalAnswer>(packet->packet_number);
         answer->user_token = packet->user_token;
-        answer->user_location = user_location->user_location;
+        answer->user_location = user_location->value.user_location;
         answer->client_packet_number = packet->client_packet_number;
         logic_thread.fillOtherUserList(*answer, packet->user_token);
         standardSend(answer);

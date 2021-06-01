@@ -6,7 +6,7 @@ Gkm-World is open-source massive multiplayer online game engine.
 
 Gkm-World uses UDP protocol at all for a fast network communication.
 
-Gkm-World consists from servers and clients. Only client for Windows is available.
+Gkm-World consists from servers and clients. Only client for Windows is available now.
 Windows client uses BGFX framework.
 
 Gkm-World server part consists of several servers:
@@ -14,6 +14,8 @@ Gkm-World server part consists of several servers:
 * Proxy server
 * Node server
 * Balancer server
+
+All these servers are located in a local Gkm-World server network.
 
 Proxy server is a single server which is visible from the public Internet and a local Gkm-World server network.
 Do not confuse Gkm-World proxy server with a generic web http-caching server (web proxy).

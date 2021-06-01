@@ -40,6 +40,7 @@ public:
         std::chrono::time_point<std::chrono::system_clock> sending_time;
     };
 
+    static EState mainState();
     static void start();
     void doLogout();
     void doEvent();
@@ -68,4 +69,5 @@ private:
     boost::asio::deadline_timer timer;
     std::uint32_t last_received_packet_number_answer = 0;
     bool exiting = false;
+    static EState main_state;
 };

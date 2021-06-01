@@ -18,7 +18,7 @@
 #include "Eigen/Eigen"
 #include "log.h"
 #include "config.h"
-#include "logic.h"
+#include "game_logic.h"
 
 UDPConnection* g_connection = nullptr;
 KeyboardState g_keyboard_state;

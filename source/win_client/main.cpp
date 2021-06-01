@@ -2,7 +2,9 @@
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #include <iostream>
+#include <boost/asio/impl/src.hpp>
 #include "bgfx_engine.h"
+#include "log.h"
 #include "user_interface.h"
 #include "main.h"
 
@@ -36,9 +38,9 @@ AnotherPlayer* g_other_players_display_list = nullptr;
 OtherPlayersMap* g_uuid_to_another_user = nullptr;
 std::uint32_t g_user_token = 0;
 UDPConnection* g_connection = nullptr;
-UDPConnection::EState g_main_state = UDPConnection::EState::Started;
 bool g_logout_request = false;
 
+extern Log::Logger* g_logger = nullptr;
 
 static void renderScene()
 {
@@ -226,6 +228,10 @@ static void shutdownBGFX()
 
 static int winMainImpl(HINSTANCE h_instance, HINSTANCE h_prev_instance, LPSTR lp_cmd_line, INT n_cmd_show)
 {
+    Log::Holder log_holder;
+    g_logger = new Log::Logger(Packet::ESeverityType::DebugMessage, "win_client.log", false, true);
+    LOG_INFO << "Node Server is starting...";
+
     g_hinstance = h_instance;
     registerWindowClass();
     g_hwnd = createWindow();

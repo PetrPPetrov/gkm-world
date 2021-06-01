@@ -14,12 +14,13 @@ struct AnotherPlayer
     typedef std::shared_ptr<Self> Ptr;
 
     PlayerUuidLocation player_info;
-    ChainBlock<Self> display_chain;
+    //BlockChain<Self> display_chain;
 
-    AnotherPlayer() : display_chain(this)
-    {
-    }
+    //AnotherPlayer() : display_chain(this)
+    //{
+    //}
 
+    AnotherPlayer() = default;
     AnotherPlayer(const AnotherPlayer&) = delete;
     AnotherPlayer& operator=(const AnotherPlayer&) = delete;
 };

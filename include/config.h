@@ -19,6 +19,7 @@ class ConfigurationReader
         }
         virtual void read(std::istream& stream) = 0;
 
+        IConfigurationParameter() = default;
         IConfigurationParameter(const IConfigurationParameter&) = delete;
         IConfigurationParameter& operator=(const IConfigurationParameter&) = delete;
     };

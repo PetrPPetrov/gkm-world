@@ -3,16 +3,13 @@
 
 #pragma once
 
-#include "logic.h"
+#include "game_logic.h"
+#include "block_chain.h"
 
 struct UserLocation
 {
     PlayerUuidLocation user_location;
     KeyboardState state;
-
-    UserLocation* previous = nullptr;
-    UserLocation* next = nullptr;
-
-    UserLocation(const UserLocation&) = delete;
-    UserLocation& operator=(const UserLocation&) = delete;
 };
+
+typedef BlockChain<UserLocation> UserLocationBlockChain;

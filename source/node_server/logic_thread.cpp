@@ -4,7 +4,7 @@
 #include <boost/bind.hpp>
 #include "Eigen/Eigen"
 #include "log.h"
-#include "logic.h"
+#include "game_logic.h"
 #include "logic_thread.h"
 #include "block_chain.h"
 #include "global_parameters.h"
@@ -31,10 +31,10 @@ void LogicThread::run(const boost::system::error_code& error)
         return;
     }
 
-    UserLocation* cur_user_location = user_location_chain;
+    UserLocationBlockChain* cur_user_location = user_location_chain;
     while (cur_user_location)
     {
-        gameStep(cur_user_location->user_location, cur_user_location->state);
+        gameStep(cur_user_location->value.user_location, cur_user_location->value.state);
         cur_user_location = cur_user_location->next;
     }
 
@@ -61,12 +61,12 @@ void LogicThread::run(const boost::system::error_code& error)
 #endif
 }
 
-void LogicThread::addNewUser(UserLocation* new_user)
+void LogicThread::addNewUser(UserLocationBlockChain* new_user)
 {
     pushFrontBlock(new_user, user_location_chain);
 }
 
-void LogicThread::removeUser(UserLocation* user)
+void LogicThread::removeUser(UserLocationBlockChain* user)
 {
     removeBlock(user, user_location_chain);
 }
@@ -74,16 +74,16 @@ void LogicThread::removeUser(UserLocation* user)
 void LogicThread::fillOtherUserList(Packet::UserActionInternalAnswer& packet, std::uint32_t user_token)
 {
     packet.other_player_count = 0;
-    UserLocation* cur_user_location = user_location_chain;
+    UserLocationBlockChain* cur_user_location = user_location_chain;
     // TODO: Optimize this; use cell spacing for the visible users selection
     while (cur_user_location)
     {
-        if (cur_user_location->user_location.user_token != user_token)
+        if (cur_user_location->value.user_location.user_token != user_token)
         {
-            packet.other_player[packet.other_player_count].x_pos = cur_user_location->user_location.x_pos;
-            packet.other_player[packet.other_player_count].y_pos = cur_user_location->user_location.y_pos;
-            packet.other_player[packet.other_player_count].direction = cur_user_location->user_location.direction;
-            packet.other_player[packet.other_player_count].user_token = cur_user_location->user_location.user_token;
+            packet.other_player[packet.other_player_count].x_pos = cur_user_location->value.user_location.x_pos;
+            packet.other_player[packet.other_player_count].y_pos = cur_user_location->value.user_location.y_pos;
+            packet.other_player[packet.other_player_count].direction = cur_user_location->value.user_location.direction;
+            packet.other_player[packet.other_player_count].user_token = cur_user_location->value.user_location.user_token;
             packet.other_player_count++;
         }
         if (packet.other_player_count >= Packet::MAX_USER_COUNT_IN_PACKET)

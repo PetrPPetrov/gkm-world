@@ -19,7 +19,7 @@ void UDPConnection::doLogout()
         return;
     }
 
-    if (g_main_state != UDPConnection::EState::LoggingOut)
+    if (main_state != EState::LoggingOut)
     {
 #ifdef _DEBUG
         LOG_DEBUG << "doLogout" << std::endl;
@@ -78,7 +78,7 @@ void UDPConnection::doLogin()
     LOG_DEBUG << "doLogin" << std::endl;
 #endif
 
-    g_main_state = UDPConnection::EState::LoggingIn;
+    main_state = EState::LoggingIn;
 
     auto login_request = createPacket<Packet::Login>();
     login_request->setLogin("game_tester");
@@ -101,13 +101,13 @@ bool UDPConnection::onLoginAnswer(size_t received_bytes)
 #endif
 
     auto packet = getReceiveBufferAs<Packet::LoginAnswer>();
-    if (g_main_state == UDPConnection::EState::LoggingIn && packet->success)
+    if (main_state == EState::LoggingIn && packet->success)
     {
 #ifdef _DEBUG
         LOG_DEBUG << "login success" << std::endl;
 #endif
         g_user_token = packet->user_token;
-        g_main_state = UDPConnection::EState::LoginOk;
+        main_state = EState::LoginOk;
         return doInitializePosition();
     }
     else
@@ -126,7 +126,7 @@ void UDPConnection::onLoginFailure()
     LOG_DEBUG << "onLoginFailure" << std::endl;
 #endif
 
-    g_main_state = UDPConnection::EState::LoginFailure;
+    main_state = EState::LoginFailure;
 }
 
 bool UDPConnection::doInitializePosition()
@@ -140,7 +140,7 @@ bool UDPConnection::doInitializePosition()
     LOG_DEBUG << "doInitializePosition" << std::endl;
 #endif
 
-    g_main_state = UDPConnection::EState::InitializingPosition;
+    main_state = EState::InitializingPosition;
 
     auto request = createPacket<Packet::InitializePosition>();
     request->user_token = g_user_token;
@@ -157,7 +157,7 @@ void UDPConnection::onInitializePositionFailure()
     LOG_DEBUG << "onInitializePositionFailure" << std::endl;
 #endif
 
-    g_main_state = UDPConnection::EState::InitializePositionFailure;
+    main_state = EState::InitializePositionFailure;
 }
 
 bool UDPConnection::onInitializePositionAnswer(size_t received_bytes)
@@ -172,7 +172,7 @@ bool UDPConnection::onInitializePositionAnswer(size_t received_bytes)
 #endif
 
     auto packet = getReceiveBufferAs<Packet::InitializePositionAnswer>();
-    if (g_main_state == UDPConnection::EState::InitializingPosition && packet->success)
+    if (main_state == EState::InitializingPosition && packet->success)
     {
 #ifdef _DEBUG
         LOG_DEBUG << "initialize position success" << std::endl;
@@ -181,7 +181,7 @@ bool UDPConnection::onInitializePositionAnswer(size_t received_bytes)
         //g_player_state.x_pos = packet->corrected_location.x_pos;
         //g_player_state.y_pos = packet->corrected_location.y_pos;
         //g_player_state.direction = packet->corrected_location.direction;
-        g_main_state = UDPConnection::EState::InitializePositionOk;
+        main_state = EState::InitializePositionOk;
         return doTimer();
     }
     else
@@ -205,7 +205,7 @@ bool UDPConnection::doTimer()
     LOG_DEBUG << "doTimer" << std::endl;
 #endif
 
-    g_main_state = UDPConnection::EState::Gaming;
+    main_state = EState::Gaming;
 
     setReceiveHandler(Packet::EType::UserActionAnswer, boost::bind(&UDPConnection::onUserActionAnswer, this, _1));
     boost::asio::deadline_timer timer(io_service, TIMER_INTERVAL);
@@ -244,7 +244,7 @@ void UDPConnection::onTimer(const boost::system::error_code& error)
     LOG_DEBUG << "onTimer" << std::endl;
 #endif
 
-    if (g_logout_request && g_main_state != UDPConnection::EState::LoggingOut)
+    if (g_logout_request && main_state != EState::LoggingOut)
     {
         onLogout();
         return;
@@ -304,7 +304,7 @@ bool UDPConnection::onUserActionAnswer(size_t received_bytes)
 
     PlayerLocation server_location = user_location;
     SentPacketInfo history_sent_packet_info = fit->second;
-    g_ping = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - history_sent_packet_info.sending_time).count();
+    g_ping = static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - history_sent_packet_info.sending_time).count());
     PlayerLocation difference = delta(server_location, history_sent_packet_info.player_location);
     //PlayerLocation& local = g_player_state;
 
@@ -403,7 +403,7 @@ void UDPConnection::onLogout()
     LOG_DEBUG << "onLogout" << std::endl;
 #endif
 
-    g_main_state = UDPConnection::EState::LoggingOut;
+    main_state = EState::LoggingOut;
     exiting = true;
     //g_other_players = nullptr;
 
@@ -419,7 +419,7 @@ void UDPConnection::onLogoutFailure()
     LOG_DEBUG << "onLogoutFailure" << std::endl;
 #endif
 
-    g_main_state = UDPConnection::EState::LogoutFailure;
+    main_state = EState::LogoutFailure;
 }
 
 bool UDPConnection::onLogoutAnswer(size_t received_bytes)
@@ -430,23 +430,25 @@ bool UDPConnection::onLogoutAnswer(size_t received_bytes)
 
     auto packet = getReceiveBufferAs<Packet::LogoutAnswer>();
 
-    if (g_main_state == UDPConnection::EState::LoggingOut)
+    if (main_state == EState::LoggingOut)
     {
         if (packet->success)
         {
 #ifdef _DEBUG
             LOG_DEBUG << "logout success" << std::endl;
 #endif
-            g_main_state = UDPConnection::EState::LogoutOk;
+            main_state = EState::LogoutOk;
         }
         else
         {
 #ifdef _DEBUG
             LOG_DEBUG << "logout is not success" << std::endl;
 #endif
-            g_main_state = UDPConnection::EState::LoginFailure;
+            main_state = EState::LoginFailure;
         }
     }
 
     return false;
 }
+
+UDPConnection::EState UDPConnection::main_state = UDPConnection::EState::Started;

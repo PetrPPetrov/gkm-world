@@ -23,7 +23,7 @@ class NodeServer : public Transport
     std::uint16_t balancer_server_port_number = 17013;
     boost::asio::ip::udp::endpoint balancer_server_end_point;
 
-    typedef Memory::FastIndexMap<UserLocation> uuid_to_user_location_t;
+    typedef Memory::FastIndexMap<UserLocationBlockChain> uuid_to_user_location_t;
     uuid_to_user_location_t uuid_to_user_location;
     std::uint32_t user_count = 0;
 

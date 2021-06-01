@@ -17,6 +17,7 @@ struct UserInfo
     bool online = false;
     std::uint32_t user_token = 0;
 
+    UserInfo() = default;
     UserInfo(const UserInfo&) = delete;
     UserInfo& operator=(const UserInfo&) = delete;
 };
@@ -33,6 +34,7 @@ struct UserOnlineInfo
     {
     }
 
+    UserOnlineInfo() = default;
     UserOnlineInfo(const UserOnlineInfo&) = delete;
     UserOnlineInfo& operator=(const UserOnlineInfo&) = delete;
 };

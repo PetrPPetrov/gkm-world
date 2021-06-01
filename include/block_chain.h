@@ -7,23 +7,26 @@
 #include <list>
 
 template<typename ValueType>
-struct ChainBlock
+struct BlockChain
 {
-    ValueType* pointer = nullptr;
-    ChainBlock<ValueType>* previous = nullptr;
-    ChainBlock<ValueType>* next = nullptr;
+    ValueType value;
+    BlockChain<ValueType>* previous = nullptr;
+    BlockChain<ValueType>* next = nullptr;
 
-    ChainBlock(ValueType* pointer_) : pointer(pointer_)
+    BlockChain(ValueType value_) : value(value_)
     {
     }
+    BlockChain() = default;
+    BlockChain(const BlockChain&) = delete;
+    BlockChain& operator=(const BlockChain&) = delete;
 };
 
 template<class ValueType>
-void removeBlock(ChainBlock<ValueType>* block, ChainBlock<ValueType>*& head)
+void removeBlock(BlockChain<ValueType>* block, BlockChain<ValueType>*& head)
 {
     assert(block);
-    ChainBlockType* previous = block->previous;
-    ChainBlockType* next = block->next;
+    BlockChain<ValueType>* previous = block->previous;
+    BlockChain<ValueType>* next = block->next;
     if (previous)
     {
         previous->next = next;
@@ -39,7 +42,7 @@ void removeBlock(ChainBlock<ValueType>* block, ChainBlock<ValueType>*& head)
 }
 
 template<class ValueType>
-void pushFrontBlock(ChainBlock<ValueType>* block, ChainBlock<ValueType>*& head)
+void pushFrontBlock(BlockChain<ValueType>* block, BlockChain<ValueType>*& head)
 {
     block->next = head;
     if (head)

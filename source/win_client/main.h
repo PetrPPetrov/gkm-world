@@ -42,5 +42,4 @@ extern AnotherPlayer* g_other_players_display_list;
 extern OtherPlayersMap* g_uuid_to_another_user;
 extern std::uint32_t g_user_token;
 extern UDPConnection* g_connection;
-extern UDPConnection::EState g_main_state;
 extern bool g_logout_request;
