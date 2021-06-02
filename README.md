@@ -56,6 +56,38 @@ Windows client is two-threaded graphics & network Win32 GUI application.
 One thread is for network communication,
 another thread is for GUI interaction and 3D visualization.
 
+# Protocol
+
+## Login
+
+* Client sends *Login* packet to proxy server.
+* Proxy server checks for credentials (username and password) and sends answer by *LoginAnswer* packet.
+* Proxy server changes the curren status of user (*online* flag).
+
+## Spawning
+
+* Client sends *InitializePosition* packet to proxy server.
+* Proxy server checks user status and sends *InitializePositionInternal* packet to balancer server.
+* Balancer server sends *InitializePositionInternal* packet to the corresponding node server.
+* Node server registers a new user and sends answer to balancer server by using *InitializePositionInternalAnswer* packet.
+* Balancer server resends answer to proxy server by using *InitializePositionInternalAnswer* packet.
+* Proxy server resends answer to client by using *InitializePositionAnswer* packet.
+
+## Logout
+
+* Client sends *Logout* packet to proxy server.
+* Proxy server sends *LogoutInternal* to the corresponding node server.
+* Node server unregister the user and sends answer to proxy server by using *LogoutInternalAnswer* packet.
+* Proxy server resends answer to client by using *LogoutAnswer* packet.
+
+## Game actions
+
+* Client sends *UserAction* packet to proxy server which contains the current state of keyboard and mouse.
+* Proxy server sends *UserActionInternal* packet to the corresponding node server.
+* Node server updates the current state of keyboard and mouse in user internal structures and sends
+  answer to proxy server by using *UserActionInternalAnswer* packet. Answer contains the actual user coordinates.
+* Proxy server resends answer to client by using *UserActionAnswer* packet.
+
 # Dependencies
 * Boost library 1.60 or higher (Boost.Asio for network)
 * QT library version 5.x (for Balancer Monitor)
