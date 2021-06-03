@@ -9,7 +9,7 @@
 #include <boost/bind.hpp>
 #include "packet_pool.h"
 #include "transport.h"
-#include "fast_index_map.h"
+#include "fast_index.h"
 #include "user_info.h"
 
 class ProxyServer : public Transport
@@ -27,7 +27,7 @@ class ProxyServer : public Transport
     typedef std::map<std::string, UserInfo::Ptr> LoginToUserInfo;
     LoginToUserInfo login_to_user_info;
 
-    typedef Memory::FastIndexMap<UserOnlineInfo> IdToUserInfo;
+    typedef Memory::FastIndexRegistry<UserOnlineInfo> IdToUserInfo;
     IdToUserInfo id_to_user_info;
     std::uint32_t online_user_count = 0;
 
@@ -43,9 +43,6 @@ public:
     bool start();
 
 private:
-    std::uint32_t allocateId();
-    void deallocateId(std::uint32_t id);
-
     void dumpParameters();
     void startImpl();
 

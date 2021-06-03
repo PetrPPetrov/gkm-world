@@ -104,5 +104,4 @@ another thread is for GUI interaction and 3D visualization.
 * prepare visible users list on node server for quick fetching
 * Log::Logger is not thread-safe
 * Log::Logger could lost some log messages
-* Memory::FastIndexMap hide some methods
-* 
+

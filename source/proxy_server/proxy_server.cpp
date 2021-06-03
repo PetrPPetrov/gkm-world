@@ -68,18 +68,6 @@ bool ProxyServer::start()
     return true;
 }
 
-std::uint32_t ProxyServer::allocateId()
-{
-    online_user_count++;
-    return id_to_user_info.allocateIndex();
-}
-
-void ProxyServer::deallocateId(std::uint32_t id)
-{
-    online_user_count--;
-    id_to_user_info.deallocateIndex(id);
-}
-
 void ProxyServer::dumpParameters()
 {
     LOG_INFO << "configuration_file_name " << cfg_file_name;
@@ -193,14 +181,16 @@ bool ProxyServer::onLogin(size_t received_bytes)
 #ifdef _DEBUG
         LOG_DEBUG << "user is logging";
 #endif
-        std::uint32_t id = allocateId();
+        std::uint32_t id;
+        UserOnlineInfo* allocated_user_online_info = id_to_user_info.allocate(id);
+        online_user_count++;
 
 #ifdef _DEBUG
         LOG_DEBUG << "generated new id " << id;
 #endif
         cur_user->user_token = id;
         cur_user->online = true;
-        UserOnlineInfo* user_online_info = new(id_to_user_info.allocate(id)) UserOnlineInfo(cur_user.get());
+        UserOnlineInfo* user_online_info = new(allocated_user_online_info) UserOnlineInfo(cur_user.get());
         user_online_info->user_end_point = remote_end_point;
     }
     else
@@ -280,8 +270,8 @@ bool ProxyServer::onLogoutInternalAnswer(size_t received_bytes)
     user_online_info->in_game = false;
     user_online_info->user_info = nullptr;
     boost::asio::ip::udp::endpoint user_end_point = user_online_info->user_end_point;
-    deallocateId(user_id);
     id_to_user_info.deallocate(user_id);
+    online_user_count--;
 
     auto answer = createPacket<Packet::LogoutAnswer>(packet->client_packet_number);
     answer->success = true;

@@ -14,7 +14,7 @@
 #include "transport.h"
 #include "packet_pool.h"
 #include "balance_tree.h"
-#include "fast_index_map.h"
+#include "fast_index.h"
 #include "mac_address.h"
 #include "global_types.h"
 
@@ -48,7 +48,7 @@ class BalancerServer : public Transport
     SquareCell global_bounding_box;
     BalanceTree* balance_tree = nullptr;
 
-    typedef Memory::FastIndexMap<BalanceTree> UuidToTree;
+    typedef Memory::FastIndexRegistry<BalanceTree> UuidToTree;
     UuidToTree uuid_to_tree;
 
     typedef std::map<boost::asio::ip::udp::endpoint, BalanceTree*> EndPointToTree;

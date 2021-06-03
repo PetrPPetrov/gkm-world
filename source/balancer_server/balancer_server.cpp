@@ -85,7 +85,8 @@ BalancerServer::BalancerServer(const std::string& cfg_file_name_) :
 
     initAvailableNodes();
 
-    uuid_to_tree.allocate(uuid_to_tree.allocateIndex()); // Allocate BalanceTree with 0 token
+    std::uint32_t zero_token;
+    uuid_to_tree.allocate(zero_token); // Allocate BalanceTree with 0 token
     balance_tree = createNewBalanceNode(global_bounding_box, nullptr);
     balance_tree->staticSplit(1);
     //balance_tree->startNodeServers();
@@ -124,7 +125,7 @@ bool BalancerServer::start()
 
 BalanceTree* BalancerServer::createNewBalanceNode(const SquareCell& bounding_box, BalanceTree* parent)
 {
-    std::uint32_t new_node_token = uuid_to_tree.allocateIndex();
+    std::uint32_t new_node_token;
     BalanceTree* new_node = uuid_to_tree.allocate(new_node_token);
     return new(new_node) BalanceTree(*this, new_node_token, bounding_box, parent);
 }
@@ -134,7 +135,6 @@ void BalancerServer::destroyBalanceNode(BalanceTree* node)
     std::uint32_t node_token = node->getToken();
     node->~BalanceTree();
     uuid_to_tree.deallocate(node_token);
-    uuid_to_tree.deallocateIndex(node_token);
 }
 
 NodeInfo BalancerServer::getAvailableNode()

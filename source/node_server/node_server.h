@@ -8,7 +8,7 @@
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include "packet_pool.h"
-#include "fast_index_map.h"
+#include "fast_index.h"
 #include "transport.h"
 #include "user_location.h"
 #include "logic_thread.h"

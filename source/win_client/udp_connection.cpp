@@ -6,6 +6,11 @@
 #include "udp_connection.h"
 #include "main.h"
 
+UDPConnection::EState UDPConnection::mainState()
+{
+    return main_state;
+}
+
 void UDPConnection::start()
 {
     std::thread thread(&UDPConnection::runInNewThread);

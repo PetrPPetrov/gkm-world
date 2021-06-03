@@ -126,7 +126,7 @@ bool NodeServer::onLogoutInternal(size_t received_bytes)
         // because FastImdexMap does not really deallocate memory blocks
         // Maybe it will be OK and does not need to be fixed
         user_count--;
-        uuid_to_user_location.deallocate(packet->user_token);
+        uuid_to_user_location.deallocateBlock(packet->user_token);
     }
 
     // Double logout will give a positive answer
@@ -152,7 +152,7 @@ bool NodeServer::onInitializePositionInternal(size_t received_bytes)
         if (inside(global_bounding_box, packet->user_location.x_pos, packet->user_location.y_pos))
         {
             user_count++;
-            UserLocationBlockChain* new_user = new(uuid_to_user_location.allocate(packet->user_token)) UserLocationBlockChain;
+            UserLocationBlockChain* new_user = new(uuid_to_user_location.allocateBlock(packet->user_token)) UserLocationBlockChain;
             new_user->value.user_location.user_token = packet->user_token;
             new_user->value.user_location.x_pos = packet->user_location.x_pos;
             new_user->value.user_location.y_pos = packet->user_location.y_pos;

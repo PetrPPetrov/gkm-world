@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include "pool.h"
 #include "log.h"
-#include "fast_index_map.h"
+#include "fast_index.h"
 
 extern Log::Logger* g_logger = nullptr;
 
@@ -41,7 +41,7 @@ void main6()
         auto it = map_data6.find(index);
         if (!it)
         {
-            A* new_element = map_data6.allocate(index);
+            A* new_element = map_data6.allocateBlock(index);
             new(new_element) A();
         }
         else
@@ -58,7 +58,7 @@ void main6()
             if (it)
             {
                 it->~A();
-                map_data6.deallocate(x);
+                map_data6.deallocateBlock(x);
             }
         }
         else
@@ -66,7 +66,7 @@ void main6()
             A* it = map_data6.find(x);
             if (!it)
             {
-                A* new_element = map_data6.allocate(x);
+                A* new_element = map_data6.allocateBlock(x);
                 new(new_element) A();
             }
         }

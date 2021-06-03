@@ -587,7 +587,7 @@ void MainMonitorWindow::onMonitoringBalanceTreeInfoAnswer(QByteArray data)
                 BalancerTreeInfo* tree_info = server_info->token_to_tree_node.find(answer->tree_node_token);
                 if (!tree_info)
                 {
-                    tree_info = new(server_info->token_to_tree_node.allocate(answer->tree_node_token)) BalancerTreeInfo;
+                    tree_info = new(server_info->token_to_tree_node.allocateBlock(answer->tree_node_token)) BalancerTreeInfo;
                 }
                 tree_info->token = answer->tree_node_token;
                 tree_info->bounding_box = answer->bounding_box;

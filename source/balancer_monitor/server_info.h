@@ -16,7 +16,7 @@
 #include <QPlainTextEdit>
 #include "global_types.h"
 #include "balance_tree/common.h"
-#include "fast_index_map.h"
+#include "fast_index.h"
 #include "protocol.h"
 
 struct BalancerTreeInfo

@@ -77,15 +77,5 @@ namespace Memory
                 free(element);
             }
         }
-        void deallocate(size_t index)
-        {
-            assert(index < MAX_CAPACITY);
-            if (storage[index].allocated)
-            {
-                storage[index].allocated = false;
-                storage[index].next_free = free_element;
-                free_element = &storage[index];
-            }
-        }
     };
 }
