@@ -2,7 +2,6 @@
 // License: https://github.com/PetrPPetrov/gkm-world/blob/master/LICENSE
 
 #include <set>
-#include "block_chain.h"
 #include "udp_connection.h"
 #include "main.h"
 

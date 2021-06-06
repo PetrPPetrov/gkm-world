@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <iostream>
 
@@ -20,10 +21,10 @@ namespace Packet
         InitializePositionAnswer,                     // Proxy->Client
         InitializePositionInternal,                   // Proxy->Balancer, Balancer->Node
         InitializePositionInternalAnswer,             // Node->Proxy
-        UserAction,                                   // Client->Proxy
-        UserActionAnswer,                             // Proxy->Client
-        UserActionInternal,                           // Proxy->Node
-        UserActionInternalAnswer,                     // Node->Proxy
+        UnitAction,                                   // Client->Proxy
+        UnitActionAnswer,                             // Proxy->Client
+        UnitActionInternal,                           // Proxy->Node
+        UnitActionInternalAnswer,                     // Node->Proxy
         GetNodeInfo,                                  // Node->Balancer
         GetNodeInfoAnswer,                            // Balancer->Node
         RegisterProxy,                                // Proxy->Balancer
@@ -46,10 +47,6 @@ namespace Packet
         MonitoringGetProxyCountAnswer,                // Balancer->Monitor
         MonitoringGetProxyInfo,                       // Monitor->Balancer
         MonitoringGetProxyInfoAnswer,                 // Balancer->Monitor
-        MonitoringMessageCount,                       // Monitor->Balancer, Monitor->Proxy, Monitor->Node
-        MonitoringMessageCountAnswer,                 // Balancer->Monitor, Proxy->Monitor, Node->Monitor
-        MonitoringPopMessage,                         // Monitor->Balancer, Monitor->Proxy, Monitor->Node
-        MonitoringPopMessageAnswer,                   // Balancer->Monitor, Proxy->Monitor, Node->Monitor
         Last,
         First = Login
     };
@@ -61,10 +58,10 @@ namespace Packet
     {
         switch (packet_type)
         {
-        case EType::UserAction:
-        case EType::UserActionAnswer:
-        case EType::UserActionInternal:
-        case EType::UserActionInternalAnswer:
+        case EType::UnitAction:
+        case EType::UnitActionAnswer:
+        case EType::UnitActionInternal:
+        case EType::UnitActionInternalAnswer:
             return false;
         default:
             return true;
@@ -77,7 +74,9 @@ namespace Packet
         ProxyServer,
         NodeServer,
         BalancerServer,
-        Monitor
+        LogServer,
+        ResourceServer,
+        MonitorApplication
     };
 
     inline std::string getText(EServerType server_type)
@@ -92,7 +91,11 @@ namespace Packet
             return "[Node]";
         case EServerType::BalancerServer:
             return "[Balancer]";
-        case EServerType::Monitor:
+        case EServerType::LogServer:
+            return "[Log]";
+        case EServerType::ResourceServer:
+            return "[Resource]";
+        case EServerType::MonitorApplication:
             return "[Monitor]";
         default:
             return "[Unknown]";

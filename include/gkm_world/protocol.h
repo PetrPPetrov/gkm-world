@@ -7,26 +7,58 @@
 #include <string>
 #include <boost/asio/ip/address_v4.hpp>
 #include <boost/asio/ip/address_v6.hpp>
-#include "global_types.h"
-#include "game_logic.h"
-#include "protocol_enum.h"
-#include "mac_address.h"
-#include "balance_tree/common.h"
+#include "gkm_world/gkm_world.h"
+#include "gkm_world/protocol_enum.h"
+#include "gkm_world/mac_address.h"
+#include "gkm_world/balance_tree/common.h"
 
-typedef boost::asio::ip::address_v6 IpAddress;
-#define TO_V to_v6
+typedef boost::asio::ip::address_v4 IpAddress;
+#define TO_V to_v4
 
 #pragma pack(push, 1)
 
 namespace Packet
 {
     static const std::size_t MAX_SIZE = 1024;
-    static const std::uint16_t MAX_USER_COUNT_IN_PACKET = 20;
+    static const std::uint16_t MAX_UNIT_COUNT_IN_PACKET = 20;
+
+    struct ProtocolCoordinate2D
+    {
+        CoordinateType x = 0;
+        CoordinateType y = 0;
+    };
+
+    struct ProtocolUnitLocation
+    {
+        ProtocolCoordinate2D position;
+        AngularType direction = 0;
+    };
+
+    struct ProtocolUnitLocationToken : public ProtocolUnitLocation
+    {
+        IndexType unit_token;
+    };
+
+    constexpr std::uint8_t UP_KEY_MASK = 0x01;
+    constexpr std::uint8_t DOWN_KEY_MASK = 0x02;
+    constexpr std::uint8_t LEFT_KEY_MASK = 0x04;
+    constexpr std::uint8_t RIGHT_KEY_MASK = 0x08;
+
+    struct ProtocolKeyboardState
+    {
+        std::uint8_t state = 0;
+    };
+
+    struct ProtocolSquare2D
+    {
+        ProtocolCoordinate2D start;
+        CoordinateType size;
+    };
 
     struct Base
     {
         EType type;
-        std::uint32_t packet_number = 0;
+        IndexType packet_number = 0;
     };
 
     struct Login : public Base
@@ -84,7 +116,7 @@ namespace Packet
     struct LoginAnswer : public Base
     {
         bool success = false;
-        std::uint32_t user_token = 0;
+        IndexType unit_token = 0;
 
         LoginAnswer()
         {
@@ -95,7 +127,7 @@ namespace Packet
 
     struct Logout : public Base
     {
-        std::uint32_t user_token = 0;
+        IndexType unit_token = 0;
 
         Logout()
         {
@@ -117,8 +149,8 @@ namespace Packet
 
     struct LogoutInternal : public Base
     {
-        std::uint32_t user_token = 0;
-        std::uint32_t client_packet_number = 0;
+        IndexType client_packet_number = 0;
+        IndexType unit_token = 0;
 
         LogoutInternal()
         {
@@ -130,8 +162,8 @@ namespace Packet
     struct LogoutInternalAnswer : public Base
     {
         bool success = false;
-        std::uint32_t user_token = 0;
-        std::uint32_t client_packet_number = 0;
+        IndexType unit_token = 0;
+        IndexType client_packet_number = 0;
 
         LogoutInternalAnswer()
         {
@@ -142,8 +174,7 @@ namespace Packet
 
     struct InitializePosition : public Base
     {
-        std::uint32_t user_token = 0;
-        PlayerLocation user_location;
+        ProtocolUnitLocationToken unit_location;
 
         InitializePosition()
         {
@@ -155,7 +186,7 @@ namespace Packet
     struct InitializePositionAnswer : public Base
     {
         bool success = false;
-        PlayerLocation corrected_location;
+        ProtocolUnitLocation corrected_location;
 
         InitializePositionAnswer()
         {
@@ -166,12 +197,11 @@ namespace Packet
 
     struct InitializePositionInternal : public Base
     {
-        std::uint32_t user_token = 0;
-        PlayerLocation user_location;
-        std::uint32_t client_packet_number = 0;
-        std::uint32_t proxy_packet_number = 0;
+        ProtocolUnitLocationToken unit_location;
+        IndexType client_packet_number = 0;
+        IndexType proxy_packet_number = 0;
         IpAddress::bytes_type proxy_server_address = { 0 };
-        std::uint16_t proxy_server_port_number = 0;
+        PortNumberType proxy_server_port_number = 0;
 
         InitializePositionInternal()
         {
@@ -184,11 +214,10 @@ namespace Packet
     {
         bool success = false;
         IpAddress::bytes_type node_server_address = { 0 };
-        std::uint16_t node_server_port_number = 0;
-        std::uint32_t user_token = 0;
-        PlayerLocation corrected_location;
-        std::uint32_t client_packet_number = 0;
-        std::uint32_t proxy_packet_number = 0;
+        PortNumberType node_server_port_number = 0;
+        ProtocolUnitLocationToken corrected_location;
+        IndexType client_packet_number = 0;
+        IndexType proxy_packet_number = 0;
 
         InitializePositionInternalAnswer()
         {
@@ -197,55 +226,54 @@ namespace Packet
         }
     };
 
-    struct UserAction : public Base
+    struct UnitAction : public Base
     {
-        std::uint32_t user_token = 0;
-        KeyboardState keyboard_state;
+        IndexType unit_token = 0;
+        ProtocolKeyboardState keyboard_state;
 
-        UserAction()
+        UnitAction()
         {
-            type = EType::UserAction;
+            type = EType::UnitAction;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
         }
     };
 
-    struct UserActionAnswer : public Base
+    struct UnitActionAnswer : public Base
     {
-        PlayerLocation user_location;
-        std::uint16_t other_player_count = 0;
-        PlayerUuidLocation other_player[1];
+        ProtocolUnitLocation unit_location;
+        std::uint16_t other_unit_count = 0;
+        ProtocolUnitLocationToken other_unit[1];
 
-        UserActionAnswer()
+        UnitActionAnswer()
         {
-            type = EType::UserActionAnswer;
+            type = EType::UnitActionAnswer;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
         }
     };
 
-    struct UserActionInternal : public Base
+    struct UnitActionInternal : public Base
     {
-        std::uint32_t user_token = 0;
-        KeyboardState keyboard_state;
-        std::uint32_t client_packet_number = 0;
+        IndexType unit_token = 0;
+        ProtocolKeyboardState keyboard_state;
+        IndexType client_packet_number = 0;
 
-        UserActionInternal()
+        UnitActionInternal()
         {
-            type = EType::UserActionInternal;
+            type = EType::UnitActionInternal;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
         }
     };
 
     struct UserActionInternalAnswer : public Base
     {
-        std::uint32_t user_token = 0;
-        PlayerLocation user_location;
-        std::uint32_t client_packet_number = 0;
-        std::uint16_t other_player_count = 0;
-        PlayerUuidLocation other_player[1];
+        ProtocolUnitLocationToken unit_location;
+        IndexType client_packet_number = 0;
+        std::uint16_t other_unit_count = 0;
+        ProtocolUnitLocationToken other_unit[1];
 
         UserActionInternalAnswer()
         {
-            type = EType::UserActionInternalAnswer;
+            type = EType::UnitActionInternalAnswer;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
         }
     };
@@ -262,13 +290,13 @@ namespace Packet
     struct GetNodeInfoAnswer : public Base
     {
         bool success = false;
-        SquareCell bounding_box;
+        ProtocolSquare2D bounding_box;
         std::array<IpAddress::bytes_type, 12> neighbor_addresses = { 0 };
-        std::array<std::uint16_t, 12> neighbor_ports = { 0 };
-        std::array<std::uint32_t, 12> neighbor_tokens = { 0 };
+        std::array<PortNumberType, 12> neighbor_ports = { 0 };
+        std::array<IndexType, 12> neighbor_tokens = { 0 };
         IpAddress::bytes_type parent_address = { 0 };
-        unsigned short parent_port = 0;
-        std::uint32_t parent_token = 0;
+        PortNumberType parent_port = 0;
+        IndexType parent_token = 0;
 
         GetNodeInfoAnswer()
         {
@@ -279,7 +307,7 @@ namespace Packet
 
     struct RegisterProxy : public Base
     {
-        std::uint32_t proxy_index = 0;
+        IndexType proxy_token = 0;
 
         RegisterProxy()
         {
@@ -290,7 +318,7 @@ namespace Packet
 
     struct RegisterProxyAnswer : public Base
     {
-        std::uint32_t proxy_index = 0;
+        IndexType proxy_token = 0;
 
         RegisterProxyAnswer()
         {
@@ -301,7 +329,7 @@ namespace Packet
 
     struct SpawnNodeServer : public Base
     {
-        std::uint16_t node_server_port = 0;
+        PortNumberType node_server_port = 0;
 
         SpawnNodeServer()
         {
@@ -330,8 +358,8 @@ namespace Packet
 
     struct MonitoringBalancerServerInfoAnswer : public Base
     {
-        SquareCell global_bounding_box;
-        std::uint32_t tree_root_token = 0;
+        ProtocolSquare2D global_bounding_box;
+        IndexType tree_root_token = 0;
 
         MonitoringBalancerServerInfoAnswer()
         {
@@ -342,7 +370,7 @@ namespace Packet
 
     struct MonitoringBalanceTreeInfo : public Base
     {
-        std::uint32_t tree_node_token = 0;
+        IndexType tree_node_token = 0;
 
         MonitoringBalanceTreeInfo()
         {
@@ -354,14 +382,14 @@ namespace Packet
     struct MonitoringBalanceTreeInfoAnswer : public Base
     {
         bool success = false;
-        std::uint32_t tree_node_token = 0;
-        std::size_t level = 0;
-        SquareCell bounding_box;
+        IndexType tree_node_token = 0;
+        std::uint16_t level = 0;
+        ProtocolSquare2D bounding_box;
         bool leaf_node = true;
-        std::array<std::uint32_t, CountOfChildren> children;
-        std::uint32_t user_count = 0;
+        std::array<IndexType, CountOfChildren> children;
+        IndexType unit_count = 0;
         IpAddress::bytes_type node_server_address = { 0 };
-        std::uint16_t node_server_port_number = 0;
+        PortNumberType node_server_port_number = 0;
 
         MonitoringBalanceTreeInfoAnswer()
         {
@@ -373,8 +401,8 @@ namespace Packet
 
     struct MonitoringBalanceTreeNeighborInfo : public Base
     {
-        std::uint32_t tree_node_token = 0;
-        CellIndex neighbor_cell;
+        IndexType tree_node_token = 0;
+        ProtocolCoordinate2D neighbor_cell;
 
         MonitoringBalanceTreeNeighborInfo()
         {
@@ -386,9 +414,9 @@ namespace Packet
     struct MonitoringBalanceTreeNeighborInfoAnswer : public Base
     {
         bool success = false;
-        std::uint32_t tree_node_token = 0;
-        CellIndex neighbor_cell;
-        std::uint32_t neighbor_node_token = 0;
+        IndexType tree_node_token = 0;
+        ProtocolCoordinate2D neighbor_cell;
+        IndexType neighbor_node_token = 0;
 
         MonitoringBalanceTreeNeighborInfoAnswer()
         {
@@ -399,7 +427,7 @@ namespace Packet
 
     struct MonitoringBalanceTreeStaticSplit : public Base
     {
-        std::uint32_t tree_node_token = 0;
+        IndexType tree_node_token = 0;
 
         MonitoringBalanceTreeStaticSplit()
         {
@@ -410,7 +438,7 @@ namespace Packet
 
     struct MonitoringBalanceTreeStaticSplitAnswer : public Base
     {
-        std::uint32_t tree_node_token = 0;
+        IndexType tree_node_token = 0;
         bool success = false;
         bool not_leaf_node = false;
         bool node_server_running = false;
@@ -424,7 +452,7 @@ namespace Packet
 
     struct MonitoringBalanceTreeStaticMerge : public Base
     {
-        std::uint32_t tree_node_token = 0;
+        IndexType tree_node_token = 0;
 
         MonitoringBalanceTreeStaticMerge()
         {
@@ -435,7 +463,7 @@ namespace Packet
 
     struct MonitoringBalanceTreeStaticMergeAnswer : public Base
     {
-        std::uint32_t tree_node_token = 0;
+        IndexType tree_node_token = 0;
         bool success = false;
 
         MonitoringBalanceTreeStaticMergeAnswer()
@@ -456,7 +484,7 @@ namespace Packet
 
     struct MonitoringGetProxyCountAnswer : public Base
     {
-        std::uint32_t proxy_count = 0;
+        IndexType proxy_count = 0;
 
         MonitoringGetProxyCountAnswer()
         {
@@ -467,7 +495,7 @@ namespace Packet
 
     struct MonitoringGetProxyInfo : public Base
     {
-        std::uint32_t proxy_index = 0;
+        IndexType proxy_index = 0;
 
         MonitoringGetProxyInfo()
         {
@@ -479,71 +507,14 @@ namespace Packet
     struct MonitoringGetProxyInfoAnswer : public Base
     {
         bool success = false;
-        std::uint32_t proxy_index = 0;
+        IndexType proxy_index = 0;
         IpAddress::bytes_type proxy_server_address = { 0 };
-        std::uint16_t proxy_server_port_number = 0;
+        PortNumberType proxy_server_port_number = 0;
 
         MonitoringGetProxyInfoAnswer()
         {
             type = EType::MonitoringGetProxyInfoAnswer;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-
-    struct MonitoringMessageCount : public Base
-    {
-        MonitoringMessageCount()
-        {
-            type = EType::MonitoringMessageCount;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-
-    struct MonitoringMessageCountAnswer : public Base
-    {
-        std::uint32_t message_count = 0;
-
-        MonitoringMessageCountAnswer()
-        {
-            type = EType::MonitoringMessageCountAnswer;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-
-    struct MonitoringPopMessage : public Base
-    {
-        MonitoringPopMessage()
-        {
-            type = EType::MonitoringPopMessage;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-    };
-
-    struct MonitoringPopMessageAnswer : public Base
-    {
-        bool success = false;
-        ESeverityType severity_type = ESeverityType::InfoMessage;
-        EServerType server_type = EServerType::NodeServer;
-        std::uint32_t token = 0;
-        char message[256] = { 0 };
-        std::uint32_t message_count = 0;
-
-        MonitoringPopMessageAnswer()
-        {
-            type = EType::MonitoringPopMessageAnswer;
-            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-        std::string getMessage() const
-        {
-            char temp_message[sizeof(message) / sizeof(message[0])];
-            memcpy(temp_message, message, std::size(message));
-            temp_message[std::size(temp_message) - 1] = 0;
-            return temp_message;
-        }
-        void setMessage(const std::string& message_)
-        {
-            memset(message, 0, std::size(message));
-            memcpy(message, message_.c_str(), std::min(message_.size(), std::size(message)));
         }
     };
 
@@ -593,13 +564,13 @@ namespace Packet
             return sizeof(InitializePositionInternal);
         case EType::InitializePositionInternalAnswer:
             return sizeof(InitializePositionInternalAnswer);
-        case EType::UserAction:
-            return sizeof(UserAction);
-        case EType::UserActionAnswer:
-            return sizeof(UserActionAnswer);
-        case EType::UserActionInternal:
-            return sizeof(UserActionInternal);
-        case EType::UserActionInternalAnswer:
+        case EType::UnitAction:
+            return sizeof(UnitAction);
+        case EType::UnitActionAnswer:
+            return sizeof(UnitActionAnswer);
+        case EType::UnitActionInternal:
+            return sizeof(UnitActionInternal);
+        case EType::UnitActionInternalAnswer:
             return sizeof(UserActionInternalAnswer);
         case EType::GetNodeInfo:
             return sizeof(GetNodeInfo);
@@ -641,14 +612,6 @@ namespace Packet
             return sizeof(MonitoringGetProxyInfo);
         case EType::MonitoringGetProxyInfoAnswer:
             return sizeof(MonitoringGetProxyInfoAnswer);
-        case EType::MonitoringMessageCount:
-            return sizeof(MonitoringMessageCount);
-        case EType::MonitoringMessageCountAnswer:
-            return sizeof(MonitoringMessageCountAnswer);
-        case EType::MonitoringPopMessage:
-            return sizeof(MonitoringPopMessage);
-        case EType::MonitoringPopMessageAnswer:
-            return sizeof(MonitoringPopMessageAnswer);
         default:
             return 0;
         }
@@ -661,19 +624,19 @@ namespace Packet
     }
 
     template<>
-    inline size_t getSize<UserActionAnswer>(const UserActionAnswer* packet)
+    inline size_t getSize<UnitActionAnswer>(const UnitActionAnswer* packet)
     {
-        size_t other_user_count = std::max<size_t>(packet->other_player_count, 1);
-        size_t result = sizeof(UserActionAnswer) + sizeof(PlayerUuidLocation) * (other_user_count - 1);
+        size_t other_unit_count = std::max<size_t>(packet->other_unit_count, 1);
+        size_t result = sizeof(UnitActionAnswer) + sizeof(ProtocolUnitLocationToken) * (other_unit_count - 1);
         assert(result <= MAX_SIZE);
         return result;
     }
 
     template<>
-    inline size_t getSize<UserActionInternalAnswer>(const UserActionInternalAnswer* packet)
+    inline size_t getSize<UnitActionInternalAnswer>(const UserActionInternalAnswer* packet)
     {
-        size_t other_user_count = std::max<size_t>(packet->other_player_count, 1);
-        size_t result = sizeof(UserActionInternalAnswer) + sizeof(PlayerUuidLocation) * (other_user_count - 1);
+        size_t other_unit_count = std::max<size_t>(packet->other_unit_count, 1);
+        size_t result = sizeof(UserActionInternalAnswer) + sizeof(ProtocolUnitLocationToken) * (other_unit_count - 1);
         assert(result <= MAX_SIZE);
         return result;
     }

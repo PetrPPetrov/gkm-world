@@ -6,7 +6,6 @@
 #include <memory>
 #include <cstdint>
 #include "game_logic.h"
-#include "block_chain.h"
 
 struct AnotherPlayer
 {

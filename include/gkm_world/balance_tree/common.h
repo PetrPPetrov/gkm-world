@@ -3,7 +3,10 @@
 
 #pragma once
 
-enum EChildIndex : std::uint8_t
+#include <cstdint>
+#include "gkm_world/gkm_world.h"
+
+enum class EChildIndex : std::uint8_t
 {
     ChildLowerLeft,
     ChildUpperLeft,
@@ -14,4 +17,4 @@ enum EChildIndex : std::uint8_t
     CountOfChildren = ChildLast
 };
 
-const std::uint32_t NEIGHBOR_COUNT_AT_SIDE = MAXIMAL_NODE_SIZE / MINIMAL_NODE_SIZE;
+constexpr CoordinateType NEIGHBOR_COUNT_AT_SIDE = NODE_SIZE_MAX / NODE_SIZE_MIN;

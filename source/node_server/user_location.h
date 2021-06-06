@@ -4,12 +4,12 @@
 #pragma once
 
 #include "game_logic.h"
-#include "block_chain.h"
+#include "fast_index.h"
 
-struct UserLocation
+struct UnitLocation
 {
     PlayerUuidLocation user_location;
     KeyboardState state;
 };
 
-typedef BlockChain<UserLocation> UserLocationBlockChain;
+typedef Memory::FastIndexMap<UserLocation> UuidToUserLocation;

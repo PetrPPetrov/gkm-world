@@ -8,7 +8,6 @@
 #include <iostream>
 #include <cassert>
 #include <map>
-#include "log.h"
 
 class ConfigurationReader
 {

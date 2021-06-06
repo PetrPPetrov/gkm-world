@@ -3,10 +3,9 @@
 
 #pragma once
 
-#include "global_types.h"
-#include "global_parameters.h"
+#include <cstdint>
 
-enum ENeighborIndex : std::uint8_t
+enum class ENeighborIndex : std::uint8_t
 {
     NeighborUpperLeftCorner,
     NeighborUpperLeft,
