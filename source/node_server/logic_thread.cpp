@@ -3,11 +3,10 @@
 
 #include <boost/bind.hpp>
 #include "Eigen/Eigen"
-#include "log.h"
-#include "game_logic.h"
+#include "gkm_world/gkm_world.h"
+#include "gkm_world/logger.h"
+#include "gkm_world/game_logic.h"
 #include "logic_thread.h"
-#include "block_chain.h"
-#include "global_parameters.h"
 
 void LogicThread::start()
 {

@@ -96,12 +96,12 @@ inline bool inside(const Square2D& square, CoordinateType x_position, Coordinate
     }
 }
 
-inline Coordinate2D cellGlobalToLocal(Coordinate2D global_position, const Square2D& square)
+inline Coordinate2D squareGlobalToLocal(const Coordinate2D& global_position, const Square2D& square)
 {
     return Coordinate2D(global_position.x - square.start.x, global_position.y - square.start.y);
 }
 
-inline Coordinate2D cellLocalToGlobal(const Square2D& square, Coordinate2D local_position)
+inline Coordinate2D squareLocalToGlobal(const Square2D& square, const Coordinate2D& local_position)
 {
     return Coordinate2D(square.start.x + local_position.x, square.start.y + local_position.y);
 }

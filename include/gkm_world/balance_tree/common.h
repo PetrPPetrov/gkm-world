@@ -17,4 +17,5 @@ enum class EChildIndex : std::uint8_t
     CountOfChildren = ChildLast
 };
 
+constexpr std::uint8_t CountOfChildren = static_cast<std::uint8_t>(EChildIndex::CountOfChildren);
 constexpr CoordinateType NEIGHBOR_COUNT_AT_SIDE = NODE_SIZE_MAX / NODE_SIZE_MIN;

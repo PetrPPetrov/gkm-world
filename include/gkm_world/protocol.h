@@ -5,10 +5,12 @@
 
 #include <cstdint>
 #include <string>
+#include <array>
 #include <boost/asio/ip/address_v4.hpp>
 #include <boost/asio/ip/address_v6.hpp>
 #include "gkm_world/gkm_world.h"
 #include "gkm_world/protocol_enum.h"
+#include "gkm_world/fixed_string.h"
 #include "gkm_world/mac_address.h"
 #include "gkm_world/balance_tree/common.h"
 
@@ -21,6 +23,8 @@ namespace Packet
 {
     static const std::size_t MAX_SIZE = 1024;
     static const std::uint16_t MAX_UNIT_COUNT_IN_PACKET = 20;
+
+    typedef std::array<std::uint8_t, MAX_SIZE> MaxPacketArrayType;
 
     struct ProtocolCoordinate2D
     {
@@ -59,57 +63,19 @@ namespace Packet
     {
         EType type;
         IndexType packet_number = 0;
+        IndexType buffer_index = INVALID_INDEX;
     };
 
     struct Login : public Base
     {
-        char login[64];
-        char password[64];
-        char full_name[64];
+        String255 login;
+        String255 password;
+        String255 full_name;
 
         Login()
         {
             type = EType::Login;
-            memset(login, 0, std::size(login));
-            memset(password, 0, std::size(password));
-            memset(full_name, 0, std::size(full_name));
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
-        }
-        std::string getLogin() const
-        {
-            char temp_login[sizeof(login) / sizeof(login[0])];
-            memcpy(temp_login, login, std::size(login));
-            temp_login[std::size(temp_login) - 1] = 0;
-            return temp_login;
-        }
-        void setLogin(const std::string& login_)
-        {
-            memset(login, 0, std::size(login));
-            memcpy(login, login_.c_str(), std::min(login_.size(), std::size(login)));
-        }
-        std::string getPassword() const
-        {
-            char temp_password[sizeof(password) / sizeof(password[0])];
-            memcpy(temp_password, password, std::size(password));
-            temp_password[std::size(temp_password) - 1] = 0;
-            return temp_password;
-        }
-        void setPassword(const std::string& password_)
-        {
-            memset(password, 0, std::size(password));
-            memcpy(password, password_.c_str(), std::min(password_.size(), std::size(password)));
-        }
-        std::string getFullName() const
-        {
-            char temp_full_name[sizeof(full_name) / sizeof(full_name[0])];
-            memcpy(temp_full_name, full_name, std::size(full_name));
-            temp_full_name[std::size(temp_full_name) - 1] = 0;
-            return temp_full_name;
-        }
-        void setFullName(const std::string& full_name_)
-        {
-            memset(full_name, 0, std::size(full_name));
-            memcpy(full_name, full_name_.c_str(), std::min(full_name_.size(), std::size(full_name)));
         }
     };
 
@@ -264,14 +230,14 @@ namespace Packet
         }
     };
 
-    struct UserActionInternalAnswer : public Base
+    struct UnitActionInternalAnswer : public Base
     {
         ProtocolUnitLocationToken unit_location;
         IndexType client_packet_number = 0;
         std::uint16_t other_unit_count = 0;
         ProtocolUnitLocationToken other_unit[1];
 
-        UserActionInternalAnswer()
+        UnitActionInternalAnswer()
         {
             type = EType::UnitActionInternalAnswer;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
@@ -343,6 +309,57 @@ namespace Packet
         SpawnNodeServerAnswer()
         {
             type = EType::SpawnNodeServerAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct LogMessage : public Base
+    {
+        EApplicationType application_type = EApplicationType::NodeServer;
+        IndexType application_token = 0;
+        ESeverityType severity_type = ESeverityType::DebugMessage;
+        String512 message;
+
+        LogMessage()
+        {
+            type = EType::LogMessage;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct LogMessageAnswer : public Base
+    {
+        LogMessageAnswer()
+        {
+            type = EType::LogMessageAnswer;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct LogGetMessage : public Base
+    {
+        IndexType message_token = 0;
+        bool remove_message = false;
+
+        LogGetMessage()
+        {
+            type = EType::LogGetMessage;
+            static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
+        }
+    };
+
+    struct LogGetMessageAnswer : public Base
+    {
+        IndexType message_token = 0;
+        IndexType message_count = 0;
+        EApplicationType server_type = EApplicationType::NodeServer;
+        IndexType server_token = 0;
+        ESeverityType severity_type = ESeverityType::DebugMessage;
+        String512 message;
+
+        LogGetMessageAnswer()
+        {
+            type = EType::LogGetMessageAnswer;
             static_assert(MAX_SIZE > sizeof(*this), "packet size exceeds the maximum allowed size");
         }
     };
@@ -571,7 +588,7 @@ namespace Packet
         case EType::UnitActionInternal:
             return sizeof(UnitActionInternal);
         case EType::UnitActionInternalAnswer:
-            return sizeof(UserActionInternalAnswer);
+            return sizeof(UnitActionInternalAnswer);
         case EType::GetNodeInfo:
             return sizeof(GetNodeInfo);
         case EType::GetNodeInfoAnswer:
@@ -584,6 +601,14 @@ namespace Packet
             return sizeof(SpawnNodeServer);
         case EType::SpawnNodeServerAnswer:
             return sizeof(SpawnNodeServerAnswer);
+        case EType::LogMessage:
+            return sizeof(LogMessage);
+        case EType::LogMessageAnswer:
+            return sizeof(LogMessageAnswer);
+        case EType::LogGetMessage:
+            return sizeof(LogGetMessage);
+        case EType::LogGetMessageAnswer:
+            return sizeof(LogGetMessageAnswer);
         case EType::MonitoringBalancerServerInfo:
             return sizeof(MonitoringBalancerServerInfo);
         case EType::MonitoringBalancerServerInfoAnswer:
@@ -618,27 +643,43 @@ namespace Packet
     }
 
     template<class PacketType>
-    inline size_t getSize(const PacketType* packet)
+    inline std::size_t getSize(const PacketType* packet)
     {
         return sizeof(PacketType);
     }
 
     template<>
-    inline size_t getSize<UnitActionAnswer>(const UnitActionAnswer* packet)
+    inline std::size_t getSize<UnitActionAnswer>(const UnitActionAnswer* packet)
     {
-        size_t other_unit_count = std::max<size_t>(packet->other_unit_count, 1);
-        size_t result = sizeof(UnitActionAnswer) + sizeof(ProtocolUnitLocationToken) * (other_unit_count - 1);
+        std::size_t other_unit_count = std::max<std::size_t>(packet->other_unit_count, 1);
+        std::size_t result = sizeof(UnitActionAnswer) + sizeof(ProtocolUnitLocationToken) * (other_unit_count - 1);
         assert(result <= MAX_SIZE);
         return result;
     }
 
     template<>
-    inline size_t getSize<UnitActionInternalAnswer>(const UserActionInternalAnswer* packet)
+    inline std::size_t getSize<UnitActionInternalAnswer>(const UnitActionInternalAnswer* packet)
     {
-        size_t other_unit_count = std::max<size_t>(packet->other_unit_count, 1);
-        size_t result = sizeof(UserActionInternalAnswer) + sizeof(ProtocolUnitLocationToken) * (other_unit_count - 1);
+        std::size_t other_unit_count = std::max<size_t>(packet->other_unit_count, 1);
+        std::size_t result = sizeof(UnitActionInternalAnswer) + sizeof(ProtocolUnitLocationToken) * (other_unit_count - 1);
         assert(result <= MAX_SIZE);
         return result;
+    }
+
+    template<>
+    inline std::size_t getSize<LogMessage>(const LogMessage* packet)
+    {
+        const std::size_t result = sizeof(LogMessage);
+        const std::size_t unused_space = packet->message.unusedSpace();
+        return result - unused_space;
+    }
+
+    template<>
+    inline std::size_t getSize<LogGetMessageAnswer>(const LogGetMessageAnswer* packet)
+    {
+        const std::size_t result = sizeof(LogGetMessageAnswer);
+        const std::size_t unused_space = packet->message.unusedSpace();
+        return result - unused_space;
     }
 }
 

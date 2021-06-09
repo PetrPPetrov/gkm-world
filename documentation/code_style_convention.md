@@ -82,7 +82,7 @@ The file inclusions should be organized in fhe following order:
   Other letters are small. Some examples are *memoryBuffer*, *triangleFan*, *createMemoryBuffer*.
 * *snake_case* naming convention.
   Naming convention where all letters in a name are small.
-  Name can consist from several words and each word is separated from other words by using under-scope symbol.
+  Name can consist from several words and each word is separated from other words by using underscope symbol.
   Some examples are *memory_buffer*, *triangle_fan*, *create_memory_buffer*.
 * *kebab-case* naming convention.
   Naming convention where all letters in a name are small.
@@ -90,5 +90,5 @@ The file inclusions should be organized in fhe following order:
   Some examples are *memory-buffer*, *triangle-fan*, *create-memory-buffer*.
 * *MACROS_CASE* naming convention.
   Naming convention where all letters in a name are capital.
-  Name can consist from several words and each word is separated from other words by using under-scope symbol.
+  Name can consist from several words and each word is separated from other words by using underscope symbol.
   Some examples are *MEMORY_BUFFER*, *TRIANGLE_FAN*, *CREATE_MEMORY_BUFFER*.

@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include <list>
+#include <memory>
 #include <boost/asio.hpp>
-#include "protocol.h"
+#include "gkm_world/protocol.h"
 #include "user_location.h"
 
 class LogicThread

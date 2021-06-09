@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
 // We use fixed-point numbers for coordinates
@@ -21,7 +22,7 @@ inline double toFloat(CoordinateType value)
 
 inline CoordinateType toCoordinateType(double value)
 {
-    return value * UNIT_SCALE;
+    return static_cast<CoordinateType>(value * UNIT_SCALE);
 }
 
 constexpr CoordinateType CELL_SIZE = 16 * UNIT_SCALE; // Cell size is 16 x 16 meters
@@ -32,7 +33,7 @@ constexpr CoordinateType TRIGGER_DISTANCE = CELL_SIZE / 2; // Trigger distance i
 
 // We use IndexType as index (or in other words, token) for game units
 typedef std::uint32_t IndexType;
-const IndexType INVALID_INDEX = static_cast<IndexType>(std::numeric_limits<IndexType>::max());
+constexpr IndexType INVALID_INDEX = static_cast<IndexType>(std::numeric_limits<IndexType>::max());
 constexpr IndexType NODE_GUNIT_MAX = 1024; // Maxumum number of game units on node server is 1024
 constexpr IndexType NODE_GUNIT_MIN = 64; // Minumum number of game units of node server is 64
 
@@ -46,7 +47,8 @@ constexpr PortNumberType NODE_SERVER_PORT_NUMBER_BASE = 17014;
 constexpr PortNumberType NODE_SERVER_PORT_NUMBER_MAX = 50000;
 
 // Game logic computation interval
-constexpr boost::posix_time::milliseconds TIMER_INTERVAL(50);
+const boost::posix_time::milliseconds GAME_TIME_INTERVAL(50);
+const boost::posix_time::milliseconds LOGGING_TIME_INTERVAL(1);
 
 constexpr double GKM_PI = 3.14159265358979323846264338327950288;
 constexpr double GKM_2PI = 2 * GKM_PI;

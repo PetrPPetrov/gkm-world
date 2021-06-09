@@ -15,7 +15,7 @@ struct UserInfo
     std::string password;
     std::string full_name;
     bool online = false;
-    std::uint32_t user_token = 0;
+    std::uint32_t unit_token = 0;
 
     UserInfo() = default;
     UserInfo(const UserInfo&) = delete;

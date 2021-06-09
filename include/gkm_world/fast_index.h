@@ -12,8 +12,8 @@ namespace Memory
     template<class ElementType>
     class FastIndex16BitPage
     {
-        constexpr std::uint8_t PAGE_BIT_COUNT = 16;
-        constexpr IndexType PAGE_SIZE = (1 << PAGE_BIT_COUNT);
+        constexpr static std::uint8_t PAGE_BIT_COUNT = 16;
+        constexpr static IndexType PAGE_SIZE = (1 << PAGE_BIT_COUNT);
 
         static inline IndexType getPageIndex(IndexType index)
         {
@@ -97,7 +97,7 @@ namespace Memory
                 page = new Page;
                 pages[page_index] = page;
             }
-            const IndexType element_index = getOffsetIndex(index);
+            const IndexType element_index = getElementIndex(index);
             ElementStorage& element = page->elements[element_index];
             element.allocated = true;
             return reinterpret_cast<ElementType*>(element.storage.data());
@@ -261,8 +261,8 @@ namespace Memory
     template<class ElementType>
     class FastIndex8BitPage
     {
-        constexpr std::uint8_t PAGE_BIT_COUNT = 8;
-        const static IndexType PAGE_SIZE = (1 << PAGE_BIT_COUNT);
+        constexpr static std::uint8_t PAGE_BIT_COUNT = 8;
+        constexpr static IndexType PAGE_SIZE = (1 << PAGE_BIT_COUNT);
 
         static inline IndexType getElementIndex(IndexType index)
         {
@@ -307,6 +307,7 @@ namespace Memory
         IndexType max_allocated_index = 0;
         IndexType next_available_index = 0;
         std::atomic<IndexType> chain_head_index = INVALID_INDEX;
+        std::atomic<IndexType> chain_tail_index = INVALID_INDEX;
 
     protected:
         ElementStorage* element(IndexType index) const
@@ -489,7 +490,7 @@ namespace Memory
         {
             assert(pageAllocated(index));
             ElementStorage* info = element(index);
-            info->chain_next_index = chain_head_index;
+            info->chain_next_index = chain_head_index.load();
             info->chain_previous_index = INVALID_INDEX;
             if (chain_head_index != INVALID_INDEX)
             {
@@ -497,6 +498,27 @@ namespace Memory
                 head_info->chain_previous_index = index;
             }
             chain_head_index = index;
+            if (chain_tail_index == INVALID_INDEX)
+            {
+                chain_tail_index = index;
+            }
+        }
+        void chainPushBack(IndexType index)
+        {
+            assert(pageAllocated(index));
+            ElementStorage* info = element(index);
+            info->chain_next_index = INVALID_INDEX;
+            info->chain_previous_index = chain_tail_index.load();
+            if (chain_tail_index != INVALID_INDEX)
+            {
+                ElementStorage* tail_info = element(chain_tail_index);
+                tail_info->chain_next_index = index;
+            }
+            chain_tail_index = index;
+            if (chain_head_index == INVALID_INDEX)
+            {
+                chain_head_index = index;
+            }
         }
         void chainRemove(IndexType index)
         {
@@ -518,6 +540,12 @@ namespace Memory
                 ElementStorage* next = element(next_index);
                 next->chain_previous_index = previous_index;
             }
+            else
+            {
+                chain_tail_index = previous_index;
+            }
+            info->chain_previous_index = INVALID_INDEX;
+            info->chain_next_index = INVALID_INDEX;
         }
         IndexType getChainHeadIndex() const
         {
@@ -573,13 +601,21 @@ namespace Memory
         ElementType* chainPushFront(IndexType& result_index)
         {
             result_index = allocateIndex();
+            auto result = allocateBlock(result_index);
             Base::chainPushFront(result_index);
-            return allocateBlock(result_index);
+            return result;
+        }
+        ElementType* chainPushBack(IndexType& result_index)
+        {
+            result_index = allocateIndex();
+            auto result = allocateBlock(result_index);
+            Base::chainPushBack(result_index);
+            return result;
         }
         void chainRemove(IndexType index)
         {
-            deallocateBlock(index);
             Base::chainRemove(index);
+            deallocateBlock(index);
             deallocateIndex(index);
         }
         IndexType getChainHeadIndex() const

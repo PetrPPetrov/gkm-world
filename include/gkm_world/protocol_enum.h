@@ -31,9 +31,13 @@ namespace Packet
         RegisterProxyAnswer,                          // Balancer->Proxy
         SpawnNodeServer,                              // Balancer->Node, not used
         SpawnNodeServerAnswer,                        // Node->Balancer, not used
+        // Logging
+        LogMessage = 150,                             // {Proxy | Node | Balancer}->Log
+        LogMessageAnswer,                             // Log->{Proxy | Node | Balancer}
+        LogGetMessage,                                // Monitor->Log
+        LogGetMessageAnswer,                          // Log->Monitor
         // Markers
-        MonitoringApi = 200,
-        MonitoringBalancerServerInfo = MonitoringApi, // Monitor->Balancer
+        MonitoringBalancerServerInfo = 200, // Monitor->Balancer
         MonitoringBalancerServerInfoAnswer,           // Balancer->Monitor
         MonitoringBalanceTreeInfo,                    // Monitor->Balancer
         MonitoringBalanceTreeInfoAnswer,              // Balancer->Monitor
@@ -68,7 +72,92 @@ namespace Packet
         }
     }
 
-    enum class EServerType : std::uint8_t
+    inline std::string getText(EType packet_type)
+    {
+        switch (packet_type)
+        {
+        case EType::Login:
+            return "Login";
+        case EType::LoginAnswer:
+            return "LoginAnswer";
+        case EType::Logout:
+            return "Logout";
+        case EType::LogoutAnswer:
+            return "LogoutAnswer";
+        case EType::LogoutInternal:
+            return "LogoutInternal";
+        case EType::LogoutInternalAnswer:
+            return "LogoutInternalAnswer";
+        case EType::InitializePosition:
+            return "InitializePosition";
+        case EType::InitializePositionAnswer:
+            return "InitializePositionAnswer";
+        case EType::InitializePositionInternal:
+            return "InitializePositionInternal";
+        case EType::InitializePositionInternalAnswer:
+            return "InitializePositionInternalAnswer";
+        case EType::UnitAction:
+            return "UnitAction";
+        case EType::UnitActionAnswer:
+            return "UnitActionAnswer";
+        case EType::UnitActionInternal:
+            return "UnitActionInternal";
+        case EType::UnitActionInternalAnswer:
+            return "UnitActionInternalAnswer";
+        case EType::GetNodeInfo:
+            return "GetNodeInfo";
+        case EType::GetNodeInfoAnswer:
+            return "GetNodeInfoAnswer";
+        case EType::RegisterProxy:
+            return "RegisterProxy";
+        case EType::RegisterProxyAnswer:
+            return "RegisterProxyAnswer";
+        case EType::SpawnNodeServer:
+            return "SpawnNodeServer";
+        case EType::SpawnNodeServerAnswer:
+            return "SpawnNodeServerAnswer";
+        case EType::LogMessage:
+            return "LogMessage";
+        case EType::LogMessageAnswer:
+            return "LogMessageAnswer";
+        case EType::LogGetMessage:
+            return "LogGetMessage";
+        case EType::LogGetMessageAnswer:
+            return "LogGetMessageAnswer";
+        case EType::MonitoringBalancerServerInfo:
+            return "MonitoringBalancerServerInfo";
+        case EType::MonitoringBalancerServerInfoAnswer:
+            return "MonitoringBalancerServerInfoAnswer";
+        case EType::MonitoringBalanceTreeInfo:
+            return "MonitoringBalanceTreeInfo";
+        case EType::MonitoringBalanceTreeInfoAnswer:
+            return "MonitoringBalanceTreeInfoAnswer";
+        case EType::MonitoringBalanceTreeNeighborInfo:
+            return "MonitoringBalanceTreeNeighborInfo";
+        case EType::MonitoringBalanceTreeNeighborInfoAnswer:
+            return "MonitoringBalanceTreeNeighborInfoAnswer";
+        case EType::MonitoringBalanceTreeStaticSplit:
+            return "MonitoringBalanceTreeStaticSplit";
+        case EType::MonitoringBalanceTreeStaticSplitAnswer:
+            return "MonitoringBalanceTreeStaticSplitAnswer";
+        case EType::MonitoringBalanceTreeStaticMerge:
+            return "MonitoringBalanceTreeStaticMerge";
+        case EType::MonitoringBalanceTreeStaticMergeAnswer:
+            return "MonitoringBalanceTreeStaticMergeAnswer";
+        case EType::MonitoringGetProxyCount:
+            return "MonitoringGetProxyCount";
+        case EType::MonitoringGetProxyCountAnswer:
+            return "MonitoringGetProxyCountAnswer";
+        case EType::MonitoringGetProxyInfo:
+            return "MonitoringGetProxyInfo";
+        case EType::MonitoringGetProxyInfoAnswer:
+            return "MonitoringGetProxyInfoAnswer";
+        default:
+            return "Unknown";
+        }
+    }
+
+    enum class EApplicationType : std::uint8_t
     {
         ClientApplication,
         ProxyServer,
@@ -79,23 +168,23 @@ namespace Packet
         MonitorApplication
     };
 
-    inline std::string getText(EServerType server_type)
+    inline std::string getText(EApplicationType application_type)
     {
-        switch (server_type)
+        switch (application_type)
         {
-        case EServerType::ClientApplication:
+        case EApplicationType::ClientApplication:
             return "[Client]";
-        case EServerType::ProxyServer:
+        case EApplicationType::ProxyServer:
             return "[Proxy]";
-        case EServerType::NodeServer:
+        case EApplicationType::NodeServer:
             return "[Node]";
-        case EServerType::BalancerServer:
+        case EApplicationType::BalancerServer:
             return "[Balancer]";
-        case EServerType::LogServer:
+        case EApplicationType::LogServer:
             return "[Log]";
-        case EServerType::ResourceServer:
+        case EApplicationType::ResourceServer:
             return "[Resource]";
-        case EServerType::MonitorApplication:
+        case EApplicationType::MonitorApplication:
             return "[Monitor]";
         default:
             return "[Unknown]";
