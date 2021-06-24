@@ -74,12 +74,12 @@ The file inclusions should be organized in fhe following order:
   Naming convention where names start with a capital letter.
   Name can consist from several words and each word starts with capital letter.
   Other letters are small. Some examples are *MemoryBuffer*, *TriangleFan*, *CreateMemoryBuffer*.
-  In some cases when a part of name is a contraction  this part name could be all in upper case.  
+  In some cases when a part of name is a contraction this part of name could be all in upper case.
 * *camelCase* naming convention.
   Naming convention where names start with a small letter.
   Name can consist from several words and each word starts with capital letter (except first letter).
   Other letters are small. Some examples are *memoryBuffer*, *triangleFan*, *createMemoryBuffer*.
-  In some cases when a part of name is a contraction  this part name could be all in upper case.  
+  In some cases when a part of name is a contraction this part of name could be all in upper case.
 * *snake_case* naming convention.
   Naming convention where all letters in a name are small.
   Name can consist from several words and each word is separated from other words by using underscope symbol.
