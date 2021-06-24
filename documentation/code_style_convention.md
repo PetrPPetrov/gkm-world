@@ -35,15 +35,13 @@ The file inclusions should be organized in fhe following order:
 
 ## Naming convention
 * Namespace names should be in *PascalCase* naming convention.
-  If namespace name is contraction then all letters should be in upper case.
   Prefer names in singular form rather than plural names.
   For instance, use *Network::Container* instead of *Network::Containers*.
 * Interface names should be in *PascalCase* naming convention starting with capital *I* letter.
   For instance, *IMemoryBuffer*.
 * Interface methods should use *camelCase* naming convention.
 * Classes and structures should use *PascalCase* naming convention.
-* Class and structure methods should have the same names as corresponding interface methods.
-  However, if a method is not a part of any interface, then *camelCase* should be used.
+* Class and structure methods should use *camelCase* naming convention.
 * Arguments for methods, interface methods, functions, constructors and destructors should use *snake_case* naming convention.
 * Local variables should use *snake_case* naming convention.
 * Class and structure fields should use *snake_case* naming convention starting without any prefix.
@@ -76,10 +74,12 @@ The file inclusions should be organized in fhe following order:
   Naming convention where names start with a capital letter.
   Name can consist from several words and each word starts with capital letter.
   Other letters are small. Some examples are *MemoryBuffer*, *TriangleFan*, *CreateMemoryBuffer*.
+  In some cases when a part of name is a contraction  this part name could be all in upper case.  
 * *camelCase* naming convention.
   Naming convention where names start with a small letter.
   Name can consist from several words and each word starts with capital letter (except first letter).
   Other letters are small. Some examples are *memoryBuffer*, *triangleFan*, *createMemoryBuffer*.
+  In some cases when a part of name is a contraction  this part name could be all in upper case.  
 * *snake_case* naming convention.
   Naming convention where all letters in a name are small.
   Name can consist from several words and each word is separated from other words by using underscope symbol.
