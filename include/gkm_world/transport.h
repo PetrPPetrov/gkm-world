@@ -8,14 +8,14 @@
 #include <vector>
 #include <chrono>
 #include <functional>
+#include <type_traits>
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include "gkm_world/protocol.h"
 #include "gkm_world/fast_index.h"
 #include "gkm_world/logger.h"
 
-class Transport
-{
+class Transport {
 protected:
     boost::asio::io_service io_service;
     boost::asio::deadline_timer logging_timer;
@@ -25,16 +25,15 @@ protected:
 private:
     char receive_buffer[Packet::MAX_SIZE] = { 0 };
     IndexType cur_packet_number = 0;
-    Memory::FastIndexChain<Packet::MaxPacketArrayType> packet_pool;
+    Memory::FastIndexRegistryChain<Packet::MaxPacketArrayType, 12> packet_pool;
     std::vector<std::function<bool(size_t)>> handlers;
     Packet::EApplicationType application_type = Packet::EApplicationType::BalancerServer;
     IndexType application_token = 0;
 
-    struct GuaranteedDeliveryInfo : public std::enable_shared_from_this<GuaranteedDeliveryInfo>
-    {
+    struct GuaranteedDeliveryInfo : public std::enable_shared_from_this<GuaranteedDeliveryInfo> {
         typedef std::shared_ptr<GuaranteedDeliveryInfo> Ptr;
 
-        std::uint32_t packet_number = 0;
+        IndexType packet_number = 0;
         std::uint8_t attempt_count = 8;
         boost::asio::deadline_timer timer;
         const boost::posix_time::milliseconds delay;
@@ -46,36 +45,33 @@ private:
         bool delivered_ok = false;
 
         GuaranteedDeliveryInfo(boost::asio::io_service& io_service, const boost::posix_time::milliseconds delay_) :
-            timer(io_service, delay_), delay(delay_)
-        {
-        }
+            timer(io_service, delay_), delay(delay_) {}
     };
-    typedef std::unordered_map<std::uint32_t, GuaranteedDeliveryInfo::Ptr> GuaranteedDeliveryMap;
-    GuaranteedDeliveryMap guaranteed_delivery_map;
+    std::unordered_map<IndexType, GuaranteedDeliveryInfo::Ptr> guaranteed_delivery_map;
     bool guaranteed_delivery_enabled = false;
 
 public:
     Transport(const Transport&) = delete;
     Transport& operator=(const Transport&) = delete;
 
-    Transport() : socket(io_service), logging_timer(io_service, LOGGING_TIME_INTERVAL)
-    {
+    Transport() : socket(io_service), logging_timer(io_service, LOGGING_TIME_INTERVAL) {
+        using namespace boost::placeholders;
+
         handlers.resize(Packet::TYPE_COUNT);
-        logging_timer.async_wait(boost::bind(&Transport::onLoggingTimer, this, _1));
+        logging_timer.async_wait(bind(&Transport::onLoggingTimer, this, _1));
     }
 
-    std::uint32_t getCurPacketNumber() const
-    {
+    std::uint32_t getCurPacketNumber() const {
         return cur_packet_number;
     }
 
-    void setReceiveHandler(Packet::EType type, std::function<bool(size_t)> handler)
-    {
+    void setReceiveHandler(Packet::EType type, std::function<bool(size_t)> handler) {
         handlers.at(static_cast<std::uint8_t>(type)) = handler;
     }
 
-    void doReceive()
-    {
+    void doReceive() {
+        using namespace boost::placeholders;
+
         socket.async_receive_from(
             boost::asio::buffer(receive_buffer),
             remote_end_point,
@@ -83,31 +79,31 @@ public:
     }
 
     template<class PacketType>
-    PacketType* getReceiveBufferAs()
-    {
+    PacketType* getReceiveBufferAs() {
         return reinterpret_cast<PacketType*>(receive_buffer);
     }
 
     template<class PacketType>
-    PacketType* createPacket(IndexType packet_number)
-    {
+    PacketType* createPacket(IndexType packet_number) {
         IndexType result_index;
         void* new_buffer = packet_pool.chainPushBack(result_index);
         PacketType* result = new (new_buffer) PacketType();
-        result->packet_number = packet_number;
-        result->buffer_index = result_index;
+        if constexpr (std::is_base_of<Packet::Base, PacketType>::value) {
+            result->packet_number = packet_number;
+            result->buffer_index = result_index;
+        }
         return result;
     }
 
     template<class PacketType>
-    PacketType* createPacket()
-    {
+    PacketType* createPacket() {
         return createPacket<PacketType>(++cur_packet_number);
     }
 
     template<class PacketType>
-    void standardSendTo(const PacketType* packet, boost::asio::ip::udp::endpoint& end_point)
-    {
+    void standardSendTo(const PacketType* packet, boost::asio::ip::udp::endpoint& end_point) {
+        using namespace boost::placeholders;
+
         LOG_DEBUG << "standardSendTo " << end_point << " #" << packet->packet_number;
 
         void* packet_buffer = static_cast<void*>(const_cast<PacketType*>(packet));
@@ -118,14 +114,14 @@ public:
     }
 
     template<class PacketType>
-    void standardSend(const PacketType* packet)
-    {
+    void standardSend(const PacketType* packet) {
         standardSendTo<PacketType>(packet, remote_end_point);
     }
 
     template<class PacketType, size_t AttemptCount = 10, size_t WaitMs = 1000>
-    void guaranteedSendTo(const PacketType* packet, boost::asio::ip::udp::endpoint& end_point, std::function<void(void*, std::size_t)> error_handler)
-    {
+    void guaranteedSendTo(const PacketType* packet, boost::asio::ip::udp::endpoint& end_point, std::function<void(void*, std::size_t)> error_handler) {
+        using namespace boost::placeholders;
+
         LOG_DEBUG << "guaranteedSendTo " << end_point << " #" << packet->packet_number;
 
         assert(Packet::isGuaranteedDeliveryType(packet->type));
@@ -149,39 +145,32 @@ public:
     }
 
     template<class PacketType>
-    void guaranteedSend(const PacketType* packet, std::function<void(void*, std::size_t)> error_handler)
-    {
+    void guaranteedSend(const PacketType* packet, std::function<void(void*, std::size_t)> error_handler) {
         guaranteedSendTo<PacketType>(packet, remote_end_point, error_handler);
     }
 
-    void setApplicationType(Packet::EApplicationType application_type_)
-    {
+    void setApplicationType(Packet::EApplicationType application_type_) {
         application_type = application_type_;
     }
 
-    void setApplicationToken(IndexType token)
-    {
+    void setApplicationToken(IndexType token) {
         application_token = token;
     }
 
-    void logError(void* packet_buffer, std::size_t packet_buffer_size)
-    {
-        if (packet_buffer_size >= sizeof(Packet::Base))
-        {
+    void logError(void* packet_buffer, std::size_t packet_buffer_size) {
+        if (packet_buffer_size >= sizeof(Packet::Base)) {
             auto base_packet = reinterpret_cast<const Packet::Base*>(packet_buffer);
             LOG_ERROR << "can not delivery packet; type " << getText(base_packet->type) << " length " << base_packet->packet_number;
         }
     }
 
-    void silentlyIgnore(void* /*packet_buffer*/, std::size_t /*packet_buffer_size*/)
-    {
-    }
+    void silentlyIgnore(void* /*packet_buffer*/, std::size_t /*packet_buffer_size*/) {}
 
 private:
-    void onLoggingTimer(const boost::system::error_code& error)
-    {
-        if (error)
-        {
+    void onLoggingTimer(const boost::system::error_code& error) {
+        using namespace boost::placeholders;
+
+        if (error) {
             LOG_ERROR << "onLoggingTimer error";
             return;
         }
@@ -192,23 +181,19 @@ private:
         logging_timer.async_wait(boost::bind(&Transport::onLoggingTimer, this, _1));
     }
 
-    void onReceive(const boost::system::error_code& error, size_t received_bytes)
-    {
-        if (error == boost::asio::error::connection_reset)
-        {
+    void onReceive(const boost::system::error_code& error, size_t received_bytes) {
+        if (error == boost::asio::error::connection_reset) {
             LOG_DEBUG << "error && error != boost::asio::error::connection_reset, size = " << received_bytes;
             doReceive();
             return;
         }
 
-        if (error && error != boost::asio::error::message_size)
-        {
+        if (error && error != boost::asio::error::message_size) {
             LOG_DEBUG << "error && error != boost::asio::error::message_size, size = " << received_bytes;
             return;
         }
 
-        if (received_bytes < sizeof(Packet::Base))
-        {
+        if (received_bytes < sizeof(Packet::Base)) {
             LOG_DEBUG << "received_bytes < sizeof(Packet::Base)";
             return;
         }
@@ -217,77 +202,64 @@ private:
 
         auto basic_packet = reinterpret_cast<const Packet::Base*>(receive_buffer);
         std::uint8_t type_code = static_cast<std::uint8_t>(basic_packet->type);
-        if (type_code < Packet::TYPE_FIRST || type_code >= Packet::TYPE_LAST)
-        {
+        if (type_code < Packet::TYPE_FIRST || type_code >= Packet::TYPE_LAST) {
             LOG_DEBUG << "unknown packet type, packet type = " << static_cast<unsigned>(type_code);
             return;
         }
 
         const size_t minimum_size = Packet::getSize(basic_packet->type);
-        if (received_bytes < minimum_size)
-        {
+        if (received_bytes < minimum_size) {
             LOG_DEBUG << "received_bytes < " << minimum_size;
             return;
         }
 
-        if (guaranteed_delivery_enabled && Packet::isGuaranteedDeliveryType(basic_packet->type))
-        {
+        if (guaranteed_delivery_enabled && Packet::isGuaranteedDeliveryType(basic_packet->type)) {
             onGuaranteedAnswer(basic_packet->packet_number);
         }
 
         bool handler_return_value = true;
         std::function<bool(size_t)>& handler = handlers[type_code];
-        if (handler)
-        {
+        if (handler) {
             handler_return_value = handler(received_bytes);
-        }
-        else
-        {
+        } else {
             LOG_DEBUG << "unknown packet type, packet type = " << static_cast<unsigned>(type_code);
         }
 
-        if (handler_return_value)
-        {
+        if (handler_return_value) {
             doReceive();
         }
     }
 
-    void onGuaranteedAnswer(std::uint32_t packet_number)
-    {
-        GuaranteedDeliveryMap::iterator fit = guaranteed_delivery_map.find(packet_number);
-        if (fit != guaranteed_delivery_map.end())
-        {
+    void onGuaranteedAnswer(std::uint32_t packet_number) {
+        auto fit = guaranteed_delivery_map.find(packet_number);
+        if (fit != guaranteed_delivery_map.end()) {
             LOG_DEBUG << "found guaranteed request #" << packet_number;
 
             fit->second->delivered_ok = true;
             fit->second->timer.cancel();
             packet_pool.chainRemove(fit->second->packet_buffer_index);
             guaranteed_delivery_map.erase(fit);
-        }
-        else
-        {
+        } else {
             LOG_WARNING << "guaranteed request is not found #" << packet_number;
         }
     }
 
-    void onSend(void* packet_buffer, const boost::system::error_code& error, size_t transferred_bytes)
-    {
+    void onSend(void* packet_buffer, const boost::system::error_code& error, size_t transferred_bytes) {
         Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(packet_buffer);
         LOG_DEBUG << "onSend #" << basic_packet->packet_number;
 
         packet_pool.chainRemove(basic_packet->buffer_index);
     }
 
-    void onGuaranteedSend(void* packet_buffer, const boost::system::error_code& error, size_t transferred_bytes)
-    {
+    void onGuaranteedSend(void* packet_buffer, const boost::system::error_code& error, size_t transferred_bytes) {
         Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(packet_buffer);
         LOG_DEBUG << "onGuaranteedSend #" << basic_packet->packet_number;
     }
 
-    void onTimeout(GuaranteedDeliveryInfo::Ptr info, const boost::system::error_code& error)
-    {
-        if (info->delivered_ok)
-        {
+    void onTimeout(GuaranteedDeliveryInfo::Ptr info, const boost::system::error_code& error) {
+        using namespace boost::placeholders;
+
+        if (info->delivered_ok) {
             Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(info->packet_buffer);
             LOG_INFO << "guaranteed delivered OK #" << info->packet_number;
 
@@ -295,8 +267,7 @@ private:
             guaranteed_delivery_map.erase(info->packet_number);
             return;
         }
-        if (info->attempt_count)
-        {
+        if (info->attempt_count) {
             Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(info->packet_buffer);
             LOG_WARNING << "guaranteed failed to delivery, new attempt #" << basic_packet->packet_number;
 
@@ -307,15 +278,12 @@ private:
                 boost::bind(&Transport::onGuaranteedSend, this, info->packet_buffer, _1, _2));
             info->timer.expires_at(info->timer.expires_at() + info->delay);
             info->timer.async_wait(boost::bind(&Transport::onTimeout, this, info, _1));
-        }
-        else
-        {
+        } else {
             Packet::Base* basic_packet = reinterpret_cast<Packet::Base*>(info->packet_buffer);
             LOG_ERROR << "guaranteeed failed to devilery #" << basic_packet->packet_number;
 
             info->timer.cancel();
-            if (info->error_handler)
-            {
+            if (info->error_handler) {
                 info->error_handler(info->packet_buffer, info->packet_buffer_size);
             }
             packet_pool.chainRemove(info->packet_buffer_index);
@@ -324,8 +292,7 @@ private:
     }
 };
 
-inline void onQuitSignal(const boost::system::error_code& error, int sig_number)
-{
+inline void onQuitSignal(const boost::system::error_code& error, int sig_number) {
     Logger::onQuit();
     exit(EXIT_SUCCESS);
 }

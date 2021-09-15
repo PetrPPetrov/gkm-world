@@ -7,18 +7,14 @@
 #include <cstdint>
 
 // Fowler / Noll / Vo (FNV) Hash
-struct FnvHash
-{
-    void Update(const std::uint8_t* data, std::size_t size)
-    {
-        for (std::size_t i = 0; i < size; ++i)
-        {
-            hash = hash ^ (data[i]); // xor the low 8 bits
-            hash = hash * g_fnv_multiple; // multiply by the magic number
+struct FnvHash {
+    void Update(const std::uint8_t* data, std::size_t size) {
+        for (std::size_t i = 0; i < size; ++i) {
+            hash = hash ^ (data[i]); // Xor the low 8 bits
+            hash = hash * g_fnv_multiple; // Multiply by the magic number
         }
     }
-    std::uint64_t getHash() const
-    {
+    std::uint64_t getHash() const {
         return hash;
     }
 private:

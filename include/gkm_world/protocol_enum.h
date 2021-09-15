@@ -7,10 +7,8 @@
 #include <string>
 #include <iostream>
 
-namespace Packet
-{
-    enum class EType : std::uint8_t
-    {
+namespace Packet {
+    enum class EType : std::uint8_t {
         Login,                                        // Client->Proxy
         LoginAnswer,                                  // Proxy->Client
         Logout,                                       // Client->Proxy
@@ -36,8 +34,8 @@ namespace Packet
         LogMessageAnswer,                             // Log->{Proxy | Node | Balancer}
         LogGetMessage,                                // Monitor->Log
         LogGetMessageAnswer,                          // Log->Monitor
-        // Markers
-        MonitoringBalancerServerInfo = 200, // Monitor->Balancer
+        // Monitoring
+        MonitoringBalancerServerInfo = 200,           // Monitor->Balancer
         MonitoringBalancerServerInfoAnswer,           // Balancer->Monitor
         MonitoringBalanceTreeInfo,                    // Monitor->Balancer
         MonitoringBalanceTreeInfoAnswer,              // Balancer->Monitor
@@ -58,10 +56,8 @@ namespace Packet
     const std::uint8_t TYPE_LAST = static_cast<std::uint8_t>(EType::Last);
     const std::uint8_t TYPE_COUNT = static_cast<std::uint8_t>(EType::Last);
 
-    inline bool isGuaranteedDeliveryType(EType packet_type)
-    {
-        switch (packet_type)
-        {
+    inline bool isGuaranteedDeliveryType(EType packet_type) {
+        switch (packet_type) {
         case EType::UnitAction:
         case EType::UnitActionAnswer:
         case EType::UnitActionInternal:
@@ -72,10 +68,8 @@ namespace Packet
         }
     }
 
-    inline std::string getText(EType packet_type)
-    {
-        switch (packet_type)
-        {
+    inline std::string getText(EType packet_type) {
+        switch (packet_type) {
         case EType::Login:
             return "Login";
         case EType::LoginAnswer:
@@ -157,8 +151,7 @@ namespace Packet
         }
     }
 
-    enum class EApplicationType : std::uint8_t
-    {
+    enum class EApplicationType : std::uint8_t {
         ClientApplication,
         ProxyServer,
         NodeServer,
@@ -168,10 +161,8 @@ namespace Packet
         MonitorApplication
     };
 
-    inline std::string getText(EApplicationType application_type)
-    {
-        switch (application_type)
-        {
+    inline std::string getText(EApplicationType application_type) {
+        switch (application_type) {
         case EApplicationType::ClientApplication:
             return "[Client]";
         case EApplicationType::ProxyServer:
@@ -191,8 +182,7 @@ namespace Packet
         }
     }
 
-    enum class ESeverityType : std::uint8_t
-    {
+    enum class ESeverityType : std::uint8_t {
         DebugMessage,
         InfoMessage,
         WarningMessage,
@@ -200,10 +190,8 @@ namespace Packet
         FatalMessage
     };
 
-    inline std::string getText(ESeverityType severity)
-    {
-        switch (severity)
-        {
+    inline std::string getText(ESeverityType severity) {
+        switch (severity) {
         case ESeverityType::DebugMessage:
             return "DEBUG";
         case ESeverityType::InfoMessage:
@@ -219,32 +207,21 @@ namespace Packet
         }
     }
 
-    inline ESeverityType getSeverity(const std::string& string_representation)
-    {
-        if (string_representation == "INFO")
-        {
+    inline ESeverityType getSeverity(const std::string& string_representation) {
+        if (string_representation == "INFO") {
             return ESeverityType::InfoMessage;
-        }
-        else if (string_representation == "WARNING")
-        {
+        } else if (string_representation == "WARNING") {
             return ESeverityType::WarningMessage;
-        }
-        else if (string_representation == "ERROR")
-        {
+        } else if (string_representation == "ERROR") {
             return ESeverityType::ErrorMessage;
-        }
-        else if (string_representation == "FATAL")
-        {
+        } else if (string_representation == "FATAL") {
             return ESeverityType::FatalMessage;
-        }
-        else
-        {
+        } else {
             return ESeverityType::DebugMessage;
         }
     }
 
-    inline std::istream& operator>>(std::istream& input_stream, ESeverityType& severity)
-    {
+    inline std::istream& operator>>(std::istream& input_stream, ESeverityType& severity) {
         std::string string_representation;
         input_stream >> string_representation;
         severity = getSeverity(string_representation);

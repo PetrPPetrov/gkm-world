@@ -6,8 +6,7 @@
 #include <cstdint>
 #include "gkm_world/gkm_world.h"
 
-enum class EChildIndex : std::uint8_t
-{
+enum class EChildIndex : std::uint8_t {
     ChildLowerLeft,
     ChildUpperLeft,
     ChildUpperRight,
@@ -17,5 +16,11 @@ enum class EChildIndex : std::uint8_t
     CountOfChildren = ChildLast
 };
 
-constexpr std::uint8_t CountOfChildren = static_cast<std::uint8_t>(EChildIndex::CountOfChildren);
+inline unsigned toInteger(EChildIndex value) {
+    return static_cast<unsigned>(value);
+}
+
+constexpr unsigned CountOfChildren = static_cast<unsigned>(EChildIndex::CountOfChildren);
+constexpr unsigned ChildFirst = static_cast<unsigned>(EChildIndex::ChildFirst);
+constexpr unsigned ChildLast = static_cast<unsigned>(EChildIndex::ChildLast);
 constexpr CoordinateType NEIGHBOR_COUNT_AT_SIDE = NODE_SIZE_MAX / NODE_SIZE_MIN;

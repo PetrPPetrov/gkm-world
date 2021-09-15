@@ -13,12 +13,10 @@
 #include <boost/process.hpp>
 #include "process_spawn.h"
 
-std::string findNodeServerPath()
-{
+std::string findNodeServerPath() {
     return boost::process::search_path("node_server").generic_string();
 }
 
-void processSpawn(const std::string& executable_name, const std::string& node_server_port_number)
-{
+void processSpawn(const std::string& executable_name, const std::string& node_server_port_number) {
     boost::process::spawn(executable_name, node_server_port_number);
 }

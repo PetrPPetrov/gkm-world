@@ -5,8 +5,7 @@
 
 #include <cstdint>
 
-enum class ENeighborIndex : std::uint8_t
-{
+enum class ENeighborIndex : std::uint8_t {
     NeighborUpperLeftCorner,
     NeighborUpperLeft,
     NeighborUpperRight,
@@ -22,3 +21,10 @@ enum class ENeighborIndex : std::uint8_t
     NeighborLast,
     NeighborFirst = NeighborUpperLeftCorner
 };
+
+inline unsigned toInteger(ENeighborIndex value) {
+    return static_cast<unsigned>(value);
+}
+
+constexpr unsigned NeighborFirst = static_cast<unsigned>(ENeighborIndex::NeighborFirst);
+constexpr unsigned NeighborLast = static_cast<unsigned>(ENeighborIndex::NeighborLast);

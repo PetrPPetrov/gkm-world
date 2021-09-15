@@ -12,16 +12,14 @@ typedef std::int32_t CoordinateType;
 // The lower FRACTION_BITS is used for fraction part, the rest part is used as integer part
 constexpr std::uint8_t FRACTION_BITS = 8;
 constexpr CoordinateType UNIT_SCALE = 1 << FRACTION_BITS;
-// So, 256 coordinate units is 1 meter
+// So, 256 coordinate units are 1 meter
 // 1 coordinate unit is 1/256 meter
 
-inline double toFloat(CoordinateType value)
-{
+inline double toFloatingPoint(CoordinateType value) {
     return static_cast<double>(value) / UNIT_SCALE;
 }
 
-inline CoordinateType toCoordinateType(double value)
-{
+inline CoordinateType toFixedPoint(double value) {
     return static_cast<CoordinateType>(value * UNIT_SCALE);
 }
 
@@ -37,7 +35,7 @@ constexpr IndexType INVALID_INDEX = static_cast<IndexType>(std::numeric_limits<I
 constexpr IndexType NODE_GUNIT_MAX = 1024; // Maxumum number of game units on node server is 1024
 constexpr IndexType NODE_GUNIT_MIN = 64; // Minumum number of game units of node server is 64
 
-// We use fixed-point numbers for angles; 0-360 range is mapped into 0-65536 range
+// We use fixed-point numbers for angles; 0-360 range is mapped into 0-65535 range
 typedef std::uint16_t AngularType;
 
 // We us 16-bit unsigned integer as port number

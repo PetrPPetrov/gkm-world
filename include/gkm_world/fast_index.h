@@ -7,25 +7,10 @@
 #include <array>
 #include "gkm_world/gkm_world.h"
 
-namespace Memory
-{
-    template<class ElementType>
-    class FastIndex16BitPage
-    {
-        constexpr static std::uint8_t PAGE_BIT_COUNT = 16;
-        constexpr static IndexType PAGE_SIZE = (1 << PAGE_BIT_COUNT);
-
-        static inline IndexType getPageIndex(IndexType index)
-        {
-            return index >> PAGE_BIT_COUNT;
-        }
-        static inline IndexType getElementIndex(IndexType index)
-        {
-            return index & ((1 << PAGE_BIT_COUNT) - 1);
-        }
-
-        struct ElementStorage
-        {
+namespace Memory {
+    namespace Details {
+        template<class ElementType>
+        struct ElementStorage {
             std::atomic<bool> allocated = false;
             IndexType next_available_index = 0;
             std::atomic<IndexType> chain_previous_index = INVALID_INDEX;
@@ -33,605 +18,371 @@ namespace Memory
 
             std::array<std::uint8_t, sizeof(ElementType)> storage;
         };
-        struct Page
-        {
-            std::array<ElementStorage, PAGE_SIZE> elements;
-        };
 
-        std::array<std::atomic<Page*>, PAGE_SIZE> pages;
-        IndexType max_allocated_index = 0;
-        IndexType next_available_index = 0;
-        std::atomic<IndexType> chain_head_index = INVALID_INDEX;
+        template<class ElementType, std::uint8_t PageBitCount, std::uint8_t NestedPageBitCount, std::uint8_t PageBitOffset>
+        class FastIndexPage;
 
-    protected:
-        ElementStorage* element(IndexType index) const
-        {
-            const IndexType page_index = getPageIndex(index);
-            Page* page = pages[page_index];
-            if (page)
-            {
-                const IndexType element_index = getElementIndex(index);
-                return &page->elements[element_index];
+        template<class ElementType, std::uint8_t PageBitCount, std::uint8_t NestedPageBitCount>
+        class FastIndexPage<ElementType, PageBitCount, NestedPageBitCount, 0> {
+            constexpr static std::uint8_t PAGE_BIT_COUNT = PageBitCount;
+            constexpr static IndexType PAGE_SIZE = (1 << PAGE_BIT_COUNT);
+
+            std::array<ElementStorage<ElementType>, PAGE_SIZE> elements;
+
+            constexpr static IndexType getMask() {
+                return ((1 << PAGE_BIT_COUNT) - 1);
             }
-            return nullptr;
-        }
-        ElementType* fast_find(IndexType index) const
-        {
-            const IndexType page_index = getPageIndex(index);
-            Page* page = pages[page_index];
-            if (page)
-            {
+            static IndexType getElementIndex(IndexType index) {
+                return index & getMask();
+            }
+
+        public:
+            typedef ElementStorage<ElementType> ElementTypeStorage;
+
+            ElementTypeStorage* element(IndexType index) const {
                 const IndexType element_index = getElementIndex(index);
-                ElementStorage& element = page->elements[element_index];
+                return const_cast<ElementTypeStorage*>(&elements[element_index]);
+            }
+            ElementType* fast_find(IndexType index) const {
+                const IndexType element_index = getElementIndex(index);
+                const ElementTypeStorage& element = elements[element_index];
+                return const_cast<ElementType*>(reinterpret_cast<const ElementType*>(element.storage.data()));
+            }
+            ElementType* find(IndexType index) const {
+                const IndexType element_index = getElementIndex(index);
+                const ElementTypeStorage& element = elements[element_index];
+                if (element.allocated) {
+                    return const_cast<ElementType*>(reinterpret_cast<const ElementType*>(element.storage.data()));
+                }
+                return nullptr;
+            }
+            bool pageAllocated(IndexType index) const {
+                return true;
+            }
+            ElementType* allocateBlock(IndexType index) {
+                const IndexType element_index = getElementIndex(index);
+                ElementTypeStorage& element = elements[element_index];
+                element.allocated = true;
                 return reinterpret_cast<ElementType*>(element.storage.data());
             }
-            return nullptr;
-        }
-        ElementType* find(IndexType index) const
-        {
-            const IndexType page_index = getPageIndex(index);
-            Page* page = pages[page_index];
-            if (page)
-            {
+            void deallocateBlock(IndexType index) {
                 const IndexType element_index = getElementIndex(index);
-                ElementStorage& element = page->elements[element_index];
-                if (element.allocated)
-                {
-                    return reinterpret_cast<ElementType*>(element.storage.data());
-                }
-            }
-            return nullptr;
-        }
-        bool pageAllocated(IndexType index) const
-        {
-            const IndexType page_index = getPageIndex(index);
-            return pages[page_index] ? true : false;
-        }
-        ElementType* allocateBlock(IndexType index)
-        {
-            max_allocated_index = std::max(max_allocated_index, index);
-            const IndexType page_index = getPageIndex(index);
-            Page* page = pages[page_index];
-            if (page == nullptr)
-            {
-                page = new Page;
-                pages[page_index] = page;
-            }
-            const IndexType element_index = getElementIndex(index);
-            ElementStorage& element = page->elements[element_index];
-            element.allocated = true;
-            return reinterpret_cast<ElementType*>(element.storage.data());
-        }
-        void deallocateBlock(IndexType index)
-        {
-            const IndexType page_index = getPageIndex(index);
-            Page* page = pages[page_index];
-            if (page)
-            {
-                const IndexType element_index = getElementIndex(index);
-                ElementStorage& element = page->elements[element_index];
+                ElementTypeStorage& element = elements[element_index];
                 element.allocated = false;
             }
-        }
-        IndexType getMaxAllocatedIndex() const
-        {
-            return max_allocated_index;
-        }
-        IndexType allocateIndex()
-        {
-            if (pageAllocated(next_available_index))
-            {
-                ElementStorage* info = element(next_available_index);
-                IndexType result_index = next_available_index;
-                if (info->next_available_index)
-                {
-                    next_available_index = info->next_available_index;
-                }
-                else
-                {
-                    next_available_index++;
-                }
-                return result_index;
-            }
-            else
-            {
-                return next_available_index++;
-            }
-        }
-        void deallocateIndex(IndexType index)
-        {
-            assert(pageAllocated(index));
-            ElementStorage* info = element(index);
-            if (index < next_available_index)
-            {
-                info->next_available_index = next_available_index;
-                next_available_index = index;
-            }
-            else if (index > next_available_index)
-            {
-                assert(pageAllocated(next_available_index));
-                ElementStorage* next_available_info = element(next_available_index);
-                info->next_available_index = next_available_info->next_available_index;
-                next_available_info->next_available_index = index;
-            }
-        }
-        void chainPushFront(IndexType index)
-        {
-            assert(pageAllocated(index));
-            ElementStorage* info = element(index);
-            info->chain_next_index = chain_head_index;
-            info->chain_previous_index = INVALID_INDEX;
-            if (chain_head_index != INVALID_INDEX)
-            {
-                ElementStorage* head_info = element(chain_head_index);
-                head_info->chain_previous_index = index;
-            }
-            chain_head_index = index;
-        }
-        void chainRemove(IndexType index)
-        {
-            assert(pageAllocated(index));
-            ElementStorage* info = element(index);
-            IndexType previous_index = info->chain_previous_index;
-            IndexType next_index = info->chain_next_index;
-            if (previous_index != INVALID_INDEX)
-            {
-                ElementStorage* previous = element(previous_index);
-                previous->chain_next_index = next_index;
-            }
-            else
-            {
-                chain_head_index = next_index;
-            }
-            if (next_index != INVALID_INDEX)
-            {
-                ElementStorage* next = element(next_index);
-                next->chain_previous_index = previous_index;
-            }
-        }
-        IndexType getChainHeadIndex() const
-        {
-            return chain_head_index;
-        }
-        IndexType getChainNextIndex(IndexType index) const
-        {
-            assert(pageAllocated(index));
-            ElementStorage* info = element(index);
-            return info->chain_next_index;
-        }
-        FastIndex16BitPage()
-        {
-        }
-        ~FastIndex16BitPage()
-        {
-            for (IndexType page_index = 0; page_index < PAGE_SIZE; ++page_index)
-            {
-                Page* page = pages[page_index];
-                pages[page_index] = nullptr;
-                if (page)
-                {
-                    delete page;
+        };
+
+        template<class ElementType, std::uint8_t PageBitCount, std::uint8_t NestedPageBitCount, std::uint8_t PageBitOffset>
+        class FastIndexPage {
+            constexpr static std::uint8_t ALL_BIT_COUNT = sizeof(IndexType) * 8;
+            constexpr static std::uint8_t PAGE_BIT_COUNT = PageBitCount;
+            constexpr static IndexType PAGE_SIZE = (1 << PAGE_BIT_COUNT);
+            constexpr static std::uint8_t NESTED_PAGE_BIT_COUNT = NestedPageBitCount;
+            constexpr static std::uint8_t PAGE_BIT_OFFSET = PageBitOffset;
+
+            static_assert(PAGE_BIT_OFFSET >= NESTED_PAGE_BIT_COUNT);
+            typedef FastIndexPage<ElementType, NESTED_PAGE_BIT_COUNT, NESTED_PAGE_BIT_COUNT, PAGE_BIT_OFFSET - NESTED_PAGE_BIT_COUNT> PageType;
+            std::array<std::atomic<PageType*>, PAGE_SIZE> pages;
+
+            constexpr static IndexType getMask() {
+                if constexpr (PAGE_BIT_COUNT + PAGE_BIT_OFFSET == ALL_BIT_COUNT) {
+                    return std::numeric_limits<IndexType>::max();
+                } else {
+                    return ((1 << (PAGE_BIT_COUNT + PAGE_BIT_OFFSET)) - 1);
                 }
             }
-        }
-    };
+            static IndexType getPageIndex(IndexType index) {
+                return (index & getMask()) >> PAGE_BIT_OFFSET;
+            }
 
-    template<class ElementType>
-    class FastIndexMap : protected FastIndex16BitPage<ElementType>
-    {
-        typedef FastIndex16BitPage<ElementType> Base;
+        public:
+            typedef ElementStorage<ElementType> ElementTypeStorage;
 
-    public:
-        ElementType* allocateBlock(IndexType index)
-        {
-            return Base::allocateBlock(index);
-        }
-        void deallocateBlock(IndexType index)
-        {
-            Base::deallocateBlock(index);
-        }
-        ElementType* find(IndexType index) const
-        {
-            return Base::find(index);
-        }
-    };
+            ~FastIndexPage() {
+                for (IndexType page_index = 0; page_index < PAGE_SIZE; ++page_index) {
+                    PageType* page = pages[page_index];
+                    pages[page_index] = nullptr;
+                    if (page) {
+                        delete page;
+                    }
+                }
+            }
 
-    template<class ElementType>
-    class FastIndexRegistry : protected FastIndex16BitPage<ElementType>
-    {
-        typedef FastIndex16BitPage<ElementType> Base;
-
-    public:
-        ElementType* allocate(IndexType& result_index)
-        {
-            result_index = allocateIndex();
-            return allocateBlock(result_index);
-        }
-        void deallocate(IndexType index)
-        {
-            deallocateBlock(index);
-            deallocateIndex(index);
-        }
-        ElementType* find(IndexType index) const
-        {
-            return Base::find(index);
-        }
-    };
-
-    template<class ElementType>
-    class FastIndex8BitPage
-    {
-        constexpr static std::uint8_t PAGE_BIT_COUNT = 8;
-        constexpr static IndexType PAGE_SIZE = (1 << PAGE_BIT_COUNT);
-
-        static inline IndexType getElementIndex(IndexType index)
-        {
-            return index & ((1 << PAGE_BIT_COUNT) - 1);
-        }
-        static inline IndexType getPageIndex(IndexType index)
-        {
-            return (index & ((1 << PAGE_BIT_COUNT * 2) - 1)) >> PAGE_BIT_COUNT;
-        }
-        static inline IndexType getChapterIndex(IndexType index)
-        {
-            return (index & ((1 << PAGE_BIT_COUNT * 3) - 1)) >> (PAGE_BIT_COUNT * 2);
-        }
-        static inline IndexType getVolumeIndex(IndexType index)
-        {
-            return index >> (PAGE_BIT_COUNT * 3);
-        }
-
-        struct ElementStorage
-        {
-            std::atomic<bool> allocated = false;
-            IndexType next_available_index = 0;
-            std::atomic<IndexType> chain_previous_index = INVALID_INDEX;
-            std::atomic<IndexType> chain_next_index = INVALID_INDEX;
-
-            std::array<std::uint8_t, sizeof(ElementType)> storage;
+            ElementTypeStorage* element(IndexType index) const {
+                const IndexType page_index = getPageIndex(index);
+                PageType* page = pages[page_index];
+                if (page) {
+                    return page->element(index);
+                }
+                return nullptr;
+            }
+            ElementType* fast_find(IndexType index) const {
+                const IndexType page_index = getPageIndex(index);
+                PageType* page = pages[page_index];
+                if (page) {
+                    return page->fast_find(index);
+                }
+                return nullptr;
+            }
+            ElementType* find(IndexType index) const {
+                const IndexType page_index = getPageIndex(index);
+                PageType* page = pages[page_index];
+                if (page) {
+                    return page->find(index);
+                }
+                return nullptr;
+            }
+            bool pageAllocated(IndexType index) const {
+                const IndexType page_index = getPageIndex(index);
+                PageType* page = pages[page_index];
+                if (page == nullptr) {
+                    return false;
+                }
+                return page->pageAllocated(index);
+            }
+            ElementType* allocateBlock(IndexType index) {
+                const IndexType page_index = getPageIndex(index);
+                PageType* page = pages[page_index];
+                if (page == nullptr) {
+                    page = new PageType;
+                    pages[page_index] = page;
+                }
+                return page->allocateBlock(index);
+            }
+            void deallocateBlock(IndexType index) {
+                const IndexType page_index = getPageIndex(index);
+                PageType* page = pages[page_index];
+                if (page) {
+                    page->deallocateBlock(index);
+                }
+            }
         };
-        struct Page
-        {
-            std::array<ElementStorage, PAGE_SIZE> elements;
-        };
-        struct Chapter
-        {
-            std::array<std::atomic<Page*>, PAGE_SIZE> pages;
-        };
-        struct Volume
-        {
-            std::array<std::atomic<Chapter*>, PAGE_SIZE> chapters;
-        };
+    }
 
-        std::array<std::atomic<Volume*>, PAGE_SIZE> volumes;
+    template<class ElementType, std::uint8_t PageBitCount>
+    class FastIndex {
+        constexpr static std::uint8_t ALL_BIT_COUNT = sizeof(IndexType) * 8;
+        constexpr static std::uint8_t NESTED_PAGE_BIT_COUNT = PageBitCount;
+        constexpr static std::uint8_t REMAINDER = ALL_BIT_COUNT % PageBitCount;
+        constexpr static std::uint8_t PAGE_BIT_COUNT = (REMAINDER == 0) ? PageBitCount : REMAINDER;
+
+        static_assert(ALL_BIT_COUNT >= PAGE_BIT_COUNT);
+
+        Details::FastIndexPage<ElementType, PAGE_BIT_COUNT, NESTED_PAGE_BIT_COUNT, ALL_BIT_COUNT - PAGE_BIT_COUNT> storage;
         IndexType max_allocated_index = 0;
         IndexType next_available_index = 0;
         std::atomic<IndexType> chain_head_index = INVALID_INDEX;
         std::atomic<IndexType> chain_tail_index = INVALID_INDEX;
 
     protected:
-        ElementStorage* element(IndexType index) const
-        {
-            const IndexType volume_index = getVolumeIndex(index);
-            Volume* volume = volumes[volume_index];
-            if (volume)
-            {
-                const IndexType chapter_index = getChapterIndex(index);
-                Chapter* chapter = volume->chapters[chapter_index];
-                if (chapter)
-                {
-                    const IndexType page_index = getPageIndex(index);
-                    Page* page = chapter->pages[page_index];
-                    if (page)
-                    {
-                        const IndexType element_index = getElementIndex(index);
-                        return &page->elements[element_index];
-                    }
-                }
-            }
-            return nullptr;
+        typedef Details::ElementStorage<ElementType> ElementTypeStorage;
+
+        ElementTypeStorage* element(IndexType index) const {
+            return storage.element(index);
         }
-        ElementType* fast_find(IndexType index) const
-        {
-            const IndexType volume_index = getVolumeIndex(index);
-            Volume* volume = volumes[volume_index];
-            if (volume)
-            {
-                const IndexType chapter_index = getChapterIndex(index);
-                Chapter* chapter = volume->chapters[chapter_index];
-                if (chapter)
-                {
-                    const IndexType page_index = getPageIndex(index);
-                    Page* page = chapter->pages[page_index];
-                    if (page)
-                    {
-                        const IndexType element_index = getElementIndex(index);
-                        ElementStorage& element = page->elements[element_index];
-                        return reinterpret_cast<ElementType*>(element.storage.data());
-                    }
-                }
-            }
-            return nullptr;
+        ElementType* fast_find(IndexType index) const {
+            return storage.fast_find(index);
         }
-        ElementType* find(IndexType index) const
-        {
-            const IndexType volume_index = getVolumeIndex(index);
-            Volume* volume = volumes[volume_index];
-            if (volume)
-            {
-                const IndexType chapter_index = getChapterIndex(index);
-                Chapter* chapter = volume->chapters[chapter_index];
-                if (chapter)
-                {
-                    const IndexType page_index = getPageIndex(index);
-                    Page* page = chapter->pages[page_index];
-                    if (page)
-                    {
-                        const IndexType element_index = getElementIndex(index);
-                        ElementStorage& element = page->elements[element_index];
-                        if (element.allocated)
-                        {
-                            return reinterpret_cast<ElementType*>(element.storage.data());
-                        }
-                    }
-                }
-            }
-            return nullptr;
+        ElementType* find(IndexType index) const {
+            return storage.find(index);
         }
-        bool pageAllocated(IndexType index) const
-        {
-            const IndexType volume_index = getVolumeIndex(index);
-            Volume* volume = volumes[volume_index];
-            if (volume)
-            {
-                const IndexType chapter_index = getChapterIndex(index);
-                Chapter* chapter = volume->chapters[chapter_index];
-                if (chapter)
-                {
-                    const IndexType page_index = getPageIndex(index);
-                    return chapter->pages[page_index] ? true : false;
-                }
-            }
-            return false;
+        bool pageAllocated(IndexType index) const {
+            return storage.pageAllocated(index);
         }
-        ElementType* allocateBlock(IndexType index)
-        {
+        ElementType* allocateBlock(IndexType index) {
             max_allocated_index = std::max(max_allocated_index, index);
-            const IndexType volume_index = getVolumeIndex(index);
-            Volume* volume = volumes[volume_index];
-            if (volume == nullptr)
-            {
-                volume = new Volume;
-                volumes[volume_index] = volume;
-            }
-            const IndexType chapter_index = getVolumeIndex(index);
-            Chapter* chapter = volume->chapters[chapter_index];
-            if (chapter == nullptr)
-            {
-                chapter = new Chapter;
-                volume->chapters[chapter_index] = chapter;
-            }
-            const IndexType page_index = getPageIndex(index);
-            Page* page = chapter->pages[page_index];
-            if (page == nullptr)
-            {
-                page = new Page;
-                chapter->pages[page_index] = page;
-            }
-            const IndexType element_index = getElementIndex(index);
-            ElementStorage& element = page->elements[element_index];
-            element.allocated = true;
-            return reinterpret_cast<ElementType*>(element.storage.data());
+            return storage.allocateBlock(index);
         }
-        void deallocateBlock(IndexType index)
-        {
-            const IndexType volume_index = getVolumeIndex(index);
-            Volume* volume = volumes[volume_index];
-            if (volume)
-            {
-                const IndexType chapter_index = getChapterIndex(index);
-                Chapter* chapter = volume->chapters[chapter_index];
-                if (chapter)
-                {
-                    const IndexType page_index = getPageIndex(index);
-                    Page* page = chapter->pages[page_index];
-                    if (page)
-                    {
-                        const IndexType element_index = getElementIndex(index);
-                        ElementStorage& element = page->elements[element_index];
-                        element.allocated = false;
-                    }
-                }
-            }
+        void deallocateBlock(IndexType index) {
+            storage.deallocateBlock(index);
         }
-        IndexType getMaxAllocatedIndex() const
-        {
+        IndexType getMaxAllocatedIndex() const {
             return max_allocated_index;
         }
-        IndexType allocateIndex()
-        {
-            if (pageAllocated(next_available_index))
-            {
-                ElementStorage* info = element(next_available_index);
+        IndexType allocateIndex() {
+            if (pageAllocated(next_available_index)) {
+                ElementTypeStorage* info = element(next_available_index);
                 IndexType result_index = next_available_index;
-                if (info->next_available_index)
-                {
+                if (info->next_available_index) {
                     next_available_index = info->next_available_index;
-                }
-                else
-                {
+                } else {
                     next_available_index++;
                 }
                 return result_index;
-            }
-            else
-            {
+            } else {
                 return next_available_index++;
             }
         }
-        void deallocateIndex(IndexType index)
-        {
+        void deallocateIndex(IndexType index) {
             assert(pageAllocated(index));
-            ElementStorage* info = element(index);
-            if (index < next_available_index)
-            {
+            ElementTypeStorage* info = element(index);
+            if (index < next_available_index) {
                 info->next_available_index = next_available_index;
                 next_available_index = index;
-            }
-            else if (index > next_available_index)
-            {
+            } else if (index > next_available_index) {
                 assert(pageAllocated(next_available_index));
-                ElementStorage* next_available_info = element(next_available_index);
+                ElementTypeStorage* next_available_info = element(next_available_index);
                 info->next_available_index = next_available_info->next_available_index;
                 next_available_info->next_available_index = index;
             }
         }
-        void chainPushFront(IndexType index)
-        {
+        void chainPushFront(IndexType index) {
             assert(pageAllocated(index));
-            ElementStorage* info = element(index);
+            ElementTypeStorage* info = element(index);
             info->chain_next_index = chain_head_index.load();
             info->chain_previous_index = INVALID_INDEX;
-            if (chain_head_index != INVALID_INDEX)
-            {
-                ElementStorage* head_info = element(chain_head_index);
+            if (chain_head_index != INVALID_INDEX) {
+                ElementTypeStorage* head_info = element(chain_head_index);
                 head_info->chain_previous_index = index;
             }
             chain_head_index = index;
-            if (chain_tail_index == INVALID_INDEX)
-            {
+            if (chain_tail_index == INVALID_INDEX) {
                 chain_tail_index = index;
             }
         }
-        void chainPushBack(IndexType index)
-        {
+        void chainPushBack(IndexType index) {
             assert(pageAllocated(index));
-            ElementStorage* info = element(index);
+            ElementTypeStorage* info = element(index);
             info->chain_next_index = INVALID_INDEX;
             info->chain_previous_index = chain_tail_index.load();
-            if (chain_tail_index != INVALID_INDEX)
-            {
-                ElementStorage* tail_info = element(chain_tail_index);
+            if (chain_tail_index != INVALID_INDEX) {
+                ElementTypeStorage* tail_info = element(chain_tail_index);
                 tail_info->chain_next_index = index;
             }
             chain_tail_index = index;
-            if (chain_head_index == INVALID_INDEX)
-            {
+            if (chain_head_index == INVALID_INDEX) {
                 chain_head_index = index;
             }
         }
-        void chainRemove(IndexType index)
-        {
+        void chainRemove(IndexType index) {
             assert(pageAllocated(index));
-            ElementStorage* info = element(index);
+            ElementTypeStorage* info = element(index);
             IndexType previous_index = info->chain_previous_index;
             IndexType next_index = info->chain_next_index;
-            if (previous_index != INVALID_INDEX)
-            {
-                ElementStorage* previous = element(previous_index);
+            if (previous_index != INVALID_INDEX) {
+                ElementTypeStorage* previous = element(previous_index);
                 previous->chain_next_index = next_index;
-            }
-            else
-            {
+            } else {
                 chain_head_index = next_index;
             }
-            if (next_index != INVALID_INDEX)
-            {
-                ElementStorage* next = element(next_index);
+            if (next_index != INVALID_INDEX) {
+                ElementTypeStorage* next = element(next_index);
                 next->chain_previous_index = previous_index;
-            }
-            else
-            {
+            } else {
                 chain_tail_index = previous_index;
             }
             info->chain_previous_index = INVALID_INDEX;
             info->chain_next_index = INVALID_INDEX;
         }
-        IndexType getChainHeadIndex() const
-        {
+        IndexType getChainHeadIndex() const {
             return chain_head_index;
         }
-        IndexType getChainNextIndex(IndexType index) const
-        {
+        IndexType getChainNextIndex(IndexType index) const {
             assert(pageAllocated(index));
-            ElementStorage* info = element(index);
+            ElementTypeStorage* info = element(index);
             return info->chain_next_index;
-        }
-        FastIndex8BitPage()
-        {
-        }
-        ~FastIndex8BitPage()
-        {
-            for (IndexType volume_index = 0; volume_index < PAGE_SIZE; ++volume_index)
-            {
-                Volume* volume = volumes[volume_index];
-                volumes[volume_index] = nullptr;
-                if (volume)
-                {
-                    for (IndexType chapter_index = 0; chapter_index < PAGE_SIZE; ++chapter_index)
-                    {
-                        Chapter* chapter = volume->chapters[chapter_index];
-                        volume->chapters[chapter_index] = nullptr;
-                        if (chapter)
-                        {
-                            for (IndexType page_index = 0; page_index < PAGE_SIZE; ++page_index)
-                            {
-                                Page* page = chapter->pages[page_index];
-                                chapter->pages[page_index] = nullptr;
-                                if (page)
-                                {
-                                    delete page;
-                                }
-                            }
-                            delete chapter;
-                        }
-                    }
-                    delete volume;
-                }
-            }
         }
     };
 
-    template<class ElementType>
-    class FastIndexChain : protected FastIndex8BitPage<ElementType>
-    {
-        typedef FastIndex8BitPage<ElementType> Base;
+    template<class ElementType, std::uint8_t PageBitCount>
+    class FastIndexMap : protected FastIndex<ElementType, PageBitCount> {
+        typedef FastIndex<ElementType, PageBitCount> Base;
 
     public:
-        ElementType* chainPushFront(IndexType& result_index)
-        {
+        ElementType* allocateBlock(IndexType index) {
+            return Base::allocateBlock(index);
+        }
+        void deallocateBlock(IndexType index) {
+            Base::deallocateBlock(index);
+        }
+        ElementType* find(IndexType index) const {
+            return Base::find(index);
+        }
+    };
+
+    template<class ElementType, std::uint8_t PageBitCount>
+    class FastIndexChain : protected FastIndex<ElementType, PageBitCount> {
+        typedef FastIndex<ElementType, PageBitCount> Base;
+
+    public:
+        ElementType* chainPushFront(IndexType index) {
+            auto result = allocateBlock(index);
+            Base::chainPushFront(index);
+            return result;
+        }
+        ElementType* chainPushBack(IndexType index) {
+            auto result = allocateBlock(index);
+            Base::chainPushBack(index);
+            return result;
+        }
+        void chainRemove(IndexType index) {
+            Base::chainRemove(index);
+            deallocateBlock(index);
+        }
+        IndexType getChainHeadIndex() const {
+            return Base::getChainHeadIndex();
+        }
+        IndexType getChainNextIndex(IndexType index) const {
+            return Base::getChainNextIndex(index);
+        }
+        ElementType* get(IndexType index) const {
+            return Base::fast_find(index);
+        }
+        ElementType* find(IndexType index) const {
+            return Base::find(index);
+        }
+    };
+
+    template<class ElementType, std::uint8_t PageBitCount>
+    class FastIndexRegistry : protected FastIndex<ElementType, PageBitCount> {
+        typedef FastIndex<ElementType, PageBitCount> Base;
+
+    public:
+        ElementType* allocate(IndexType& result_index) {
+            result_index = allocateIndex();
+            return allocateBlock(result_index);
+        }
+        void deallocate(IndexType index) {
+            deallocateBlock(index);
+            deallocateIndex(index);
+        }
+        ElementType* find(IndexType index) const {
+            return Base::find(index);
+        }
+    };
+
+    template<class ElementType, std::uint8_t PageBitCount>
+    class FastIndexRegistryChain : protected FastIndex<ElementType, PageBitCount> {
+        typedef FastIndex<ElementType, PageBitCount> Base;
+
+    public:
+        ElementType* chainPushFront(IndexType& result_index) {
             result_index = allocateIndex();
             auto result = allocateBlock(result_index);
             Base::chainPushFront(result_index);
             return result;
         }
-        ElementType* chainPushBack(IndexType& result_index)
-        {
+        ElementType* chainPushBack(IndexType& result_index) {
             result_index = allocateIndex();
             auto result = allocateBlock(result_index);
             Base::chainPushBack(result_index);
             return result;
         }
-        void chainRemove(IndexType index)
-        {
+        void chainRemove(IndexType index) {
             Base::chainRemove(index);
             deallocateBlock(index);
             deallocateIndex(index);
         }
-        IndexType getChainHeadIndex() const
-        {
+        IndexType getChainHeadIndex() const {
             return Base::getChainHeadIndex();
         }
-        IndexType getChainNextIndex(IndexType index) const
-        {
+        IndexType getChainNextIndex(IndexType index) const {
             return Base::getChainNextIndex(index);
         }
-        ElementType* get(IndexType index) const
-        {
+        ElementType* get(IndexType index) const {
             return Base::fast_find(index);
         }
-        ElementType* find(IndexType index) const
-        {
+        ElementType* find(IndexType index) const {
             return Base::find(index);
         }
     };
